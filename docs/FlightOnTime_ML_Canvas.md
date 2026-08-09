@@ -1,8 +1,8 @@
 # FLIGHTONTIME - MACHINE LEARNING CANVAS
 
 **Designed by:** Alessandro Bevilacqua
-**Date:** [date]
-**Iteration:** 2
+**Date:** 09/08/2026
+**Iteration:** 3
 
 ---
 
@@ -24,11 +24,11 @@ The system supports **passengers**, **airport staff**, and **airline planners**.
 
 What a prediction suggests depends on who is asking. A **passenger** facing a high risk may add extra time before a connection, choose another flight, or arrange a backup plan. **Airport staff** may anticipate pressure on gates and adjust ground handling accordingly. **Airline planners** benefit most from the explanation behind the prediction: knowing whether a route is fragile because of its departure time, its airport, or its exposure to weather points to different corrective actions, such as reshaping the schedule or adding slack to a rotation. A low risk, for all three, means continuing as planned.
 
-Two ways to use the system: **manual entry** (the user types in the flight details, and the system adds weather) and **auto-lookup** (the user gives only the carrier, the flight number and the date, and the system fetches everything else automatically).
+Two ways to use the system: **manual entry** (the user types in the flight details, and the system adds weather) and **auto-lookup** (the user gives only the carrier, the flight number and the departure date, and the system fetches everything else automatically).
 
 A default decision threshold is chosen during development (see §6), but it is exposed as a configuration parameter rather than hard-coded, so that an integrating application can tune it properly based on its users' needs.
 
-Predictions are also flagged as low-confidence when the input is unusual — i.e. when some key features take values that are rare or extreme compared to the training data.
+Predictions are also flagged as low-confidence when the input is unusual - i.e. when some key features take values that are rare or extreme compared to the training data.
 
 ---
 
@@ -56,7 +56,7 @@ Retraining is not scheduled: it is triggered when monitoring detects a drop in p
 
 | Source | Provides |
 |---|---|
-| BTS On-Time Performance | Flight records, features and training label |
+| BTS On-Time Performance | Flight records, features and training labels |
 | Open-Meteo (Historical Forecast and Previous Runs) | Archived weather forecasts at different lead times, for training |
 | Open-Meteo Forecast API | Weather forecast at inference time |
 | Python `holidays` library | Federal holiday flags and distance to the nearest holiday |
@@ -67,7 +67,7 @@ Retraining is not scheduled: it is triggered when monitoring detects a drop in p
 
 ## 6. Impact Simulation
 
-**Evaluation protocol.** Candidates are compared using expanding-window folds: each fold trains on everything up to a cut-off date and tests on the following period, with the training window growing at each step. The split follows time rather than random sampling, since flights close together in time share similar weather and airport congestion, which breaks the independence a random split would assume. Metrics are averaged across folds, and their spread is reported alongside the average, since a single split would reflect whichever period happened to fall on the test side rather
+**Evaluation protocol.** Candidate models are compared using expanding-window folds: each fold trains on everything up to a cut-off date and tests on the following period, with the training window growing at each step. The split follows time rather than random sampling, since flights close together in time share similar weather and airport congestion, which breaks the independence a random split would assume. Metrics are averaged across folds, and their spread is reported alongside the average, since a single split would reflect whichever period happened to fall on the test side rather
 than the model's general behaviour.
 
 **Choosing what to optimize for.** Accuracy is not used: with delays in the minority, a model that always predicts "on time" would score well while being useless. Model selection is driven by ROC-AUC and PR-AUC, which do not depend on where the decision threshold is set. Predicted probabilities are also checked for calibration, because the system reports a risk level rather than only a plain delayed/on-time answer, and that number is only useful if it can be trusted as stated. The decision threshold is chosen only afterwards, on a held-out slice of each training window never seen by the model, by maximising F-beta on delayed flights: missing a real delay costs more than a false positive.
@@ -95,15 +95,13 @@ Batch scoring of multiple flights in one request is also supported. Compute targ
 
 ## 8. Building Models
 
-Three model variants are trained and tracked. **all** uses the full feature set and is the main model. **noweather** drops the weather features and is used whenever no forecast is available — either because the flight is further ahead than the forecast horizon, or because the weather service cannot be reached. Both are production models, serving different situations rather than competing for the same role. **nocarrier** removes carrier identity and exists only as an analysis variant, to check whether the carrier carries real signal or mostly reflects the routes and airports it serves.
+Three model variants are trained and tracked. **all** uses the full feature set and is the main model. **noweather** drops the weather features and is used whenever no forecast is available - either because the flight is further ahead than the forecast horizon, or because the weather service cannot be reached. Both are production models, serving different situations rather than competing for the same role. **nocarrier** removes carrier identity and exists only as an analysis variant, to check whether the carrier carries real signal or mostly reflects the routes and airports it serves.
 
 Three algorithms are compared for each variant: Logistic Regression, Random Forest, and LightGBM, each with hyperparameter selection. Candidates are evaluated with expanding-window folds, so selection reflects performance across several periods rather than one. Model selection is driven by ROC-AUC and PR-AUC, which do not depend on a decision threshold.
 
-For each production variant, the winning configuration is trained once more on a held-out slice of data to fix the decision threshold, then retrained from scratch on the full dataset with that threshold kept fixed — the model benefits from every available record, while the threshold is still chosen only on data it never trained on. The final model is calibrated so that the probabilities it reports can be read properly. Only these final models are released — that is, registered in the model registry and served by the API.
+For each production variant, the winning configuration is trained once more on a held-out slice of data to fix the decision threshold, then retrained from scratch on the full dataset with that threshold kept fixed - the model benefits from every available record, while the threshold is still chosen only on data it never trained on. The final model is calibrated so that the probabilities it reports can be read properly. Only these final models are released - that is, registered in the model registry and served by the API.
 
-Retraining is triggered when monitoring detects a drop in performance or a meaningful shift in incoming data. A new model replaces the one currently in use only if it improves on ROC-AUC, PR-AUC, and calibration.
-
-Model explainability is provided through SHAP, which breaks down each individual prediction into the contribution of every feature. This lets users see which factors — route, schedule, weather, or calendar effects — pushed a specific delay prediction up or down.
+Model explainability is provided through SHAP, which breaks down each individual prediction into the contribution of every feature. This lets users see which factors - route, schedule, weather, or calendar effects - pushed a specific delay prediction up or down.
 
 ---
 
@@ -111,9 +109,9 @@ Model explainability is provided through SHAP, which breaks down each individual
 
 All features are available before departure, drawn from flight schedule data, calendar information, and weather forecasts at origin and destination. No field known only after departure is used, and no feature is built from past outcomes without explicit leakage controls.
 
-Feature selection uses only criteria that do not depend on a specific algorithm — removing constant, redundant, and uninformative columns — so the comparison between algorithms is not confounded by different input sets. Categorical features are then encoded to match what each algorithm can use natively, rather than forcing all three onto the same representation.
+Feature selection uses only criteria that do not depend on a specific algorithm — removing constant, redundant, and uninformative columns — so the comparison between algorithms is not confounded by different input sets. Missing values are imputed and categorical features are then encoded to match what each algorithm can use natively, rather than forcing all three onto the same representation.
 
-Airports and carriers with little historical support are grouped into an OTHER category.
+Airports and carriers with little historical support are grouped into an `OTHER` category.
 
 ---
 
@@ -121,7 +119,7 @@ Airports and carriers with little historical support are grouped into an OTHER c
 
 Service health (latency, error rate, resource usage, uptime) is tracked separately for each input path (manual entry and auto-lookup) and for each model variant serving the request (`all` or `noweather`). External services are monitored on their own.
 
-Incoming data is compared against the training distribution to detect drift. Model performance metrics are recomputed on production data once labels become available and compared against the values recorded when the model was released — with calibration checked separately. A drop in either performance or data stability triggers retraining.
+Incoming data is compared against the training distribution to detect drift. Model performance metrics are recomputed on production data once labels become available and compared against the values recorded when the model was released - with calibration checked separately. A drop in either performance or data stability triggers retraining. A new model replaces the one currently in use only if it improves on ROC-AUC, PR-AUC, and calibration.
 
 Whether a user actually avoided a missed connection cannot be measured directly. Usage volume gives a partial indication, but this remains a real limit: the system can show that its predictions are accurate and well calibrated, not that anyone was better off.
 
