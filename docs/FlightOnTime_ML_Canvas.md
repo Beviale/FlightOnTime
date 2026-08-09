@@ -8,7 +8,7 @@
 
 ## 1. Prediction Task
 
-FlightOnTime performs a **binary classification** task on scheduled U.S. commercial flights, predicting whether a flight will arrive **15 minutes or more late** — the official on-time threshold used by the U.S. Bureau of Transportation Statistics (BTS).
+FlightOnTime performs a **binary classification** task on scheduled U.S. commercial flights, predicting whether a flight will arrive **15 minutes or more late** - the official on-time threshold used by the U.S. Bureau of Transportation Statistics (BTS).
 
 There are two possible outcomes: **delayed** or **on time**. The output is a probability between 0 and 1, plus the binary label based on a chosen threshold.
 
@@ -46,9 +46,14 @@ Training data is drawn from a rolling window, split into expanding-window folds 
 
 Flight data comes from **BTS**, published on a regular monthly schedule with about a one-month delay. Labels require no manual annotation, since BTS publishes them directly.
 
-Each flight is also matched with weather forecasts at origin and destination, retrieved from the **Open-Meteo** API, and with holiday flags built using the Python `holidays` library, including the distance in days to the nearest federal holiday. Weather is always a forecast, never the observed outcome. A forecast lead time (`forecast_lead_days`) is assigned to every training record, sampled at random between 0 and N. At inference, the lead time is set by the real gap between the request and the flight date.
+Each flight is also matched with weather forecasts at origin and destination, retrieved from the **Open-Meteo** API, and with holiday flags built using the Python `holidays` library, including the distance in days to the nearest federal holiday. Weather is always a forecast, never the observed outcome. A forecast lead time (`forecast_lead_days`) is assigned to every training record, sampled at random between 0 and N days. At inference, the lead time is set by the real gap between the request and the flight date.
 
-Retraining is not scheduled: it is triggered when monitoring detects a drop in performance or a meaningful shift in incoming data.
+Airport coordinates and timezones, needed to match weather to each training flight record and to convert local scheduled times to UTC, come from BTS's own Master Coordinate table (T_MASTER_CORD).
+
+Whenever new months of BTS flight data are ingested for training, T_MASTER_CORD is refreshed alongside them: an airport that opens after the reference table was last built would have no coordinates or timezone, and its flights would fall into the `noweather` path by default - not because a forecast was genuinely unavailable, but because the pipeline never had a location to look one up for. At inference, the auto-lookup path does not rely on this stored reference table at
+all: the flight-schedule lookup service used to resolve carrier, flight number and date into a route also returns the origin and destination coordinates and their timezones directly, always current.
+
+Incoming data is monitored periodically to detect meaningful shifts that would justify retraining the model.
 
 ---
 
@@ -102,6 +107,8 @@ Three algorithms are compared for each variant: Logistic Regression, Random Fore
 For each production variant, the winning configuration is trained once more on a held-out slice of data to fix the decision threshold, then retrained from scratch on the full dataset with that threshold kept fixed - the model benefits from every available record, while the threshold is still chosen only on data it never trained on. The final model is calibrated so that the probabilities it reports can be read properly. Only these final models are released - that is, registered in the model registry and served by the API.
 
 Model explainability is provided through SHAP, which breaks down each individual prediction into the contribution of every feature. This lets users see which factors - route, schedule, weather, or calendar effects - pushed a specific delay prediction up or down.
+
+Retraining is not on a fixed cadence: monitoring periodically checks for a drop in performance or a meaningful shift in incoming data, and retraining is triggered only when one of these checks finds one.
 
 ---
 
