@@ -116,7 +116,7 @@ Retraining is not on a fixed cadence: monitoring periodically checks for a drop 
 
 All features are available before departure, drawn from flight schedule data, calendar information, and weather forecasts at origin and destination. No field known only after departure is used, and no feature is built from past outcomes without explicit leakage controls.
 
-Feature selection uses only criteria that do not depend on a specific algorithm — removing constant, redundant, and uninformative columns — so the comparison between algorithms is not confounded by different input sets. Missing values are imputed and categorical features are then encoded to match what each algorithm can use natively, rather than forcing all three onto the same representation.
+Feature selection uses only criteria that do not depend on a specific algorithm - removing constant, redundant, and uninformative columns - so the comparison between algorithms is not confounded by different input sets. Missing values are imputed and categorical features are then encoded to match what each algorithm can use natively, rather than forcing all three onto the same representation.
 
 Airports and carriers with little historical support are grouped into an `OTHER` category.
 
