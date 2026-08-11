@@ -1,4 +1,4 @@
-# **Risk Classification — FlightOnTime**
+# **Risk Classification - FlightOnTime**
 
 **Framework:** Regulation (EU) 2024/1689 (AI Act), as amended by Regulation (EU) 2026/1744 (Digital Omnibus on AI)
 **Assessed:** 11 August 2026
@@ -24,22 +24,22 @@ FlightOnTime predicts whether a scheduled commercial flight will arrive 15+ minu
 
 ## **2. Classification**
 
-### **2.1 Prohibited practices — Article 5: not engaged**
+### **2.1 Prohibited practices - Article 5: not engaged**
 
 No manipulation or exploitation of vulnerabilities, no social scoring, no criminal-risk prediction, no biometric identification or categorisation, no emotion inference in work or education settings. The Omnibus also added a prohibition on AI-generated non-consensual intimate imagery - likewise not engaged.
 
-### **2.2 Embedded in a regulated product — Article 6(1) + Annex I: not engaged**
+### **2.2 Embedded in a regulated product - Article 6(1) + Annex I: not engaged**
 
 Annex I lists other EU product-safety laws. Article 6(1) makes an AI system high-risk when it is a safety component of a product covered by one of them - the AI Act plugs into existing sectoral regimes rather than replacing them.
 
 Section B contains two aviation entries - one on security, one on safety - and neither reaches FlightOnTime:
 
-* **Item 13 — Reg. (EC) 300/2008, aviation *security*.** Screening, access control, protection against unlawful interference. FlightOnTime performs no security function at all.
-* **Item 20 — Reg. (EU) 2018/1139, aviation *safety* (EASA).** Listed only as regards **unmanned aircraft** and their engines, propellers, parts and remote-control equipment. It does not reach manned commercial aviation.
+* **Item 13 - Reg. (EC) 300/2008, aviation *security*.** Screening, access control, protection against unlawful interference. FlightOnTime performs no security function at all.
+* **Item 20 - Reg. (EU) 2018/1139, aviation *safety* (EASA).** Listed only as regards **unmanned aircraft** and their engines, propellers, parts and remote-control equipment. It does not reach manned commercial aviation.
 
 FlightOnTime is not a product covered by either, nor a safety component of one. It reads public BTS statistics and public weather forecasts, and its output goes to a traveller. No regulated product, so no third-party conformity assessment.
 
-### **2.3 Annex III areas — Article 6(2): not engaged**
+### **2.3 Annex III areas - Article 6(2): not engaged**
 
 Seven of the eight areas are plainly irrelevant: biometrics, education, employment, essential services and benefits, law enforcement, migration and border control, justice and democratic processes. FlightOnTime does nothing in any of them.
 
@@ -59,7 +59,7 @@ FlightOnTime protects nothing physical. It operates purely on information. When 
 
 Not being high-risk doesn't mean no obligations. Both of these are **live now**.
 
-### **Article 50(1) — transparency**
+### **Article 50(1) - transparency**
 
 Article 50 isn't tied to the risk tiers at all - it applies whether a system is high-risk, prohibited, or minimal-risk.
 
@@ -68,7 +68,7 @@ Article 50 isn't tied to the risk tiers at all - it applies whether a system is 
 **Implementation:** an explicit statement in the web interface and in the API docs, alongside the model's stated accuracy and limitations.
 
 
-### **Article 4 — AI literacy**
+### **Article 4 - AI literacy**
 
 Staff operating the system need to understand what it does and doesn't do. The Omnibus softened this into a duty to *support* AI literacy among staff, rather than guarantee a specific level.
 
@@ -82,10 +82,10 @@ Article 95 encourages applying high-risk practices voluntarily. We already do, a
 
 | Chapter III requirement | Already in place |
 |---|---|
-| Art. 10 — data governance | Versioned pipeline (DVC), automated validation (Great Expectations, Deepchecks), documented provenance |
-| Art. 11 — technical documentation | Model and dataset cards, ML Canvas, reproducible pipeline definition |
-| Art. 12 — record-keeping | Experiment tracking and model registry (MLflow), logged predictions |
-| Art. 15 — accuracy and robustness | Walk-forward temporal validation, probability calibration, behavioural testing, drift monitoring |
+| Art. 10 - data governance | Versioned pipeline (DVC), automated validation (Great Expectations, Deepchecks), documented provenance |
+| Art. 11 - technical documentation | Model and dataset cards, ML Canvas, reproducible pipeline definition |
+| Art. 12 - record-keeping | Experiment tracking and model registry (MLflow), logged predictions |
+| Art. 15 - accuracy and robustness | Walk-forward temporal validation, probability calibration, behavioural testing, drift monitoring |
 
 ---
 
@@ -110,4 +110,4 @@ Classification tracks intended purpose, so revisit this if any of the following 
 * Regulation (EC) No 300/2008 (aviation security)
 * Regulation (EU) 2018/1139 (aviation safety, EASA)
 * Directive (EU) 2022/2557 (critical entities)
-* EU AI Act Explorer (Future of Life Institute) — https://artificialintelligenceact.eu
+* EU AI Act Explorer (Future of Life Institute) - https://artificialintelligenceact.eu
