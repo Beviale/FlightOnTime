@@ -11,14 +11,15 @@ from sklearn.preprocessing import StandardScaler
 from itertools import combinations
 from scipy.stats import chi2_contingency
 from imblearn.over_sampling import SMOTE, RandomOverSampler
+from imblearn.under_sampling import RandomUnderSampler
 from predicting_flight_arrival_delays.config import (
     SEED,
-    MIN_CATEGORY_COUNT, 
-    CORRELATION_THRESHOLD, 
+    MIN_CATEGORY_COUNT,
+    CORRELATION_THRESHOLD,
     CATEGORICAL_ASSOCIATION_THRESHOLD,
-    MIN_MUTUAL_INFO, MI_SAMPLE_SIZE,
+    MIN_MUTUAL_INFO,
+    MI_SAMPLE_SIZE,
 )
-from imblearn.under_sampling import RandomUnderSampler
 
 OTHER = "OTHER"
 
@@ -57,6 +58,10 @@ class Transformer:
     encoding: str = "onehot"
     seed: int = SEED
 
+    def __post_init__(self) -> None:
+        self._categorical_columns_given = bool(self.categorical_columns)
+        self._numeric_columns_given = bool(self.numeric_columns)
+
 
     # ------------------------------------------------------------------
     # Scaling, imputation, rare-category grouping
@@ -66,7 +71,10 @@ class Transformer:
         """Learn the category buckets, imputation values and scaling statistics.
 
         Categories and imputation are learned first, then applied before fitting the
-        scaler.
+        scaler. Resets any state from a previous fit() first, so reusing the same
+        instance across folds (rather than the recommended pattern of one fresh
+        Transformer() per fold) never leaks a prior fold's learned parameters into
+        this one.
 
         Args:
             X: Training features.
@@ -74,15 +82,18 @@ class Transformer:
         Returns:
             The fitted transformer, for chaining.
         """
-        self.categorical_columns = self.categorical_columns or [
-            c for c in X.columns if X[c].dtype == object
-        ]
-        self.numeric_columns = self.numeric_columns or list(
-            X.select_dtypes(include=["number", "bool"]).columns
-        )
+        df = X.copy()
+        self.category_keep = {}
+        self.impute_values = {}
+        if not self._categorical_columns_given:
+            self.categorical_columns = [c for c in df.columns if df[c].dtype == object]
+        if not self._numeric_columns_given:
+            self.numeric_columns = list(
+                df.select_dtypes(include=["number", "bool"]).columns
+            )
 
         for col in self.categorical_columns:
-            counts = X[col].value_counts()
+            counts = df[col].value_counts()
             keep = set(counts[counts >= self.min_category_count].index)
             self.category_keep[col] = keep
             logger.info(
@@ -91,9 +102,9 @@ class Transformer:
             )
 
         for col in self.numeric_columns:
-            self.impute_values[col] = float(X[col].median())
+            self.impute_values[col] = float(df[col].median())
 
-        prepared = self._apply_categories(X.copy())
+        prepared = self._apply_categories(df)
         prepared = self._apply_imputation(prepared)
         self.scaler = StandardScaler().fit(prepared[self.numeric_columns])
 
@@ -115,11 +126,11 @@ class Transformer:
         """
         if self.scaler is None:
             raise RuntimeError("Transformer must be fitted before transform()")
-
-        X = self._apply_categories(X.copy())
-        X = self._apply_imputation(X)
-        X[self.numeric_columns] = self.scaler.transform(X[self.numeric_columns])
-        return X
+        df = X.copy()
+        df = self._apply_categories(df)
+        df = self._apply_imputation(df)
+        df[self.numeric_columns] = self.scaler.transform(df[self.numeric_columns])
+        return df
 
 
 
@@ -212,17 +223,21 @@ class Transformer:
                 logger.info(f"Correlated, dropped: {correlated}")
             dropped.extend(correlated)
 
-        idx = (
-            X.sample(self.mi_sample_size, random_state=self.seed).index
-            if len(X) > self.mi_sample_size
-            else X.index
-        )
+
+        if len(X) > self.mi_sample_size:
+            positions = np.random.default_rng(self.seed).choice(
+                len(X), self.mi_sample_size, replace=False
+            )
+            X_samp = X.iloc[positions]
+            y_samp = y.iloc[positions]
+        else:
+            X_samp, y_samp = X, y
 
         associated: list[str] = []
         for a, b in combinations(categorical_cols, 2):
-            if a in associated or b in associated: 
+            if a in associated or b in associated:
                 continue
-            v = cramers_v(X.loc[idx, a], X.loc[idx, b])
+            v = cramers_v(X_samp[a], X_samp[b])
             if v > self.categorical_association_threshold:
                 associated.append(b)
                 logger.info(f"{b} is {v:.2f} associated with {a} -- dropping {b}")
@@ -233,7 +248,7 @@ class Transformer:
         remaining_numeric = [c for c in numeric_cols if c not in dropped]
         if remaining_numeric:
             mi = mutual_info_classif(
-                X.loc[idx, remaining_numeric], y.loc[idx], random_state=self.seed
+                X_samp[remaining_numeric], y_samp, random_state=self.seed
             )
             uninformative.extend(
                 c for c, score in zip(remaining_numeric, mi) if score < self.min_mutual_info
@@ -241,10 +256,10 @@ class Transformer:
 
         remaining_categorical = [c for c in categorical_cols if c not in dropped]
         if remaining_categorical:
-            codes = X.loc[idx, remaining_categorical].apply(
+            codes = X_samp[remaining_categorical].apply(
                 lambda s: s.astype("category").cat.codes
             )
-            mi = mutual_info_classif(codes, y.loc[idx], discrete_features=True, random_state=self.seed)
+            mi = mutual_info_classif(codes, y_samp, discrete_features=True, random_state=self.seed)
             uninformative.extend(
                 c for c, score in zip(remaining_categorical, mi) if score < self.min_mutual_info
             )
@@ -340,7 +355,7 @@ def encode_categoricals(
         bool_cols = encoded.select_dtypes(include="bool").columns
         encoded[bool_cols] = encoded[bool_cols].astype("int8")
         return encoded
-    
+
     raise ValueError(f"Unknown encoding '{encoding}'. Use 'onehot' or 'native'.")
 
 
@@ -388,6 +403,7 @@ def align_columns(
         return train, test[train.columns]
 
     missing = [c for c in train.columns if c not in test.columns]
+    test = test.copy()
     for c in missing:
         test[c] = 0
     if missing:
@@ -422,7 +438,7 @@ def resample_training_data(
         ValueError: If method is unknown, or method="smote" with encoding="native".
     """
     if method == "none":
-        logger.warning(f"No resampling applied (method='none')")        
+        logger.warning(f"No resampling applied (method='none')")
         return X, y
 
     if method == "smote" and encoding != "onehot":

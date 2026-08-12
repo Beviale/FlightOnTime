@@ -138,7 +138,7 @@ def run(
             _download()
         _build(output_path)
     except Exception as e:
-        logger.error(f"An error occurred while creating the airport reference table: {e}")
+        logger.exception(f"An error occurred while creating the airport reference table: {e}")
         raise typer.Exit(code=1)
 
 
