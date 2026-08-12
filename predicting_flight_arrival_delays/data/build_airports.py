@@ -12,26 +12,12 @@ from predicting_flight_arrival_delays.config import (
     EXTERNAL_DATA_DIR,
     EXTERNAL_RAW_DATA_DIR,
     MASTER_CORD_PAGE,
+    T_MASTER_CORD_FILE_NAME,
+    REQUIRED_AIRPORTS_COLUMNS
 )
 from predicting_flight_arrival_delays.utils import safe_relative_path, to_pascal_case
 
 app = typer.Typer()
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-T_MASTER_CORD_FILE_NAME = "T_MASTER_CORD"
-
-REQUIRED_COLUMNS = [
-    "AIRPORT_ID",
-    "AIRPORT",
-    "LATITUDE",
-    "LONGITUDE",
-    "AIRPORT_IS_LATEST",
-    "AIRPORT_COUNTRY_CODE_ISO",
-]
-
 
 # ---------------------------------------------------------------------------
 # Download
@@ -77,7 +63,7 @@ def _build(output_path: Path) -> None:
 
     Reads the raw T_MASTER_CORD CSV, filters for active US airports, converts
     coordinates to numeric values, calculates timezones via coordinates,
-    restricts columns to REQUIRED_COLUMNS + TIMEZONE, and renames columns to PascalCase.
+    restricts columns to REQUIRED_AIRPORTS_COLUMNS + TIMEZONE, and renames columns to PascalCase.
 
     Args:
         output_path (Path): File path where the processed CSV table will be saved.
@@ -88,7 +74,7 @@ def _build(output_path: Path) -> None:
 
     cord = pd.read_csv(csv_path)
 
-    missing_cols = [c for c in REQUIRED_COLUMNS if c not in cord.columns]
+    missing_cols = [c for c in REQUIRED_AIRPORTS_COLUMNS if c not in cord.columns]
     if missing_cols:
         raise SystemExit(f"Missing columns in {csv_path.name}: {missing_cols}")
 
