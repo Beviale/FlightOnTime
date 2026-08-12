@@ -18,6 +18,7 @@ RAW_DATA_DIR,
 WEATHER_COLUMNS,
 SEED,
 )
+FULL_LEAD_COVERAGE_START = pd.Timestamp(FULL_LEAD_COVERAGE_START)
 from predicting_flight_arrival_delays.data.weather import load_weather
 app = typer.Typer()
 
@@ -279,7 +280,7 @@ def prepare_flights(
         df.to_parquet(output_path, index=False)
         logger.success(f"Saved {len(df)} flights to {output_path}")
     except Exception as e:
-        logger.error(f"An error occurred while preprocess the flights: {e}")
+        logger.exception(f"An error occurred while preprocess the flights: {e}")
         raise typer.Exit(code=1)
 
 @app.command()
@@ -303,7 +304,7 @@ def join_weather(
         df.to_parquet(output_path, index=False)
         logger.success(f"Saved {len(df)} flights with weather to {output_path}")
     except Exception as e:
-        logger.error(f"An error occurred while attaching the weather to the flights: {e}")
+        logger.exception(f"An error occurred while attaching the weather to the flights: {e}")
         raise typer.Exit(code=1)
 
 if __name__ == "__main__":

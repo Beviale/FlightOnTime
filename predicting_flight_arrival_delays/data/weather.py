@@ -243,7 +243,7 @@ def run(
             sleep=sleep,
         )
     except Exception as e:
-        logger.error(f"An error occurred while setting up the download weather process: {e}")
+        logger.exception(f"An error occurred while setting up the download weather process: {e}")
         raise typer.Exit(code=1)
 
 if __name__ == "__main__":

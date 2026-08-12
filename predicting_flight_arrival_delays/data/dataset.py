@@ -108,11 +108,8 @@ def download_bts_data(
             raise typer.Exit(code=1)
 
         logger.success(f"Dataset downloaded successfully to {RAW_DATA_DIR}.")
-
-    except typer.Exit:
-        raise
     except Exception as e:
-        logger.error(f"An error occurred while setting up the download process: {e}")
+        logger.exception(f"An error occurred while setting up the download process: {e}")
         raise typer.Exit(code=1)
 
 
