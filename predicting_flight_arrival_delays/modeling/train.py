@@ -53,19 +53,26 @@ def _load_hyperparams(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
 HYPERPARAMS = _load_hyperparams(HYPERPARAMS_PATH)
 
 
-def _build_model(algorithm: str, config: str) -> tuple[BaseEstimator, int | None]:
+def _build_model(algorithm: str, config: str, json_config: dict | None = None) -> tuple[BaseEstimator, int | None]:
     """Instantiate an unfitted, uncalibrated estimator for the given algorithm/config.
 
     Args:
         algorithm: Key identifying the algorithm in BUILDERS.
-        config: Key identifying the hyperparameter configuration in HYPERPARAMS.
+        config: Key identifying the hyperparameter configuration in HYPERPARAMS. Optional.
+        json_config: JSON configuration. Optional. If not None, overrides the config parameter.
+
+        Note: At least one of config or json_config must not be None.
 
     Returns:
         Tuple of:
             - An unfitted, uncalibrated scikit-learn compatible estimator.
             - The configured early_stopping_rounds, or None if absent/not lightgbm.
     """
-    params = dict(HYPERPARAMS[algorithm][config])
+    if json_config is None:
+        params = dict(HYPERPARAMS[algorithm][config])
+    else:
+        params = json_config
+   
     early_stopping_rounds = params.pop(EARLY_STOPPING_KEY, None)
     if algorithm != "lightgbm":
         early_stopping_rounds = None
@@ -73,13 +80,13 @@ def _build_model(algorithm: str, config: str) -> tuple[BaseEstimator, int | None
     model = BUILDERS[algorithm](**params)
     return model, early_stopping_rounds
 
-
 def train(
     X_fit: pd.DataFrame,
     y_fit: pd.Series,
     model: str,
     config: str,
     calibrate: bool,
+    json_config: dict | None = None,
     X_val: pd.DataFrame | None = None,
     y_val: pd.Series | None = None,
 ) -> BaseEstimator:
@@ -91,16 +98,16 @@ def train(
         model: Key identifying the algorithm in BUILDERS.
         config: Key identifying the hyperparameter configuration in HYPERPARAMS.
         calibrate: Whether to calibrate the fitted estimator with isotonic regression.
+        json_config: Complete hyperparameter dict. Optional.
         X_val: Validation features. Used for LightGBM early stopping, and as the
-            calibration set when calibrate=True. Optional.
+            calibration set when given. Optional.
         y_val: Validation target, aligned with X_val. Optional.
 
     Returns:
-        The fitted estimator. If calibrate=False, this is the plain model. If
-        calibrate=True, it is wrapped so its predictions come out calibrated
-        (CalibratedClassifierCV around a frozen copy of the model)
+        The fitted estimator. Bare if calibrate=False; a CalibratedClassifierCV
+        otherwise (fit on X_val if given, via internal 5-fold CV if not).
     """
-    estimator, early_stopping_rounds = _build_model(model, config)
+    estimator, early_stopping_rounds = _build_model(model, config, json_config)
 
     fit_kwargs: dict[str, Any] = {}
     if model == "lightgbm" and early_stopping_rounds is not None and X_val is not None and y_val is not None:
@@ -111,20 +118,22 @@ def train(
             log_evaluation(period=0),
         ]
 
-    estimator.fit(X_fit, y_fit, **fit_kwargs)
-
     if not calibrate:
+        estimator.fit(X_fit, y_fit, **fit_kwargs)
         return estimator
 
-    if X_val is None or y_val is None:
-        logger.error(
-            "calibrate=True but no X_val/y_val given. Pass a"
-            "validation set to calibrate on unseen data."
-        )
-        return estimator
+    if X_val is not None and y_val is not None:
+        estimator.fit(X_fit, y_fit, **fit_kwargs)
+        calibrated = CalibratedClassifierCV(FrozenEstimator(estimator), method="isotonic")
+        calibrated.fit(X_val, y_val)
+        return calibrated
 
-    calibrated = CalibratedClassifierCV(FrozenEstimator(estimator), method="isotonic")
-    calibrated.fit(X_val, y_val)
+    logger.info(
+        "calibrate=True but no X_val/y_val given: calibrating via 5-fold internal "
+        "cross-validation on the full training set instead."
+    )
+    calibrated = CalibratedClassifierCV(estimator, method="isotonic", cv=5)
+    calibrated.fit(X_fit, y_fit)
     return calibrated
 
 
