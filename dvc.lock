@@ -1,0 +1,55 @@
+schema: '2.0'
+stages:
+  download_bts:
+    cmd: uv run predicting_flight_arrival_delays/data/dataset.py
+    deps:
+    - path: predicting_flight_arrival_delays/data/dataset.py
+      hash: md5
+      md5: 77582110fbb503fe3a53b35db1d4c6d2
+      size: 4491
+    params:
+      predicting_flight_arrival_delays/config.py:
+        BTS_BASE_URL: 
+          https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{year}_{month}.zip
+        YEARS_DATA:
+        - 2025
+        - 2026
+    outs:
+    - path: data/raw
+      hash: md5
+      md5: 5166241c3631ba12e00b76d8eab3fbb4.dir
+      size: 4470107627
+      nfiles: 18
+  build_airports:
+    cmd: uv run predicting_flight_arrival_delays/data/build_airports.py 
+      --force_download
+    deps:
+    - path: predicting_flight_arrival_delays/data/build_airports.py
+      hash: md5
+      md5: e5c94c2ae9df553a86cfa7db393f71bb
+      size: 5528
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: a9ab0c2e0f0716e79582583c7c3e541f
+      size: 7187
+    params:
+      predicting_flight_arrival_delays/config.py:
+        MASTER_CORD_PAGE: 
+          https://transtats.bts.gov/DL_SelectFields.aspx?gnoyr_VQ=FLL&QO_fu146_anzr=N8vn6v10
+        REQUIRED_AIRPORTS_COLUMNS:
+        - AIRPORT_ID
+        - AIRPORT
+        - LATITUDE
+        - LONGITUDE
+        - AIRPORT_IS_LATEST
+        - AIRPORT_COUNTRY_CODE_ISO
+        T_MASTER_CORD_FILE_NAME: T_MASTER_CORD
+    outs:
+    - path: data/external/airports.csv
+      hash: md5
+      md5: 0369b22a1e368fbd94c45cd0c83b3971
+      size: 155210
+    - path: data/external/raw/T_MASTER_CORD.csv
+      hash: md5
+      md5: 23b06f17049f557fc0024ee583b4cb4a
+      size: 4044619
