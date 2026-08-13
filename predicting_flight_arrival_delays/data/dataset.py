@@ -110,7 +110,7 @@ def download_bts_data(
         logger.success(f"Dataset downloaded successfully to {RAW_DATA_DIR}.")
     except Exception as e:
         logger.exception(f"An error occurred while setting up the download process: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 if __name__ == "__main__":

@@ -177,7 +177,7 @@ def split_folds(
         logger.success(f"All the folds have been created and saved at {output_dir}")
     except Exception as e:
         logger.error(f"An error occurred while creating the folds: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 
@@ -240,7 +240,7 @@ def split_final_folds(
         logger.success(f"Final train/validation splits written to {output_dir}")
     except Exception as e:
         logger.error(f"An error occurred while creating the folds: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 if __name__ == "__main__":
     app()

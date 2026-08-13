@@ -281,7 +281,7 @@ def prepare_flights(
         logger.success(f"Saved {len(df)} flights to {output_path}")
     except Exception as e:
         logger.exception(f"An error occurred while preprocess the flights: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 @app.command()
 def join_weather(
@@ -305,7 +305,7 @@ def join_weather(
         logger.success(f"Saved {len(df)} flights with weather to {output_path}")
     except Exception as e:
         logger.exception(f"An error occurred while attaching the weather to the flights: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 if __name__ == "__main__":
     app()

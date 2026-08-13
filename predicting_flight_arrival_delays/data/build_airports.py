@@ -139,7 +139,7 @@ def run(
         _build(output_path)
     except Exception as e:
         logger.exception(f"An error occurred while creating the airport reference table: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 if __name__ == "__main__":
