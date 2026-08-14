@@ -98,7 +98,7 @@ Article 95 encourages the voluntary application of requirements designed for hig
 
 Classification tracks intended purpose, so revisit this if any of the following happens:
 
-* output goes to an airline, airport, or air navigation provider **for operational decisions** rather than passenger information;
+* output goes to an airline, airport, or air navigation provider **for critical operational decisions**;
 * the system gets integrated into an Annex I product;
 * output starts determining **access to, eligibility for, or pricing of** a service, e.g. compensation or insurance;
 * passenger-level features are introduced;
