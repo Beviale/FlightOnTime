@@ -25,7 +25,7 @@ stages:
       - data/external/raw/T_MASTER_CORD.csv
       - data/external/airports.csv
 
-    ---FINO QUI DVC COMMIT
+    #---FINO QUI DVC COMMIT
 
   prepare_flights:
     cmd: uv run predicting_flight_arrival_delays/data/preprocess.py prepare-flights
