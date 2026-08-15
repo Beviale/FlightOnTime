@@ -108,7 +108,7 @@ def split_folds(
         help="Comma-separated dates where each walk-forward test window starts",
     ),
     val_frac: float = typer.Option(
-        0.0,
+        0.2,
         help="Fraction of training data to reserve for validation split (0.0 disables validation)",
     ),
 ) -> None:
@@ -176,7 +176,7 @@ def split_folds(
 
         logger.success(f"All the folds have been created and saved at {output_dir}")
     except Exception as e:
-        logger.error(f"An error occurred while creating the folds: {e}")
+        logger.exception(f"An error occurred while creating the folds: {e}")
         raise typer.Exit(code=1) from None
 
 
@@ -239,7 +239,7 @@ def split_final_folds(
     
         logger.success(f"Final train/validation splits written to {output_dir}")
     except Exception as e:
-        logger.error(f"An error occurred while creating the folds: {e}")
+        logger.exception(f"An error occurred while creating the folds: {e}")
         raise typer.Exit(code=1) from None
 
 if __name__ == "__main__":

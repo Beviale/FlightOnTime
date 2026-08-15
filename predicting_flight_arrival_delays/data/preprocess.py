@@ -133,9 +133,27 @@ def add_holiday_features(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+# ---------------------------------------------------------------------------
+# 4. Aircraft Schedule Features
+# ---------------------------------------------------------------------------
+def add_aircraft_schedule_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add each flight's position in its aircraft's schedule for that day.
+
+    Args:
+        df: Flights with Tail_Number, DATE_COLUMN and CRSDepTime.
+
+    Returns:
+        The same DataFrame with "AircraftDailyLegs" and "LegPosition" added.
+    """
+    df = df.sort_values(["Tail_Number", DATE_COLUMN, "CRSDepTime"])
+    grouped = df.groupby(["Tail_Number", DATE_COLUMN])
+    df["AircraftDailyLegs"] = grouped["Tail_Number"].transform("count")
+    df["LegPosition"] = grouped.cumcount() + 1
+    return df
+
 
 # ---------------------------------------------------------------------------
-# 4. Lead time assignment
+# 5. Lead time assignment
 # ---------------------------------------------------------------------------
 
 def assign_lead_days(df: pd.DataFrame, seed: int = SEED) -> pd.DataFrame:
@@ -167,7 +185,7 @@ def assign_lead_days(df: pd.DataFrame, seed: int = SEED) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 5. UTC conversion
+# 6. UTC conversion
 # ---------------------------------------------------------------------------
 
 def add_utc_columns(df: pd.DataFrame, airports: pd.DataFrame) -> pd.DataFrame:
@@ -273,6 +291,7 @@ def prepare_flights(
         df = pd.concat([load_and_clean(p) for p in paths], ignore_index=True)
         df = add_temporal_features(df)
         df = add_holiday_features(df)
+        df = add_aircraft_schedule_features(df) 
         df = assign_lead_days(df)
         df = add_utc_columns(df, airports)
 
