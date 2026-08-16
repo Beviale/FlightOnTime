@@ -86,7 +86,7 @@ KEEP_COLUMNS = [
     "FlightDate", "CRSDepTime", "CRSArrTime", "CRSElapsedTime",
     "Distance", "DistanceGroup",
     "DayofMonth", "DayOfWeek", "Month",
-    "OriginState", "DestState", "OriginCityName", "DestCityName",
+    "OriginState", "DestState", "OriginCityName", "DestCityName", "Tail_Number"
 ]
 TARGET = "IsDelayed"
 # Columns needed by the pipeline but never given to the model.
@@ -98,6 +98,7 @@ SERVICE_COLUMNS = [
     "ArrUtcHour",
     "DepHour",    
     "ArrHour",
+    "Tail_Number"
 ]
 DATE_COLUMN = "FlightDate"
 
@@ -116,7 +117,7 @@ ENCODING = {
     "lightgbm": "native",
 }
 METRICS_DIR = PROJ_ROOT / "metrics"
-HYPERPARAMS_PATH = Path(__file__).resolve().parent / "hyperparams.yaml"
+HYPERPARAMS_PATH = Path(__file__).resolve().parent / "modeling" / "hyperparams.yaml"
 RESAMPLE_METHODS = ("none", "undersample", "oversample", "smote")
 # ------END Training and Model Selection--------
 

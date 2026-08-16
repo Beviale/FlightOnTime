@@ -177,6 +177,24 @@ def train_and_evaluate(
             X_fit, y_fit, model, config, calibrate, X_val=X_val, y_val=y_val
         )
 
+
+        if index == 0:
+            raw_estimator = estimator.estimator if hasattr(estimator, "estimator") else estimator
+            if hasattr(raw_estimator, "booster_"):  # lightgbm
+                importances = pd.Series(
+                    raw_estimator.booster_.feature_importance(importance_type="gain"),
+                    index=X_fit.columns,
+                ).sort_values(ascending=False)
+            elif hasattr(raw_estimator, "feature_importances_"):  
+                importances = pd.Series(
+                    raw_estimator.feature_importances_, index=X_fit.columns
+                ).sort_values(ascending=False)
+            else:
+                importances = None
+
+            if importances is not None:
+                logger.info(f"Top feature importances for {variant}/{model}:\n{importances}")
+
         val_prob = estimator.predict_proba(X_val)[:, 1]
         threshold = choose_threshold(y_val, val_prob)
 
