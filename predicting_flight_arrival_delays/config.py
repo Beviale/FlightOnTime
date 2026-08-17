@@ -59,8 +59,6 @@ WEATHER_COLUMNS = [
     "WindGusts10m",
     "WeatherCode",
 ]
-WEATHER_COLUMNS_ORIGIN = [col + "Origin" for col in WEATHER_COLUMNS]
-WEATHER_COLUMNS_DESTINATION = [col + "Dest" for col in WEATHER_COLUMNS]
 WEATHER_VARS = [
     "temperature_2m",
     "precipitation",
@@ -75,7 +73,7 @@ FULL_LEAD_COVERAGE_START = "2024-12-01"
 
 #Variants
 NOWEATHER_DROP = WEATHER_COLUMNS_ORIGIN + WEATHER_COLUMNS_DESTINATION + ["LeadDays"]
-CARRIER_COLUMNS = ["Reporting_Airline", "Flight_Number_Reporting_Airline"]
+CARRIER_COLUMNS = ["ReportingAirline", "FlightNumberReportingAirline", "OriginCarrier", "DestCarrier"]
 
 
 # BTS columns to keep
@@ -91,14 +89,18 @@ KEEP_COLUMNS = [
 TARGET = "IsDelayed"
 # Columns needed by the pipeline but never given to the model.
 SERVICE_COLUMNS = [
-    "FlightDate",      
     "CRSDepTime",      
     "CRSArrTime",       
     "DepUtcHour",     
     "ArrUtcHour",
     "DepHour",    
     "ArrHour",
-    "Tail_Number"
+    "TailNumber"
+]
+SERVICE_COLUMNS2 = [
+    "FlightDate",
+    "OriginCarrier", 
+    "DestCarrier"
 ]
 DATE_COLUMN = "FlightDate"
 

@@ -53,3 +53,176 @@ stages:
       hash: md5
       md5: 23b06f17049f557fc0024ee583b4cb4a
       size: 4044619
+  prepare_flights:
+    cmd: uv run predicting_flight_arrival_delays/data/preprocess.py 
+      prepare-flights
+    deps:
+    - path: data/external/airports.csv
+      hash: md5
+      md5: 0369b22a1e368fbd94c45cd0c83b3971
+      size: 155210
+    - path: data/raw
+      hash: md5
+      md5: 62714a542a6d12a99a5da79650d6fe76.dir
+      size: 4470107627
+      nfiles: 17
+    - path: predicting_flight_arrival_delays/data/preprocess.py
+      hash: md5
+      md5: 4005fbabab1d3019a5a7ab88f2a13fbe
+      size: 15242
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: c3ab12aef97abd327aa9574323639e6b
+      size: 7294
+    params:
+      predicting_flight_arrival_delays/config.py:
+        DATE_COLUMN: FlightDate
+        FULL_LEAD_COVERAGE_START: '2024-12-01'
+        KEEP_COLUMNS:
+        - OriginAirportID
+        - DestAirportID
+        - Origin
+        - Dest
+        - Reporting_Airline
+        - Flight_Number_Reporting_Airline
+        - FlightDate
+        - CRSDepTime
+        - CRSArrTime
+        - CRSElapsedTime
+        - Distance
+        - DistanceGroup
+        - DayofMonth
+        - DayOfWeek
+        - Month
+        - OriginState
+        - DestState
+        - OriginCityName
+        - DestCityName
+        - Tail_Number
+        MAX_LEAD_DAYS: 5
+        SEED: 42
+    outs:
+    - path: data/interim/flights_features.parquet
+      hash: md5
+      md5: 808d95d39e9d9a2b2d4fe2a0dfad4f37
+      size: 299169887
+  download_weather:
+    cmd: uv run predicting_flight_arrival_delays/data/weather.py
+    deps:
+    - path: data/external/airports.csv
+      hash: md5
+      md5: 0369b22a1e368fbd94c45cd0c83b3971
+      size: 155210
+    - path: data/interim/flights_features.parquet
+      hash: md5
+      md5: 808d95d39e9d9a2b2d4fe2a0dfad4f37
+      size: 299169887
+    - path: predicting_flight_arrival_delays/data/weather.py
+      hash: md5
+      md5: 4f4b8b436b298066bd3cbb6f78229eb4
+      size: 9478
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: c3ab12aef97abd327aa9574323639e6b
+      size: 7294
+    params:
+      predicting_flight_arrival_delays/config.py:
+        HISTORICAL_FORECAST_URL: 
+          https://historical-forecast-api.open-meteo.com/v1/forecast
+        MAX_LEAD_DAYS: 5
+        PREVIOUS_RUNS_URL: https://previous-runs-api.open-meteo.com/v1/forecast
+        WEATHER_MODEL: gfs_seamless
+        WEATHER_VARS:
+        - temperature_2m
+        - precipitation
+        - snowfall
+        - wind_speed_10m
+        - wind_gusts_10m
+        - weather_code
+    outs:
+    - path: data/external/weather
+      hash: md5
+      md5: eaa014ba3ba2218bb023b1efb995d2ac.dir
+      size: 482261701
+      nfiles: 2848
+  join_weather:
+    cmd: uv run predicting_flight_arrival_delays/data/preprocess.py join-weather
+    deps:
+    - path: data/external/weather
+      hash: md5
+      md5: eaa014ba3ba2218bb023b1efb995d2ac.dir
+      size: 482261701
+      nfiles: 2848
+    - path: data/interim/flights_features.parquet
+      hash: md5
+      md5: 808d95d39e9d9a2b2d4fe2a0dfad4f37
+      size: 299169887
+    - path: predicting_flight_arrival_delays/data/preprocess.py
+      hash: md5
+      md5: 4005fbabab1d3019a5a7ab88f2a13fbe
+      size: 15242
+    - path: predicting_flight_arrival_delays/data/weather.py
+      hash: md5
+      md5: 4f4b8b436b298066bd3cbb6f78229eb4
+      size: 9478
+    params:
+      predicting_flight_arrival_delays/config.py:
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: data/interim/flights_preprocessed.parquet
+      hash: md5
+      md5: a81fb0d07683cd137b8bef18ff73f6ab
+      size: 386716736
+  split_data_cv:
+    cmd: uv run predicting_flight_arrival_delays/data/split_data.py split-folds
+    deps:
+    - path: data/interim/flights_preprocessed.parquet
+      hash: md5
+      md5: a81fb0d07683cd137b8bef18ff73f6ab
+      size: 386716736
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 6c7fb091ca0a2c0e36898f7316d6597e
+      size: 4848
+    - path: predicting_flight_arrival_delays/data/split_data.py
+      hash: md5
+      md5: 1729d1afaed662f867c5b13e4a05ea6b
+      size: 9648
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: c3ab12aef97abd327aa9574323639e6b
+      size: 7294
+    params:
+      predicting_flight_arrival_delays/config.py:
+        DATE_COLUMN: FlightDate
+        PRODUCTION_VARIANTS:
+        - all
+        - noweather
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: data/processed/selection
+      hash: md5
+      md5: 7470cdb0919324f9a118aba02aace412.dir
+      size: 1773127961
+      nfiles: 27

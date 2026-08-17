@@ -1,5 +1,4 @@
 stages:
-
   download_bts:
     cmd: uv run predicting_flight_arrival_delays/data/dataset.py
     deps:
@@ -25,23 +24,19 @@ stages:
       - data/external/raw/T_MASTER_CORD.csv
       - data/external/airports.csv
 
-    #---FINO QUI DVC COMMIT
-
   prepare_flights:
     cmd: uv run predicting_flight_arrival_delays/data/preprocess.py prepare-flights
     deps:
       - predicting_flight_arrival_delays/data/preprocess.py
       - data/raw
       - data/external/airports.csv
+      - predicting_flight_arrival_delays/utils.py
     params:
       - predicting_flight_arrival_delays/config.py:
-          - EXTERNAL_DATA_DIR
           - DATE_COLUMN
-          - INTERIM_DATA_DIR
           - MAX_LEAD_DAYS
           - KEEP_COLUMNS
           - FULL_LEAD_COVERAGE_START
-          - RAW_DATA_DIR,
           - SEED
     outs:
       - data/interim/flights_features.parquet
@@ -56,11 +51,9 @@ stages:
     params:
       - predicting_flight_arrival_delays/config.py:
           - HISTORICAL_FORECAST_URL
-          - INTERIM_DATA_DIR
           - PREVIOUS_RUNS_URL
           - WEATHER_MODEL
           - WEATHER_VARS
-          - EXTERNAL_DATA_DIR
           - MAX_LEAD_DAYS
     outs:
       - data/external/weather
@@ -74,14 +67,12 @@ stages:
       - data/external/weather
     params:
       - predicting_flight_arrival_delays/config.py:
-          - EXTERNAL_DATA_DIR
-          - INTERIM_DATA_DIR
           - WEATHER_COLUMNS
     outs:
       - data/interim/flights_preprocessed.parquet
 
   split_data_cv:
-    cmd: uv run predicting_flight_arrival_delays/data/split_data.py split-folds --val_frac 0.2
+    cmd: uv run predicting_flight_arrival_delays/data/split_data.py split-folds
     deps:
       - predicting_flight_arrival_delays/data/split_data.py
       - predicting_flight_arrival_delays/data/features.py
@@ -90,14 +81,14 @@ stages:
     params:
       - predicting_flight_arrival_delays/config.py:
           - DATE_COLUMN
-          - INTERIM_DATA_DIR
-          - PROCESSED_DATA_DIR
+          - PRODUCTION_VARIANTS
           - SERVICE_COLUMNS
           - TARGET
-          - NOWEATHER_DROP
-          - CARRIER_COLUMNS
+          - WEATHER_COLUMNS
     outs:
       - data/processed/selection
+
+    #---FINO QUI DVC COMMIT
 
   train_evaluate_save_metrics:
     foreach:

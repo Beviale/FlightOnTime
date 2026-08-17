@@ -63,7 +63,8 @@ def make_folds(df: pd.DataFrame, cut_points: str) -> list[Fold]:
     Raises:
         ValueError: If any cut point falls outside the minimum and maximum date range of the dataset.
     """
-    start, end = df[DATE_COLUMN].min(), df[DATE_COLUMN].max() + pd.Timedelta(days=1)
+    dates = pd.to_datetime(df[DATE_COLUMN]).astype("datetime64[ns]")
+    start, end = dates.min(), dates.max() + pd.DateOffset(days=1)
 
     cuts = [pd.Timestamp(c.strip()) for c in cut_points.split(",")]
     invalid = [c for c in cuts if not (start < c < end)]
@@ -122,13 +123,14 @@ def split_folds(
         val_frac (float): Fraction of training window to carve out for validation.
     """
     try:
-        df = pd.read_parquet(input_path)
-        df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN])
-
-        folds = make_folds(df, cut_points=cut_points)
+        complete_df = pd.read_parquet(input_path)
+        complete_df[DATE_COLUMN] = pd.to_datetime(complete_df[DATE_COLUMN]).astype("datetime64[ns]")
+        complete_df = complete_df.sort_values(DATE_COLUMN)
 
         for variant in variants:
             logger.info(f"Processing variant '{variant}'...")
+            df = select_features_variant(complete_df.copy(), variant)
+            folds = make_folds(df, cut_points=cut_points)
 
             for fold in folds:
                 fold_suffix = "with_val" if val_frac > 0 else "without_val"
@@ -148,11 +150,8 @@ def split_folds(
                 validation_df = None
                 if val_frac > 0:
                     cutoff = train_df[DATE_COLUMN].quantile(1 - val_frac)
-                    validation_df = select_features_variant(train_df[train_df[DATE_COLUMN] > cutoff], variant)
+                    validation_df = train_df[train_df[DATE_COLUMN] > cutoff]
                     train_df = train_df[train_df[DATE_COLUMN] <= cutoff].copy()
-
-                train_df = select_features_variant(train_df, variant)
-                test_df = select_features_variant(test_df, variant)
 
                 train_path = fold_dir / "train.parquet"
                 test_path = fold_dir / "test.parquet"
@@ -209,32 +208,31 @@ def split_final_folds(
         val_frac (float): Fraction of data to reserve for validation split.
     """
     try:
-        df = pd.read_parquet(input_path)
-        df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN])
-        df = df.sort_values(DATE_COLUMN)
-    
-        cutoff = df[DATE_COLUMN].quantile(1 - val_frac)
-        train_df = df[df[DATE_COLUMN] <= cutoff]
-        validation_df = df[df[DATE_COLUMN] > cutoff]
+        complete_df = pd.read_parquet(input_path)
+        complete_df[DATE_COLUMN] = pd.to_datetime(complete_df[DATE_COLUMN]).astype("datetime64[ns]")
+        complete_df = complete_df.sort_values(DATE_COLUMN)
+
     
         for variant in variants:
             logger.info(f"Processing variant '{variant}'...")
+            df = select_features_variant(complete_df.copy(), variant)
+
+            cutoff = df[DATE_COLUMN].quantile(1 - val_frac)
+            train_df = df[df[DATE_COLUMN] <= cutoff]
+            validation_df = df[df[DATE_COLUMN] > cutoff]
     
             variant_dir = output_dir / variant
             variant_dir.mkdir(parents=True, exist_ok=True)
-    
-            variant_train_df = select_features_variant(train_df, variant)
-            variant_validation_df = select_features_variant(validation_df, variant)
-    
+        
             train_path = variant_dir / "train.parquet"
             validation_path = variant_dir / "validation.parquet"
     
-            variant_train_df.to_parquet(train_path, index=False)
-            variant_validation_df.to_parquet(validation_path, index=False)
+            train_df.to_parquet(train_path, index=False)
+            validation_df.to_parquet(validation_path, index=False)
     
             logger.info(
-                f"{variant}: train={len(variant_train_df)} rows -> {safe_relative_path(train_path)} | "
-                f"val={len(variant_validation_df)} rows -> {safe_relative_path(validation_path)}"
+                f"{variant}: train={len(train_df)} rows -> {safe_relative_path(train_path)} | "
+                f"val={len(validation_df)} rows -> {safe_relative_path(validation_path)}"
             )
     
         logger.success(f"Final train/validation splits written to {output_dir}")
