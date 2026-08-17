@@ -20,6 +20,8 @@ SEED,
 )
 FULL_LEAD_COVERAGE_START = pd.Timestamp(FULL_LEAD_COVERAGE_START)
 from predicting_flight_arrival_delays.data.weather import load_weather
+from predicting_flight_arrival_delays.utils import to_pascal_case
+
 app = typer.Typer()
 
 # ---------------------------------------------------------------------------
@@ -100,10 +102,9 @@ def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
         df: Flights.
 
     Returns:
-        The same DataFrame with "IsWeekend", "DepHour". "DepTimeDecimal", "ArrHour", and "ArrTimeDecimal" added.
+        The same DataFrame with "DepHour", "DepTimeDecimal", "ArrHour", and "ArrTimeDecimal" added.
     """
     df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN])
-    df["IsWeekend"] = df["DayOfWeek"].isin([6, 7]).astype(int)
 
     for time_col, prefix in [("CRSDepTime", "Dep"), ("CRSArrTime", "Arr")]:
         raw = df[time_col].replace(2400, 0)
@@ -161,14 +162,14 @@ def add_aircraft_schedule_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add each flight's position in its aircraft's schedule for that day.
 
     Args:
-        df: Flights with Tail_Number, DATE_COLUMN and CRSDepTime.
+        df: Flights with TailNumber, DATE_COLUMN and CRSDepTime.
 
     Returns:
         The same DataFrame with "AircraftDailyLegs" and "LegPosition" added.
     """
-    df = df.sort_values(["Tail_Number", DATE_COLUMN, "CRSDepTime"])
-    grouped = df.groupby(["Tail_Number", DATE_COLUMN])
-    df["AircraftDailyLegs"] = grouped["Tail_Number"].transform("count")
+    df = df.sort_values(["TailNumber", DATE_COLUMN, "CRSDepTime"])
+    grouped = df.groupby(["TailNumber", DATE_COLUMN])
+    df["AircraftDailyLegs"] = grouped["TailNumber"].transform("count")
     df["LegPosition"] = grouped.cumcount() + 1
     return df
 
@@ -261,16 +262,32 @@ def add_turnaround_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add each flight's scheduled turnaround time since its aircraft's previous leg.
 
     Args:
-        df: Flights with Tail_Number, DepUtcHour and ArrUtcHour.
+        df: Flights with TailNumber, DepUtcHour and ArrUtcHour.
 
     Returns:
         The same DataFrame with "ScheduledTurnaround" added (minutes; NaN
         only for an aircraft's first-ever appearance in the dataset, left to
         the Transformer's median imputation).
     """
-    df = df.sort_values(["Tail_Number", "DepUtcHour"])
-    prev_arr = df.groupby("Tail_Number")["ArrUtcHour"].shift(1)
+    df = df.sort_values(["TailNumber", "DepUtcHour"])
+    prev_arr = df.groupby("TailNumber")["ArrUtcHour"].shift(1)
     df["ScheduledTurnaround"] = (df["DepUtcHour"] - prev_arr).dt.total_seconds() / 60
+    return df
+
+# ---------------------------------------------------------------------------
+# 9. Carrier-airport interaction features
+# ---------------------------------------------------------------------------
+def add_carrier_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add each flight's airport-carrier combination, for historical delay rates.
+
+    Args:
+        df: Flights with Origin, Dest and ReportingAirline.
+
+    Returns:
+        The same DataFrame with "OriginCarrier" and "DestCarrier" added.
+    """
+    df["OriginCarrier"] = df["Origin"] + df["ReportingAirline"]
+    df["DestCarrier"] = df["Dest"] + df["ReportingAirline"]
     return df
 
 
@@ -304,6 +321,11 @@ def join_weather_to_flights(flights: pd.DataFrame, weather_dir: Path) -> pd.Data
         ).drop(columns=["AirportId", "Time"])
 
         del side
+
+    for col in ["WeatherCodeOrigin", "WeatherCodeDest"]:
+        if col in flights.columns:
+            flights[col] = flights[col].astype("Int64").astype(str)
+            
     return flights
 
 
@@ -317,7 +339,7 @@ def prepare_flights(
     airports_path: Path = typer.Option(EXTERNAL_DATA_DIR / "airports.csv"),
     output_path: Path = typer.Option(INTERIM_DATA_DIR / "flights_features.parquet"),
 ):
-    """Clean the flights and build the calendar, schedule and holiday features.
+    """Clean the flights and build the carrier, calendar, schedule, and holiday features.
 
     Args:
         bts_path: A single BTS CSV, or a directory searched recursively for CSVs.
@@ -335,6 +357,7 @@ def prepare_flights(
             [pd.read_csv(p, usecols=lambda c: c in needed) for p in paths],
             ignore_index=True,
         )        
+        df.columns = [to_pascal_case(c) for c in df.columns]
         df = add_congestion_features(df)  
         df = load_and_clean(df)       
         df = add_temporal_features(df)
@@ -343,6 +366,7 @@ def prepare_flights(
         df = assign_lead_days(df)
         df = add_utc_columns(df, airports)
         df = add_turnaround_features(df) 
+        df = add_carrier_features(df)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(output_path, index=False)
