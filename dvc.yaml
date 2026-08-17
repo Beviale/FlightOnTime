@@ -88,44 +88,47 @@ stages:
     outs:
       - data/processed/selection
 
-    #---FINO QUI DVC COMMIT
-
   train_evaluate_save_metrics:
     foreach:
-      - { variant: all, model: logistic_regression, config: default, resample: undersample }
-      - { variant: all, model: logistic_regression, config: weak_l2, resample: undersample }
-      - { variant: all, model: logistic_regression, config: strong_l2, resample: undersample }
-      - { variant: all, model: random_forest, config: default, resample: undersample }
-      - { variant: all, model: random_forest, config: deep, resample: undersample }
-      - { variant: all, model: lightgbm, config: default, resample: undersample }
-      - { variant: all, model: lightgbm, config: fast, resample: undersample }
-      - { variant: all, model: lightgbm, config: deep, resample: undersample }
-      - { variant: all, model: lightgbm, config: regularised, resample: undersample }
-      - { variant: noweather, model: logistic_regression, config: default, resample: undersample }
-      - { variant: noweather, model: logistic_regression, config: weak_l2, resample: undersample }
-      - { variant: noweather, model: logistic_regression, config: strong_l2, resample: undersample }
-      - { variant: noweather, model: random_forest, config: default, resample: undersample }
-      - { variant: noweather, model: random_forest, config: deep, resample: undersample }
-      - { variant: noweather, model: lightgbm, config: default, resample: undersample }
-      - { variant: noweather, model: lightgbm, config: fast, resample: undersample }
-      - { variant: noweather, model: lightgbm, config: deep, resample: undersample }
-      - { variant: noweather, model: lightgbm, config: regularised, resample: undersample }
-      - { variant: nocarrier, model: logistic_regression, config: default, resample: undersample }
-      - { variant: nocarrier, model: logistic_regression, config: weak_l2, resample: undersample }
-      - { variant: nocarrier, model: logistic_regression, config: strong_l2, resample: undersample }
-      - { variant: nocarrier, model: random_forest, config: default, resample: undersample }
-      - { variant: nocarrier, model: random_forest, config: deep, resample: undersample }
-      - { variant: nocarrier, model: lightgbm, config: default, resample: undersample }
-      - { variant: nocarrier, model: lightgbm, config: fast, resample: undersample }
-      - { variant: nocarrier, model: lightgbm, config: deep, resample: undersample }
-      - { variant: nocarrier, model: lightgbm, config: regularised, resample: undersample }
+      - { variant: all, model: logistic_regression, config: default}
+      - { variant: all, model: logistic_regression, config: weak_l2}
+      - { variant: all, model: logistic_regression, config: strong_l2}
+      - { variant: all, model: logistic_regression, config: elasticnet}
+      - { variant: all, model: random_forest, config: default}
+      - { variant: all, model: random_forest, config: deep}
+      - { variant: all, model: random_forest, config: shallow}
+      - { variant: all, model: lightgbm, config: default}
+      - { variant: all, model: lightgbm, config: fast}
+      - { variant: all, model: lightgbm, config: deep}
+      - { variant: all, model: lightgbm, config: regularised}
+      - { variant: noweather, model: logistic_regression, config: default}
+      - { variant: noweather, model: logistic_regression, config: weak_l2}
+      - { variant: noweather, model: logistic_regression, config: strong_l2}
+      - { variant: noweather, model: logistic_regression, config: elasticnet}
+      - { variant: noweather, model: random_forest, config: default}
+      - { variant: noweather, model: random_forest, config: deep}
+      - { variant: noweather, model: random_forest, config: shallow}
+      - { variant: noweather, model: lightgbm, config: default}
+      - { variant: noweather, model: lightgbm, config: fast}
+      - { variant: noweather, model: lightgbm, config: deep}
+      - { variant: noweather, model: lightgbm, config: regularised}
+      - { variant: nocarrier, model: logistic_regression, config: default}
+      - { variant: nocarrier, model: logistic_regression, config: weak_l2}
+      - { variant: nocarrier, model: logistic_regression, config: strong_l2}
+      - { variant: nocarrier, model: logistic_regression, config: elasticnet}
+      - { variant: nocarrier, model: random_forest, config: default}
+      - { variant: nocarrier, model: random_forest, config: deep}
+      - { variant: nocarrier, model: random_forest, config: shallow}
+      - { variant: nocarrier, model: lightgbm, config: default}
+      - { variant: nocarrier, model: lightgbm, config: fast}
+      - { variant: nocarrier, model: lightgbm, config: deep}
+      - { variant: nocarrier, model: lightgbm, config: regularised}
     do:
       cmd: >-
         uv run predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
         --variant ${item.variant}
         --model ${item.model}
         --config ${item.config}
-        --resample ${item.resample}
       deps:
         - predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
         - predicting_flight_arrival_delays/modeling/train.py
@@ -138,11 +141,25 @@ stages:
       params:
         - predicting_flight_arrival_delays/config.py:
           - ENCODING
-          - METRICS_DIR
-          - PROCESSED_DATA_DIR
+          - RESAMPLE_METHODS
+          - WEATHER_COLUMNS
+          - SERVICE_COLUMNS
+          - TARGET
+          - SEED
+          - MIN_CATEGORY_COUNT
+          - CORRELATION_THRESHOLD
+          - CATEGORICAL_ASSOCIATION_THRESHOLD
+          - MIN_MUTUAL_INFO
+          - MI_SAMPLE_SIZE
+          - DATE_COLUMN
+          - SERVICE_COLUMNS2
+          - ENCODING
       metrics:
         - metrics/${item.variant}/${item.model}__${item.config}.json:
             cache: false
+
+  #---FINO QUI DVC COMMIT
+
 
   split_data_final:
     cmd: uv run predicting_flight_arrival_delays/data/split_data.py split-final-folds

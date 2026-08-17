@@ -17,7 +17,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.frozen import FrozenEstimator
 from sklearn.linear_model import LogisticRegression
 import dagshub
-from predicting_flight_arrival_delays.config import ENCODING, MODELS_DIR, HYPERPARAMS_PATH
+from predicting_flight_arrival_delays.config import ENCODING, MODELS_DIR, HYPERPARAMS_PATH, SEED
 from predicting_flight_arrival_delays.data.features import VARIANTS, build_xy
 from predicting_flight_arrival_delays.data.transform import Transformer, align_columns, encode_categoricals
 from predicting_flight_arrival_delays.utils import safe_relative_path, register_model_bundle
@@ -47,7 +47,12 @@ def _load_hyperparams(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
     if not path.exists():
         raise FileNotFoundError(f"No hyperparameters file found at {path}")
     with open(path) as f:
-        return yaml.safe_load(f)
+        hyperparams = yaml.safe_load(f)
+
+    for algorithm, configs in hyperparams.items():
+        for params in configs.values():
+            params["random_state"] = SEED
+    return hyperparams
 
 
 HYPERPARAMS = _load_hyperparams(HYPERPARAMS_PATH)

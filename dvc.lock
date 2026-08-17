@@ -17,8 +17,8 @@ stages:
     outs:
     - path: data/raw
       hash: md5
-      md5: 5166241c3631ba12e00b76d8eab3fbb4.dir
-      size: 4470107627
+      md5: ac820d65858427d816342cfe851b4ab4.dir
+      size: 4745384513
       nfiles: 18
   build_airports:
     cmd: uv run predicting_flight_arrival_delays/data/build_airports.py 
@@ -30,8 +30,8 @@ stages:
       size: 5528
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: a9ab0c2e0f0716e79582583c7c3e541f
-      size: 7187
+      md5: c3ab12aef97abd327aa9574323639e6b
+      size: 7294
     params:
       predicting_flight_arrival_delays/config.py:
         MASTER_CORD_PAGE: 
@@ -63,9 +63,9 @@ stages:
       size: 155210
     - path: data/raw
       hash: md5
-      md5: 62714a542a6d12a99a5da79650d6fe76.dir
-      size: 4470107627
-      nfiles: 17
+      md5: ac820d65858427d816342cfe851b4ab4.dir
+      size: 4745384513
+      nfiles: 18
     - path: predicting_flight_arrival_delays/data/preprocess.py
       hash: md5
       md5: 4005fbabab1d3019a5a7ab88f2a13fbe
@@ -104,8 +104,8 @@ stages:
     outs:
     - path: data/interim/flights_features.parquet
       hash: md5
-      md5: 808d95d39e9d9a2b2d4fe2a0dfad4f37
-      size: 299169887
+      md5: ae0e2722c77aed42d7c5217a29813daa
+      size: 317191287
   download_weather:
     cmd: uv run predicting_flight_arrival_delays/data/weather.py
     deps:
@@ -115,8 +115,8 @@ stages:
       size: 155210
     - path: data/interim/flights_features.parquet
       hash: md5
-      md5: 808d95d39e9d9a2b2d4fe2a0dfad4f37
-      size: 299169887
+      md5: ae0e2722c77aed42d7c5217a29813daa
+      size: 317191287
     - path: predicting_flight_arrival_delays/data/weather.py
       hash: md5
       md5: 4f4b8b436b298066bd3cbb6f78229eb4
@@ -142,21 +142,21 @@ stages:
     outs:
     - path: data/external/weather
       hash: md5
-      md5: eaa014ba3ba2218bb023b1efb995d2ac.dir
-      size: 482261701
-      nfiles: 2848
+      md5: a95bbd3332e9e6f2447857bcc4ce6d0d.dir
+      size: 484937352
+      nfiles: 2863
   join_weather:
     cmd: uv run predicting_flight_arrival_delays/data/preprocess.py join-weather
     deps:
     - path: data/external/weather
       hash: md5
-      md5: eaa014ba3ba2218bb023b1efb995d2ac.dir
-      size: 482261701
-      nfiles: 2848
+      md5: a95bbd3332e9e6f2447857bcc4ce6d0d.dir
+      size: 484937352
+      nfiles: 2863
     - path: data/interim/flights_features.parquet
       hash: md5
-      md5: 808d95d39e9d9a2b2d4fe2a0dfad4f37
-      size: 299169887
+      md5: ae0e2722c77aed42d7c5217a29813daa
+      size: 317191287
     - path: predicting_flight_arrival_delays/data/preprocess.py
       hash: md5
       md5: 4005fbabab1d3019a5a7ab88f2a13fbe
@@ -177,15 +177,15 @@ stages:
     outs:
     - path: data/interim/flights_preprocessed.parquet
       hash: md5
-      md5: a81fb0d07683cd137b8bef18ff73f6ab
-      size: 386716736
+      md5: 3a3ad622347847b894c70203dbff34c5
+      size: 405035598
   split_data_cv:
     cmd: uv run predicting_flight_arrival_delays/data/split_data.py split-folds
     deps:
     - path: data/interim/flights_preprocessed.parquet
       hash: md5
-      md5: a81fb0d07683cd137b8bef18ff73f6ab
-      size: 386716736
+      md5: 3a3ad622347847b894c70203dbff34c5
+      size: 405035598
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
       md5: 6c7fb091ca0a2c0e36898f7316d6597e
@@ -223,6 +223,6 @@ stages:
     outs:
     - path: data/processed/selection
       hash: md5
-      md5: 7470cdb0919324f9a118aba02aace412.dir
-      size: 1773127961
+      md5: 5d0ba9444367c48fe55ba19efc57f159.dir
+      size: 1787072486
       nfiles: 27

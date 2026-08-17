@@ -18,19 +18,16 @@ random_forest:
   default:
     n_estimators: 200
     min_samples_leaf: 20
-    random_state: 42
     n_jobs: -1
   deep:
     n_estimators: 300
     min_samples_leaf: 5
-    random_state: 42
     n_jobs: -1
   shallow:
     n_estimators: 300
     min_samples_leaf: 20
     max_depth: 10
     max_features: sqrt
-    random_state: 42
     n_jobs: -1
 
 lightgbm:
@@ -38,7 +35,6 @@ lightgbm:
     n_estimators: 300
     learning_rate: 0.05
     num_leaves: 63
-    random_state: 42
     verbose: -1
     n_jobs: -1
     early_stopping_rounds: 50
@@ -46,7 +42,6 @@ lightgbm:
     n_estimators: 200
     learning_rate: 0.1
     num_leaves: 31
-    random_state: 42
     verbose: -1
     n_jobs: -1
     early_stopping_rounds: 50
@@ -54,7 +49,6 @@ lightgbm:
     n_estimators: 500
     learning_rate: 0.03
     num_leaves: 127
-    random_state: 42
     verbose: -1
     n_jobs: -1
     early_stopping_rounds: 50
@@ -63,7 +57,6 @@ lightgbm:
     learning_rate: 0.05
     num_leaves: 63
     reg_lambda: 5.0
-    random_state: 42
     verbose: -1
     n_jobs: -1
     early_stopping_rounds: 50

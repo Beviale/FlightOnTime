@@ -71,11 +71,6 @@ MAX_LEAD_DAYS = 5 # Upper bound on how far ahead a forecast can be requested fro
 FULL_LEAD_COVERAGE_START = "2024-12-01"
 
 
-#Variants
-NOWEATHER_DROP = WEATHER_COLUMNS_ORIGIN + WEATHER_COLUMNS_DESTINATION + ["LeadDays"]
-CARRIER_COLUMNS = ["ReportingAirline", "FlightNumberReportingAirline", "OriginCarrier", "DestCarrier"]
-
-
 # BTS columns to keep
 KEEP_COLUMNS = [
     "OriginAirportID", "DestAirportID",
