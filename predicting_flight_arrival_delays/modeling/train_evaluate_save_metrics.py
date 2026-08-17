@@ -106,7 +106,7 @@ def prepare_fold(
     X_fit, y_fit = build_xy(train_df)
     X_test, y_test = build_xy(test_df)
 
-    transformer = Transformer().fit(X_fit)
+    transformer = Transformer().fit(X_fit, y_fit)
     X_fit = transformer.transform(X_fit)
     X_test = transformer.transform(X_test)
 

@@ -91,7 +91,7 @@ def _fit_transform_all(
     """
     X, y = build_xy(df)
 
-    transformer = Transformer(encoding=encoding).fit(X)
+    transformer = Transformer(encoding=encoding).fit(X, y)
     X = transformer.transform(X)
 
     transformer.select_features(X, y)

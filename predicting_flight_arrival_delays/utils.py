@@ -12,11 +12,15 @@ from mlflow.models import infer_signature
 
 
 def to_pascal_case(name: str) -> str:
-    """Convert a snake_case field name to PascalCase.
+    """Convert a field name to PascalCase, handling snake_case and mixed-case alike.
+    Args:
+        name: The field name to convert.
 
-    temperature_2m -> Temperature2m, wind_speed_10m -> WindSpeed10m
+    Returns:
+        The name in PascalCase.
     """
-    return "".join(part.capitalize() for part in name.split("_"))
+    parts = name.split("_")
+    return "".join(part[:1].upper() + part[1:] if part else "" for part in parts)
 
 
 
