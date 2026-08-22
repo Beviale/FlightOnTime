@@ -33,9 +33,7 @@ dependencies = [
     "pip",
     "playwright>=1.62.0",
     "pyarrow>=25.0.0",
-    "pytest",
     "python-dotenv",
-    "ruff",
     "scikit-learn",
     "seaborn>=0.13.2",
     "timezonefinder>=8.2.5",
@@ -60,4 +58,12 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["predicting_flight_arrival_delays"]
 force-sort-within-sections = true
+
+[dependency-groups]
+dev = [
+    "click<8.2",
+    "pynblint>=0.1.6",
+    "pytest>=9.1.1",
+    "ruff>=0.16.4",
+]
 
