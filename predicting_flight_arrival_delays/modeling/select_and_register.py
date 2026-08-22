@@ -5,7 +5,6 @@ production variant, refits it on the whole dataset and registers it.
 """
 
 import json
-import re
 from pathlib import Path
 
 import dagshub
@@ -14,6 +13,7 @@ import mlflow
 import pandas as pd
 import typer
 from loguru import logger
+from mlflow.data.pandas_dataset import from_pandas
 from sklearn.base import BaseEstimator
 
 from predicting_flight_arrival_delays.config import (
@@ -34,7 +34,7 @@ from predicting_flight_arrival_delays.modeling.train_evaluate_save_metrics impor
     choose_threshold,
     prepare_fold,
 )
-from predicting_flight_arrival_delays.utils import register_model_bundle, safe_relative_path
+from predicting_flight_arrival_delays.utils import register_model_bundle, safe_relative_path, get_dvc_data_hash, get_git_dirty
 
 app = typer.Typer()
 
@@ -111,7 +111,7 @@ def fit_final(
     config: str,
     resample: str,
     calibrate: bool = True,
-) -> tuple[BaseEstimator, Transformer, pd.DataFrame, float]:
+) -> tuple[BaseEstimator, Transformer, pd.DataFrame, pd.DataFrame, float]:
     """Refit the chosen configuration for deployment.
 
     Stage 1 fits on train.parquet and picks the operating threshold on validation.parquet.
@@ -125,8 +125,10 @@ def fit_final(
         calibrate: Whether to calibrate predicted probabilities.
 
     Returns:
-        Tuple of (final model, its transformer, the final fitted feature matrix, and
-        the operating threshold chosen in Stage 1).
+        Tuple of (final model, its transformer, the final fitted feature matrix,
+        the raw train+validation dataframe used to produce it - pre-Transformer,
+        as it corresponds directly to the DVC-tracked parquet files - and the
+        operating threshold chosen in Stage 1).
     """
     encoding = ENCODING[algorithm]
 
@@ -154,7 +156,7 @@ def fit_final(
     else:
         model = train_model(X_full, y_full, algorithm, config, calibrate)
 
-    return model, transformer, X_full, threshold
+    return model, transformer, X_full, full_df, threshold
 
 
 def register_winner(
@@ -183,9 +185,18 @@ def register_winner(
             debugging/inspection.
     """
     with mlflow.start_run(run_name=f"{variant}__final__{algorithm}"):
-        model, transformer, X, threshold = fit_final(
+        model, transformer, X, full_df, threshold = fit_final(
             variant, algorithm, config, resample, calibrate
         )
+
+        dataset = from_pandas(
+            full_df,
+            source=METRICS_DIR / variant,
+            name=f"{variant}_final_train",
+            digest= get_dvc_data_hash(METRICS_DIR / variant),
+        )
+        mlflow.log_input(dataset, context="training")
+        mlflow.set_tag("git_dirty", get_git_dirty())
 
         mlflow.log_params({
             "variant": variant,

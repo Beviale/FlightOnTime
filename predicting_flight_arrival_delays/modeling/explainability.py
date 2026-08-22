@@ -1,12 +1,9 @@
+"""Per-prediction explanations for the flight-delay classifiers."""
 from __future__ import annotations
-
 from pathlib import Path
 from typing import Any
-
 import matplotlib
-
 matplotlib.use("Agg")
-
 from loguru import logger
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,22 +12,12 @@ import shap
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.frozen import FrozenEstimator
 
-# Tree-based models explained via shap.TreeExplainer. "lightgbm" added here: the
-# original only listed random_forest/decision_tree, which silently fell through
-# to no explanation (implicit None return) for this project's main algorithm.
+# Tree-based models explained via shap.TreeExplainer.
 TREE_MODEL_TYPES = ("random_forest", "decision_tree", "lightgbm")
 
 
 def _unwrap_calibration(model: Any) -> Any:
     """Return the fitted base estimator, unwrapping calibration/freezing if present.
-
-    modeling/train.py wraps the fitted base estimator in
-    CalibratedClassifierCV(FrozenEstimator(base)) when calibrate=True. Neither
-    TreeExplainer nor raw model.coef_ access work on that wrapper directly.
-    Calibration is a monotonic rescaling of the output probability, so it does not
-    change which features drive a prediction or their relative ranking, only the
-    absolute probability scale -- explaining the pre-calibration model is
-    equivalent for this purpose.
 
     Args:
         model: A fitted estimator, possibly CalibratedClassifierCV(FrozenEstimator(base)).
@@ -52,8 +39,33 @@ def explain_prediction(
     model_type: str,
     top_k: int = 5,
 ):
-    """
-    Build a explanation for a single sample.
+    """Build a feature-level explanation for a single sample's prediction.
+
+    Uses coefficients for logistic regression, or SHAP TreeExplainer for
+    tree-based models (random forest, decision tree, lightgbm). Calibration
+    wrappers (CalibratedClassifierCV/FrozenEstimator) are unwrapped first, so
+    the explanation reflects the underlying base estimator. Only the first
+    row of X is explained.
+
+    Args:
+        model: A fitted estimator, possibly wrapped in
+            CalibratedClassifierCV(FrozenEstimator(base_estimator)).
+        X: Features to explain; only the first row (X.iloc[[0]]) is used.
+        model_type: Which explanation strategy to use. "logreg"/
+            "logistic_regression" for coefficient-based explanations; one of
+            TREE_MODEL_TYPES ("random_forest", "decision_tree", "lightgbm")
+            for SHAP-based explanations. Case-insensitive.
+        top_k: How many top features (by absolute contribution) to return.
+
+    Returns:
+        Up to top_k dicts, sorted by absolute contribution descending, each
+        with:
+            - "feature": Column name.
+            - "value": Signed contribution (coefficient or SHAP value).
+            - "abs_value": Its absolute value, used for ranking.
+        An empty list if X is empty, model_type is unsupported, the model
+        lacks coef_ (logistic regression path), or SHAP explanation fails -
+        never raises for these cases, only logs a warning/error.
     """
 
     if X.empty:
@@ -106,10 +118,6 @@ def explain_prediction(
     # ---------------------------------------------------------------------
     if model_type in TREE_MODEL_TYPES:
         logger.info(f"Using SHAP TreeExplainer for tree-based model ('{model_type}').")
-
-        if X.empty:
-            logger.warning("Received empty DataFrame for SHAP explanation; returning empty list.")
-            return []
 
         x = X.iloc[[0]]
         feature_names = x.columns.tolist()
@@ -185,8 +193,27 @@ def save_shap_waterfall_plot(
     model_type: str,
     output_path: Path,
 ) -> Path | None:
-    """
-    Save a SHAP waterfall plot for a single sample to the given output path.
+    """Save a SHAP waterfall plot for a single sample's prediction to disk.
+
+    Only supported for tree-based models (TREE_MODEL_TYPES); calibration
+    wrappers are unwrapped first, same as explain_prediction. Only the first
+    row of X is plotted. Parent directories of output_path are created if
+    missing.
+
+    Args:
+        model: A fitted estimator, possibly wrapped in
+            CalibratedClassifierCV(FrozenEstimator(base_estimator)).
+        X: Features to plot; only the first row (X.iloc[[0]]) is used.
+        model_type: The model's type, case-insensitive. Must be one of
+            TREE_MODEL_TYPES for a plot to be generated; anything else is
+            skipped (not an error).
+        output_path: Where to save the plot (e.g. a .png path). Parent
+            directories are created automatically.
+
+    Returns:
+        output_path on success. None if model_type is not tree-based, X is
+        empty, the SHAP explainer could not be built, or saving the figure
+        failed - never raises, only logs a warning/error in these cases.
     """
     model_type = model_type.lower()
     model = _unwrap_calibration(model)
@@ -218,9 +245,6 @@ def save_shap_waterfall_plot(
         shap_to_plot = shap_exp
         vals = np.asarray(shap_exp.values)
         if vals.ndim == 3:
-            # Same dynamic shape check as explain_prediction, kept consistent here
-            # (the original picked class 1 unconditionally, which breaks for
-            # single-output shapes where there is no class axis to index).
             if vals.shape[1] == x.shape[1]:
                 class_index = 1 if vals.shape[2] > 1 else 0
                 shap_to_plot = shap_exp[..., class_index]

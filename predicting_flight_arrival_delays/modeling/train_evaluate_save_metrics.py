@@ -19,7 +19,7 @@ from predicting_flight_arrival_delays.data.transform import (
 )
 from predicting_flight_arrival_delays.modeling import evaluate, train
 from predicting_flight_arrival_delays.modeling.train import BUILDERS, HYPERPARAMS
-from predicting_flight_arrival_delays.utils import safe_relative_path
+from predicting_flight_arrival_delays.utils import safe_relative_path, get_dvc_data_hash, get_git_dirty
 
 app = typer.Typer()
 
@@ -299,11 +299,13 @@ def run(
                 "calibrated": calibrate,
                 "resample": resample,
                 "n_folds": len(val_fold_dirs),
+                "dvc_data_hash": get_dvc_data_hash(data_path / variant),
                 **{f"hp_{k}": v for k, v in HYPERPARAMS[model][config].items()},
             })
             metrics = train_and_evaluate(
                 val_fold_dirs, variant, model, config, calibrate, resample
             )
+            mlflow.set_tag("git_dirty", get_git_dirty())
             mlflow.log_metrics(metrics)
 
         out_path = METRICS_DIR / variant / f"{model}__{config}.json"

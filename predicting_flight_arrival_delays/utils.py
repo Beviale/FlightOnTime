@@ -1,3 +1,5 @@
+"""Generic utility methods"""
+
 import json
 import tempfile
 from pathlib import Path
@@ -8,7 +10,9 @@ import mlflow.artifacts
 import mlflow.sklearn
 import pandas as pd
 import requests
+import subprocess
 from mlflow.models import infer_signature
+import yaml
 
 
 def to_pascal_case(name: str) -> str:
@@ -201,3 +205,49 @@ def get_run_params(run_id: str) -> dict[str, str]:
     """
     return mlflow.MlflowClient().get_run(run_id).data.params
 
+
+
+# ---------------------------------------------------------------------------
+# DVC
+# ---------------------------------------------------------------------------
+
+def get_dvc_data_hash(output_path: str, dvc_lock_path: Path = Path("dvc.lock")) -> str:
+    """The DVC hash currently recorded for a specific pipeline output path.
+
+    Args:
+        output_path: The path as it appears in dvc.lock's "outs", e.g.
+            "data/processed/final/all".
+        dvc_lock_path: Path to dvc.lock. Defaults to the repo root's dvc.lock.
+
+    Returns:
+        The md5 hash DVC has recorded for that output, or "not_found" if
+        dvc.lock is missing or does not list that path.
+    """
+    try:
+        lock = yaml.safe_load(dvc_lock_path.read_text())
+        for stage in lock["stages"].values():
+            for out in stage.get("outs", []):
+                if out["path"] == output_path:
+                    return out["md5"]
+    except Exception:
+        pass
+    return "not_found"
+
+# ---------------------------------------------------------------------------
+# GIT
+# ---------------------------------------------------------------------------
+def get_git_dirty() -> bool | None:
+    """Whether there are uncommitted changes right now.
+
+    If True, the git commit that MLflow auto-tags on this run (mlflow.source.git.commit)
+    may not reflect the code that actually ran - there were local edits not yet
+    committed at run time. None if git itself is unavailable.
+
+    Returns:
+        True/False, or None if git status could not be determined.
+    """
+    try:
+        status = subprocess.check_output(["git", "status", "--porcelain"]).decode()
+        return bool(status.strip())
+    except Exception:
+        return None
