@@ -247,7 +247,7 @@ def run(
             mlflow.set_tag("git_dirty", get_git_dirty())
             mlflow.log_metrics(metrics)
 
-        out_path = METRICS_DIR / variant / f"{model}__{config}.json"
+        out_path = METRICS_DIR / "selection" / variant / f"{model}__{config}.json"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps({**metrics, "resample": resample}, indent=2))
     except Exception as e:

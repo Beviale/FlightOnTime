@@ -80,7 +80,7 @@ def load_metrics(variant: str) -> dict[tuple[str, str], dict[str, float]]:
     Returns:
         (algorithm, config) to its fold-averaged metrics.
     """
-    variant_dir = METRICS_DIR / variant
+    variant_dir = METRICS_DIR / "selection" / variant
     files = sorted(variant_dir.glob("*.json"))
     if not files:
         raise SystemExit(f"No metrics in {safe_relative_path(variant_dir)} - run training first.")
@@ -174,6 +174,10 @@ def register_winner(
             for k in per_fold_metrics[0]
         }
         metrics["roc_auc_std"] = float(np.std([m["roc_auc"] for m in per_fold_metrics]))
+
+        out_path = METRICS_DIR / "winner" / variant / f"{algorithm}__{config}.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(json.dumps({**metrics, "resample": resample}, indent=2))
 
         baseline = float(np.mean(per_fold_baseline))
 

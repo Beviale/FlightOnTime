@@ -89,13 +89,13 @@ stages:
 
   train_evaluate_save_metrics:
     foreach:
+      - { variant: all, model: random_forest, config: default}
+      - { variant: all, model: random_forest, config: deep}
+      - { variant: all, model: random_forest, config: shallow}
       - { variant: all, model: logistic_regression, config: default}
       - { variant: all, model: logistic_regression, config: weak_l2}
       - { variant: all, model: logistic_regression, config: strong_l2}
       - { variant: all, model: logistic_regression, config: elasticnet}
-      - { variant: all, model: random_forest, config: default}
-      - { variant: all, model: random_forest, config: deep}
-      - { variant: all, model: random_forest, config: shallow}
       - { variant: all, model: lightgbm, config: default}
       - { variant: all, model: lightgbm, config: fast}
       - { variant: all, model: lightgbm, config: deep}
@@ -154,7 +154,7 @@ stages:
           - SERVICE_COLUMNS2
           - ENCODING
       metrics:
-        - metrics/${item.variant}/${item.model}__${item.config}.json:
+        - metrics/selection/${item.variant}/${item.model}__${item.config}.json:
             cache: false
 
   #---FINO QUI DVC COMMIT
@@ -170,7 +170,7 @@ stages:
       - predicting_flight_arrival_delays/data/features.py
       - predicting_flight_arrival_delays/utils.py
       - data/processed/selection
-      - metrics
+      - metrics/selection
     params:
       - predicting_flight_arrival_delays/config.py:
           - ENCODING
@@ -179,4 +179,5 @@ stages:
           - PROCESSED_DATA_DIR
           - PRODUCTION_VARIANTS
     outs:
+      - metrics/final
       - models
