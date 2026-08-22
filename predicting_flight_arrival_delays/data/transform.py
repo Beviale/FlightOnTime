@@ -19,6 +19,8 @@ from predicting_flight_arrival_delays.config import (
     CATEGORICAL_ASSOCIATION_THRESHOLD,
     MIN_MUTUAL_INFO,
     MI_SAMPLE_SIZE,
+    DATE_COLUMN,
+    SERVICE_COLUMNS2,
 )
 
 OTHER = "OTHER"
@@ -39,6 +41,11 @@ class Transformer:
     mi_sample_size: mutual information is expensive on millions of rows; it is estimated
         on a random sample of this size.
     seed: seed to use for random operations.
+    delay_rate_columns: categorical columns (e.g. Origin, Dest) to also derive a
+        historical-delay-rate numeric feature from. Optional;
+    delay_rate_shrinkage: shrinkage strength (the "k" in
+        (sum + k*global_rate) / (count + k)) pulling rare categories' rates toward
+        the global rate.
     """
 
     min_category_count: int = MIN_CATEGORY_COUNT
@@ -55,6 +62,11 @@ class Transformer:
     scaler: StandardScaler | None = field(default=None, init=False)
     dropped_features: list[str] = field(default_factory=list, init=False)
 
+    delay_rate_columns: list[str] = field(default_factory=lambda: ["Origin", "Dest", "OriginCarrier", "DestCarrier"])    
+    delay_rate_shrinkage: float = 50.0
+    delay_rate_stats_: dict[str, dict[str, pd.Series]] = field(default_factory=dict, init=False)
+    global_delay_rate_: float | None = field(default=None, init=False)
+
     encoding: str = "onehot"
     seed: int = SEED
 
@@ -64,20 +76,95 @@ class Transformer:
 
 
     # ------------------------------------------------------------------
+    # Historical delay rates
+    # ------------------------------------------------------------------
+
+    def _fit_delay_rates_internal(self, X: pd.DataFrame, y: pd.Series, dates: pd.Series) -> pd.DataFrame:
+        """Learn per-category historical delay rates, with shrinkage for rare ones.
+
+        Args:
+            X: Training features, including delay_rate_columns as raw values.
+            y: Training target, aligned with X.
+            dates: Each row's flight date, aligned with X.
+
+        Returns:
+            A new DataFrame, same index as X, with one "<col>DelayRate" column
+            per entry in self.delay_rate_columns.
+        """
+        self.global_delay_rate_ = float(y.mean())
+        order = np.argsort(dates.to_numpy(), kind="stable")
+
+        result = pd.DataFrame(index=X.index)
+        self.delay_rate_stats_ = {}
+
+        for col in self.delay_rate_columns:
+            if col not in X.columns:
+                continue
+            values_sorted = X[col].to_numpy()[order]
+            y_sorted = y.to_numpy()[order].astype(float)
+            keys = pd.Series(values_sorted)
+
+            grouped_sum = pd.Series(y_sorted).groupby(keys, sort=False).cumsum().to_numpy()
+            grouped_count = (
+                pd.Series(np.ones(len(y_sorted))).groupby(keys, sort=False).cumsum().to_numpy()
+            )
+
+            prior_sum = grouped_sum - y_sorted
+            prior_count = grouped_count - 1
+
+            k = self.delay_rate_shrinkage
+            shrunk_sorted = (prior_sum + k * self.global_delay_rate_) / (prior_count + k)
+
+            shrunk = np.empty(len(shrunk_sorted))
+            shrunk[order] = shrunk_sorted
+            result[f"{col}DelayRate"] = shrunk
+
+            final_sum = pd.Series(y_sorted).groupby(keys, sort=False).sum()
+            final_count = pd.Series(np.ones(len(y_sorted))).groupby(keys, sort=False).sum()
+            self.delay_rate_stats_[col] = {"sum": final_sum, "count": final_count}
+
+            logger.info(
+                f"{col}DelayRate: learned rates for {len(final_count)} categories "
+                f"(shrinkage k={k}, global rate={self.global_delay_rate_:.3f})"
+            )
+
+        return result
+
+    def _apply_delay_rates_internal(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Score any rows against the frozen training-period delay-rate stats.
+
+        Args:
+            X: Features to score, including delay_rate_columns as raw values.
+
+        Returns:
+            A new DataFrame, same index as X, with one "<col>DelayRate" column
+            per entry in self.delay_rate_columns.
+        """
+        result = pd.DataFrame(index=X.index)
+        k = self.delay_rate_shrinkage
+
+        for col in self.delay_rate_columns:
+            if col not in X.columns:
+                continue
+            stats = self.delay_rate_stats_.get(
+                col, {"sum": pd.Series(dtype=float), "count": pd.Series(dtype=float)}
+            )
+            sums = X[col].map(stats["sum"]).fillna(0.0)
+            counts = X[col].map(stats["count"]).fillna(0.0)
+            result[f"{col}DelayRate"] = (sums + k * self.global_delay_rate_) / (counts + k)
+
+        return result
+
+    # ------------------------------------------------------------------
     # Scaling, imputation, rare-category grouping
     # ------------------------------------------------------------------
 
-    def fit(self, X: pd.DataFrame) -> "Transformer":
+    def fit(self, X: pd.DataFrame, y: pd.Series) -> "Transformer":
         """Learn the category buckets, imputation values and scaling statistics.
 
-        Categories and imputation are learned first, then applied before fitting the
-        scaler. Resets any state from a previous fit() first, so reusing the same
-        instance across folds (rather than the recommended pattern of one fresh
-        Transformer() per fold) never leaks a prior fold's learned parameters into
-        this one.
-
         Args:
-            X: Training features.
+            X: Training features, including DATE_COLUMN.
+            y: Training target, aligned with X.
 
         Returns:
             The fitted transformer, for chaining.
@@ -85,6 +172,14 @@ class Transformer:
         df = X.copy()
         self.category_keep = {}
         self.impute_values = {}
+
+        if self.delay_rate_columns:
+            dates = df[DATE_COLUMN]
+            rate_cols = self._fit_delay_rates_internal(df, y, dates)
+            df = pd.concat([df, rate_cols], axis=1)
+        
+        df = df.drop(columns=[c for c in SERVICE_COLUMNS2 if c in df.columns])
+
         if not self._categorical_columns_given:
             self.categorical_columns = [c for c in df.columns if df[c].dtype == object]
         if not self._numeric_columns_given:
@@ -115,6 +210,8 @@ class Transformer:
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         """Apply the fitted transformation to any set of rows.
 
+        Drops everything in config.SERVICE_COLUMNS2.
+
         Categories unseen during fitting and missing values
         both fall into OTHER: the model has no reliable signal for either.
 
@@ -127,6 +224,13 @@ class Transformer:
         if self.scaler is None:
             raise RuntimeError("Transformer must be fitted before transform()")
         df = X.copy()
+
+        if self.delay_rate_columns:
+            rate_cols = self._apply_delay_rates_internal(df)
+            df = pd.concat([df, rate_cols], axis=1)
+
+        df = df.drop(columns=[c for c in SERVICE_COLUMNS2 if c in df.columns])
+
         df = self._apply_categories(df)
         df = self._apply_imputation(df)
         df[self.numeric_columns] = self.scaler.transform(df[self.numeric_columns])
@@ -134,16 +238,18 @@ class Transformer:
 
 
 
-    def fit_transform(self, X: pd.DataFrame) -> pd.DataFrame:
+    def fit_transform(self, X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
         """Fit on X and transform it in one call.
 
         Args:
             X: Training features.
+            y: Training target; see fit().
 
         Returns:
-            The transformed training features.
+            The transformed training features. Never carries SERVICE_COLUMNS2
+            (e.g. "FlightDate") - both fit() and transform() drop it internally.
         """
-        return self.fit(X).transform(X)
+        return self.fit(X, y).transform(X)
 
 
     def _apply_categories(self, X: pd.DataFrame) -> pd.DataFrame:
@@ -175,7 +281,7 @@ class Transformer:
         return X
 
     # ------------------------------------------------------------------
-    # Feature selection -- run BEFORE one-hot encoding, on the training fold
+    # Feature selection - run BEFORE one-hot encoding, on the training fold
     # ------------------------------------------------------------------
 
     def select_features(self, X: pd.DataFrame, y: pd.Series) -> "Transformer":
@@ -240,7 +346,7 @@ class Transformer:
             v = cramers_v(X_samp[a], X_samp[b])
             if v > self.categorical_association_threshold:
                 associated.append(b)
-                logger.info(f"{b} is {v:.2f} associated with {a} -- dropping {b}")
+                logger.info(f"{b} is {v:.2f} associated with {a} - dropping {b}")
         dropped.extend(associated)
 
         uninformative: list[str] = []

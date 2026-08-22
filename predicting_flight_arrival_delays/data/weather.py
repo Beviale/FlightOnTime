@@ -244,7 +244,7 @@ def run(
         )
     except Exception as e:
         logger.exception(f"An error occurred while setting up the download weather process: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 if __name__ == "__main__":
     app()

@@ -1,0 +1,183 @@
+stages:
+  download_bts:
+    cmd: uv run predicting_flight_arrival_delays/data/dataset.py
+    deps:
+      - predicting_flight_arrival_delays/data/dataset.py
+    params:
+      - predicting_flight_arrival_delays/config.py:
+          - BTS_BASE_URL
+          - YEARS_DATA
+    outs:
+      - data/raw
+
+  build_airports:
+    cmd: uv run predicting_flight_arrival_delays/data/build_airports.py --force_download
+    deps:
+      - predicting_flight_arrival_delays/data/build_airports.py
+      - predicting_flight_arrival_delays/utils.py
+    params:
+      - predicting_flight_arrival_delays/config.py:
+          - MASTER_CORD_PAGE
+          - T_MASTER_CORD_FILE_NAME
+          - REQUIRED_AIRPORTS_COLUMNS
+    outs:
+      - data/external/raw/T_MASTER_CORD.csv
+      - data/external/airports.csv
+
+  prepare_flights:
+    cmd: uv run predicting_flight_arrival_delays/data/preprocess.py prepare-flights
+    deps:
+      - predicting_flight_arrival_delays/data/preprocess.py
+      - data/raw
+      - data/external/airports.csv
+      - predicting_flight_arrival_delays/utils.py
+    params:
+      - predicting_flight_arrival_delays/config.py:
+          - DATE_COLUMN
+          - MAX_LEAD_DAYS
+          - KEEP_COLUMNS
+          - FULL_LEAD_COVERAGE_START
+          - SEED
+    outs:
+      - data/interim/flights_features.parquet
+
+  download_weather:
+    cmd: uv run predicting_flight_arrival_delays/data/weather.py
+    deps:
+      - predicting_flight_arrival_delays/data/weather.py
+      - predicting_flight_arrival_delays/utils.py
+      - data/interim/flights_features.parquet
+      - data/external/airports.csv
+    params:
+      - predicting_flight_arrival_delays/config.py:
+          - HISTORICAL_FORECAST_URL
+          - PREVIOUS_RUNS_URL
+          - WEATHER_MODEL
+          - WEATHER_VARS
+          - MAX_LEAD_DAYS
+    outs:
+      - data/external/weather
+
+  join_weather:
+    cmd: uv run predicting_flight_arrival_delays/data/preprocess.py join-weather
+    deps:
+      - predicting_flight_arrival_delays/data/preprocess.py
+      - predicting_flight_arrival_delays/data/weather.py
+      - data/interim/flights_features.parquet
+      - data/external/weather
+    params:
+      - predicting_flight_arrival_delays/config.py:
+          - WEATHER_COLUMNS
+    outs:
+      - data/interim/flights_preprocessed.parquet
+
+  split_data_cv:
+    cmd: uv run predicting_flight_arrival_delays/data/split_data.py split-folds
+    deps:
+      - predicting_flight_arrival_delays/data/split_data.py
+      - predicting_flight_arrival_delays/data/features.py
+      - predicting_flight_arrival_delays/utils.py
+      - data/interim/flights_preprocessed.parquet
+    params:
+      - predicting_flight_arrival_delays/config.py:
+          - DATE_COLUMN
+          - SERVICE_COLUMNS
+          - TARGET
+          - WEATHER_COLUMNS
+    outs:
+      - data/processed/selection
+
+  train_evaluate_save_metrics:
+    foreach:
+      - { variant: all, model: random_forest, config: default}
+      - { variant: all, model: random_forest, config: deep}
+      - { variant: all, model: random_forest, config: shallow}
+      - { variant: all, model: logistic_regression, config: default}
+      - { variant: all, model: logistic_regression, config: weak_l2}
+      - { variant: all, model: logistic_regression, config: strong_l2}
+      - { variant: all, model: logistic_regression, config: elasticnet}
+      - { variant: all, model: lightgbm, config: default}
+      - { variant: all, model: lightgbm, config: fast}
+      - { variant: all, model: lightgbm, config: deep}
+      - { variant: all, model: lightgbm, config: regularised}
+      - { variant: noweather, model: logistic_regression, config: default}
+      - { variant: noweather, model: logistic_regression, config: weak_l2}
+      - { variant: noweather, model: logistic_regression, config: strong_l2}
+      - { variant: noweather, model: logistic_regression, config: elasticnet}
+      - { variant: noweather, model: random_forest, config: default}
+      - { variant: noweather, model: random_forest, config: deep}
+      - { variant: noweather, model: random_forest, config: shallow}
+      - { variant: noweather, model: lightgbm, config: default}
+      - { variant: noweather, model: lightgbm, config: fast}
+      - { variant: noweather, model: lightgbm, config: deep}
+      - { variant: noweather, model: lightgbm, config: regularised}
+      - { variant: nocarrier, model: logistic_regression, config: default}
+      - { variant: nocarrier, model: logistic_regression, config: weak_l2}
+      - { variant: nocarrier, model: logistic_regression, config: strong_l2}
+      - { variant: nocarrier, model: logistic_regression, config: elasticnet}
+      - { variant: nocarrier, model: random_forest, config: default}
+      - { variant: nocarrier, model: random_forest, config: deep}
+      - { variant: nocarrier, model: random_forest, config: shallow}
+      - { variant: nocarrier, model: lightgbm, config: default}
+      - { variant: nocarrier, model: lightgbm, config: fast}
+      - { variant: nocarrier, model: lightgbm, config: deep}
+      - { variant: nocarrier, model: lightgbm, config: regularised}
+    do:
+      cmd: >-
+        uv run predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+        --variant ${item.variant}
+        --model ${item.model}
+        --config ${item.config}
+      deps:
+        - predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+        - predicting_flight_arrival_delays/modeling/train.py
+        - predicting_flight_arrival_delays/modeling/evaluate.py
+        - predicting_flight_arrival_delays/modeling/hyperparams.yaml
+        - predicting_flight_arrival_delays/data/transform.py
+        - predicting_flight_arrival_delays/data/features.py
+        - predicting_flight_arrival_delays/utils.py
+        - data/processed/selection
+      params:
+        - predicting_flight_arrival_delays/config.py:
+          - ENCODING
+          - RESAMPLE_METHODS
+          - WEATHER_COLUMNS
+          - SERVICE_COLUMNS
+          - TARGET
+          - SEED
+          - MIN_CATEGORY_COUNT
+          - CORRELATION_THRESHOLD
+          - CATEGORICAL_ASSOCIATION_THRESHOLD
+          - MIN_MUTUAL_INFO
+          - MI_SAMPLE_SIZE
+          - DATE_COLUMN
+          - SERVICE_COLUMNS2
+          - ENCODING
+      metrics:
+        - metrics/selection/${item.variant}/${item.model}__${item.config}.json:
+            cache: false
+
+  #---FINO QUI DVC COMMIT
+
+  select_and_register:
+    cmd: uv run predicting_flight_arrival_delays/modeling/select_and_register.py
+    deps:
+      - predicting_flight_arrival_delays/modeling/select_and_register.py
+      - predicting_flight_arrival_delays/modeling/train.py
+      - predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      - predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      - predicting_flight_arrival_delays/data/transform.py
+      - predicting_flight_arrival_delays/data/features.py
+      - predicting_flight_arrival_delays/utils.py
+      - data/processed/selection
+      - metrics/selection
+    params:
+      - predicting_flight_arrival_delays/config.py:
+          - ENCODING
+          - METRICS_DIR
+          - MODELS_DIR
+          - PROCESSED_DATA_DIR
+          - PRODUCTION_VARIANTS
+    outs:
+      - metrics/final
+      - models

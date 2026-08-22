@@ -20,6 +20,8 @@ SEED,
 )
 FULL_LEAD_COVERAGE_START = pd.Timestamp(FULL_LEAD_COVERAGE_START)
 from predicting_flight_arrival_delays.data.weather import load_weather
+from predicting_flight_arrival_delays.utils import to_pascal_case
+
 app = typer.Typer()
 
 # ---------------------------------------------------------------------------
@@ -31,30 +33,51 @@ US_HOLIDAYS = holidays.UnitedStates()
 
 
 # ---------------------------------------------------------------------------
-# 1. Cleaning
+# 1 Add congestione features
+# ---------------------------------------------------------------------------
+def add_congestion_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add each flight's scheduling congestion at both its origin and destination airport.
+
+    Args:
+        df: Dataframe containing flights data with Origin, Dest, CRSDepTime and
+            CRSArrTime present, and Cancelled/Diverted not yet filtered out.
+
+    Returns:
+        The same DataFrame with "OriginCongestion" and "DestCongestion" added.
+    """
+    dep_hour = (df["CRSDepTime"].replace(2400, 0) // 100).astype(int)
+    df["OriginCongestion"] = df.groupby(
+        [df[DATE_COLUMN], df["Origin"], dep_hour]
+    )["Origin"].transform("count")
+
+    arr_hour = (df["CRSArrTime"].replace(2400, 0) // 100).astype(int)
+    df["DestCongestion"] = df.groupby(
+        [df[DATE_COLUMN], df["Dest"], arr_hour]
+    )["Dest"].transform("count")
+    return df
+
+
+# ---------------------------------------------------------------------------
+# 2. Cleaning
 # ---------------------------------------------------------------------------
 
-def load_and_clean(path: Path) -> pd.DataFrame:
-    """Load one BTS CSV, drop unusable flights and unusable columns.
+def load_and_clean(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop unusable flights.
 
     Flights dropped: cancelled, diverted, or with no arrival outcome recorded -
     none of these have a valid target.
-    Columns dropped: post-departure fields, diversion columns, and redundant identifiers.
 
     Args:
-        path: The path to the file containing the flight data.
+        df: The Dataframe containing all the flights data.
 
     Returns:
         The DataFrame clenaed.
     """
-    needed = KEEP_COLUMNS + ["Cancelled", "Diverted", "ArrDel15"]
-
-    df = pd.read_csv(path, usecols=lambda c: c in needed)
     n_raw = len(df)
 
     df = df[(df["Cancelled"] == 0) & (df["Diverted"] == 0)].copy()
     df = df.dropna(subset=["ArrDel15"])
-    logger.info(f"{path.name}: {n_raw} rows -> {len(df)} after dropping cancelled/diverted/no-target")
+    logger.info(f"{n_raw} rows -> {len(df)} after dropping cancelled/diverted/no-target")
 
     df["IsDelayed"] = df["ArrDel15"].astype(int)
     df = df.drop(columns=["Cancelled", "Diverted", "ArrDel15"])
@@ -63,7 +86,7 @@ def load_and_clean(path: Path) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 2. Temporal features
+# 3. Temporal features
 # ---------------------------------------------------------------------------
 
 def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -79,10 +102,9 @@ def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
         df: Flights.
 
     Returns:
-        The same DataFrame with "IsWeekend", "DepHour". "DepTimeDecimal", "ArrHour", and "ArrTimeDecimal" added.
+        The same DataFrame with "DepHour", "DepTimeDecimal", "ArrHour", and "ArrTimeDecimal" added.
     """
     df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN])
-    df["IsWeekend"] = df["DayOfWeek"].isin([6, 7]).astype(int)
 
     for time_col, prefix in [("CRSDepTime", "Dep"), ("CRSArrTime", "Arr")]:
         raw = df[time_col].replace(2400, 0)
@@ -95,7 +117,7 @@ def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 3. Holday features
+# 4. Holday features
 # ---------------------------------------------------------------------------
 def add_holiday_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add US federal holiday features to each flight.
@@ -133,9 +155,27 @@ def add_holiday_features(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
+# ---------------------------------------------------------------------------
+# 5. Aircraft Schedule Features
+# ---------------------------------------------------------------------------
+def add_aircraft_schedule_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add each flight's position in its aircraft's schedule for that day.
+
+    Args:
+        df: Flights with TailNumber, DATE_COLUMN and CRSDepTime.
+
+    Returns:
+        The same DataFrame with "AircraftDailyLegs" and "LegPosition" added.
+    """
+    df = df.sort_values(["TailNumber", DATE_COLUMN, "CRSDepTime"])
+    grouped = df.groupby(["TailNumber", DATE_COLUMN])
+    df["AircraftDailyLegs"] = grouped["TailNumber"].transform("count")
+    df["LegPosition"] = grouped.cumcount() + 1
+    return df
+
 
 # ---------------------------------------------------------------------------
-# 4. Lead time assignment
+# 6. Lead time assignment
 # ---------------------------------------------------------------------------
 
 def assign_lead_days(df: pd.DataFrame, seed: int = SEED) -> pd.DataFrame:
@@ -167,7 +207,7 @@ def assign_lead_days(df: pd.DataFrame, seed: int = SEED) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 5. UTC conversion
+# 7. UTC conversion
 # ---------------------------------------------------------------------------
 
 def add_utc_columns(df: pd.DataFrame, airports: pd.DataFrame) -> pd.DataFrame:
@@ -215,6 +255,43 @@ def add_utc_columns(df: pd.DataFrame, airports: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# 8. Add Turnaround features
+# ---------------------------------------------------------------------------
+
+def add_turnaround_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add each flight's scheduled turnaround time since its aircraft's previous leg.
+
+    Args:
+        df: Flights with TailNumber, DepUtcHour and ArrUtcHour.
+
+    Returns:
+        The same DataFrame with "ScheduledTurnaround" added (minutes; NaN
+        only for an aircraft's first-ever appearance in the dataset, left to
+        the Transformer's median imputation).
+    """
+    df = df.sort_values(["TailNumber", "DepUtcHour"])
+    prev_arr = df.groupby("TailNumber")["ArrUtcHour"].shift(1)
+    df["ScheduledTurnaround"] = (df["DepUtcHour"] - prev_arr).dt.total_seconds() / 60
+    return df
+
+# ---------------------------------------------------------------------------
+# 9. Carrier-airport interaction features
+# ---------------------------------------------------------------------------
+def add_carrier_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add each flight's airport-carrier combination, for historical delay rates.
+
+    Args:
+        df: Flights with Origin, Dest and ReportingAirline.
+
+    Returns:
+        The same DataFrame with "OriginCarrier" and "DestCarrier" added.
+    """
+    df["OriginCarrier"] = df["Origin"] + df["ReportingAirline"]
+    df["DestCarrier"] = df["Dest"] + df["ReportingAirline"]
+    return df
+
+
+# ---------------------------------------------------------------------------
 # Join weather to flights
 # ---------------------------------------------------------------------------
 
@@ -244,6 +321,11 @@ def join_weather_to_flights(flights: pd.DataFrame, weather_dir: Path) -> pd.Data
         ).drop(columns=["AirportId", "Time"])
 
         del side
+
+    for col in ["WeatherCodeOrigin", "WeatherCodeDest"]:
+        if col in flights.columns:
+            flights[col] = flights[col].astype("Int64").astype(str)
+            
     return flights
 
 
@@ -257,7 +339,7 @@ def prepare_flights(
     airports_path: Path = typer.Option(EXTERNAL_DATA_DIR / "airports.csv"),
     output_path: Path = typer.Option(INTERIM_DATA_DIR / "flights_features.parquet"),
 ):
-    """Clean the flights and build the calendar, schedule and holiday features.
+    """Clean the flights and build the carrier, calendar, schedule, and holiday features.
 
     Args:
         bts_path: A single BTS CSV, or a directory searched recursively for CSVs.
@@ -270,18 +352,28 @@ def prepare_flights(
             raise SystemExit(f"No CSV found at {bts_path}")
 
         airports = pd.read_csv(airports_path)
-        df = pd.concat([load_and_clean(p) for p in paths], ignore_index=True)
+        needed = KEEP_COLUMNS + ["Cancelled", "Diverted", "ArrDel15"]
+        df = pd.concat(
+            [pd.read_csv(p, usecols=lambda c: c in needed) for p in paths],
+            ignore_index=True,
+        )        
+        df.columns = [to_pascal_case(c) for c in df.columns]
+        df = add_congestion_features(df)  
+        df = load_and_clean(df)       
         df = add_temporal_features(df)
         df = add_holiday_features(df)
+        df = add_aircraft_schedule_features(df) 
         df = assign_lead_days(df)
         df = add_utc_columns(df, airports)
+        df = add_turnaround_features(df) 
+        df = add_carrier_features(df)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(output_path, index=False)
         logger.success(f"Saved {len(df)} flights to {output_path}")
     except Exception as e:
         logger.exception(f"An error occurred while preprocess the flights: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 @app.command()
 def join_weather(
@@ -305,7 +397,7 @@ def join_weather(
         logger.success(f"Saved {len(df)} flights with weather to {output_path}")
     except Exception as e:
         logger.exception(f"An error occurred while attaching the weather to the flights: {e}")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 if __name__ == "__main__":
     app()

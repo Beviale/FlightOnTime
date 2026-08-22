@@ -18,11 +18,14 @@ from loguru import logger
 from predicting_flight_arrival_delays.config import(
 TARGET,
 SERVICE_COLUMNS,
-WEATHER_COLUMNS_ORIGIN,
-WEATHER_COLUMNS_DESTINATION,
-NOWEATHER_DROP,
-CARRIER_COLUMNS,
+WEATHER_COLUMNS
 )
+
+CARRIER_COLUMNS = ["ReportingAirline", "FlightNumberReportingAirline", "OriginCarrier", "DestCarrier"]
+WEATHER_COLUMNS_ORIGIN = [col + "Origin" for col in WEATHER_COLUMNS]
+WEATHER_COLUMNS_DESTINATION = [col + "Dest" for col in WEATHER_COLUMNS]
+NOWEATHER_DROP = WEATHER_COLUMNS_ORIGIN + WEATHER_COLUMNS_DESTINATION + ["LeadDays"]
+
 
 VARIANTS: dict[str, list[str]] = {
     "all": [],
@@ -87,7 +90,7 @@ def select_features_variant(
             if dropped:
                 logger.info(
                     f"variant '{variant}': dropped {dropped} flights ({dropped / before:.2%}) "
-                    f"with unmatched weather -- these are served by 'noweather' in production."
+                    f"with unmatched weather - these are served by 'noweather' in production."
                 )
 
     df = df[feature_cols + [TARGET]]
