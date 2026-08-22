@@ -55,8 +55,9 @@ def evaluate(
     X_test: pd.DataFrame,
     y_test: pd.Series,
     estimator: BaseEstimator,
-    threshold: float = 0.5,
-) -> dict[str, float]:
+    threshold: float | None = None,
+    fbeta: float = 1.0,
+    ) -> dict[str, float]:
     """Evaluate a trained model on an evaluation dataset.
 
     Args:
@@ -64,24 +65,31 @@ def evaluate(
             estimator was trained on.
         y_test: Evaluation target, aligned with X_test.
         estimator: Trained scikit-learn or LightGBM model instance.
-        threshold: Decision threshold for binary classification. Defaults to 0.5.
-
+        threshold: Decision threshold for binary classification. 
+            Default to None. If None the threshold-based metrics are not computed.
+        fbeta: The beta in the F-beta score. Default to 1.0.    
     Returns:
         Dictionary containing evaluated classification metrics.
     """
     y_prob = estimator.predict_proba(X_test)[:, 1]
-    y_pred = (y_prob >= threshold).astype(int)
-
-    return {
-        "roc_auc": float(roc_auc_score(y_test, y_prob)),
-        "pr_auc": float(average_precision_score(y_test, y_prob)),
-        "brier": float(brier_score_loss(y_test, y_prob)),
-        "recall": float(recall_score(y_test, y_pred, zero_division=0)),
-        "precision": float(precision_score(y_test, y_pred, zero_division=0)),
-        "f1": float(fbeta_score(y_test, y_pred, beta=1, zero_division=0)),
-        "alert_rate": float(y_pred.mean()),
-        "threshold": float(threshold),
-    }
+    if threshold is not None:
+        y_pred = (y_prob >= threshold).astype(int)
+        return {
+            "roc_auc": float(roc_auc_score(y_test, y_prob)),
+            "pr_auc": float(average_precision_score(y_test, y_prob)),
+            "brier": float(brier_score_loss(y_test, y_prob)),
+            "recall": float(recall_score(y_test, y_pred, zero_division=0)),
+            "precision": float(precision_score(y_test, y_pred, zero_division=0)),
+            f"f{fbeta}": float(fbeta_score(y_test, y_pred, beta=fbeta, zero_division=0)),
+            "alert_rate": float(y_pred.mean()),
+            "threshold": float(threshold),
+        }
+    else:
+         return {
+            "roc_auc": float(roc_auc_score(y_test, y_prob)),
+            "pr_auc": float(average_precision_score(y_test, y_prob)),
+            "brier": float(brier_score_loss(y_test, y_prob)),
+        }
 
 
 def _evaluate_on_dataframe(

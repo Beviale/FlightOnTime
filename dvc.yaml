@@ -81,7 +81,6 @@ stages:
     params:
       - predicting_flight_arrival_delays/config.py:
           - DATE_COLUMN
-          - PRODUCTION_VARIANTS
           - SERVICE_COLUMNS
           - TARGET
           - WEATHER_COLUMNS
@@ -160,27 +159,6 @@ stages:
 
   #---FINO QUI DVC COMMIT
 
-
-  split_data_final:
-    cmd: uv run predicting_flight_arrival_delays/data/split_data.py split-final-folds
-    deps:
-      - predicting_flight_arrival_delays/data/split_data.py
-      - predicting_flight_arrival_delays/data/features.py
-      - predicting_flight_arrival_delays/utils.py
-      - data/interim/flights_preprocessed.parquet
-    params:
-      - predicting_flight_arrival_delays/config.py:
-          - DATE_COLUMN
-          - INTERIM_DATA_DIR
-          - PROCESSED_DATA_DIR
-          - PRODUCTION_VARIANTS
-          - SERVICE_COLUMNS
-          - TARGET
-          - NOWEATHER_DROP
-          - CARRIER_COLUMNS
-    outs:
-      - data/processed/final
-      
   select_and_register:
     cmd: uv run predicting_flight_arrival_delays/modeling/select_and_register.py
     deps:
@@ -191,7 +169,7 @@ stages:
       - predicting_flight_arrival_delays/data/transform.py
       - predicting_flight_arrival_delays/data/features.py
       - predicting_flight_arrival_delays/utils.py
-      - data/processed/final
+      - data/processed/selection
       - metrics
     params:
       - predicting_flight_arrival_delays/config.py:

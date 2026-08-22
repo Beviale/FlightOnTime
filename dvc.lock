@@ -192,8 +192,8 @@ stages:
       size: 4848
     - path: predicting_flight_arrival_delays/data/split_data.py
       hash: md5
-      md5: 1729d1afaed662f867c5b13e4a05ea6b
-      size: 9648
+      md5: 1f6d2f71d50bafe566ffe93d5b1fa9c9
+      size: 7090
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
       md5: 26e19dda807d3f8b656f5e112545a34d
@@ -201,9 +201,6 @@ stages:
     params:
       predicting_flight_arrival_delays/config.py:
         DATE_COLUMN: FlightDate
-        PRODUCTION_VARIANTS:
-        - all
-        - noweather
         SERVICE_COLUMNS:
         - CRSDepTime
         - CRSArrTime

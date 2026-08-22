@@ -1,20 +1,29 @@
 """Model selection and registration.
 
-Reads the metrics produced by each training run, picks the best algorithm for each
-production variant, refits it on the whole dataset and registers it.
+Reads the metrics produced by each training run (train_evaluate_save_metrics.py),
+picks the best algorithm/config per production variant using validation-set PR-AUC,
+then for that winner:
+
+  1. For every walk-forward fold: fits on that fold's train, calibrates and picks
+     the operating threshold on that fold's validation, and evaluates on that
+     fold's test. These per-fold scores are averaged.
+  2. Using only the last (most recent, widest-training-window) fold: fits on
+     train+validation combined, then calibrates and picks an operating
+     threshold on that fold's test. This is the model that gets registered.
+    Step 1's averaged metrics are what gets logged/reported for it.
 """
 
 import json
 from pathlib import Path
-
 import dagshub
 import joblib
 import mlflow
+import numpy as np
 import pandas as pd
 import typer
 from loguru import logger
 from mlflow.data.pandas_dataset import from_pandas
-from sklearn.base import BaseEstimator
+from sklearn.metrics import precision_recall_curve
 
 from predicting_flight_arrival_delays.config import (
     ENCODING,
@@ -28,15 +37,38 @@ from predicting_flight_arrival_delays.data.transform import (
     encode_categoricals,
     resample_training_data,
 )
+from predicting_flight_arrival_delays.modeling import evaluate
 from predicting_flight_arrival_delays.modeling.train import HYPERPARAMS
 from predicting_flight_arrival_delays.modeling.train import train as train_model
-from predicting_flight_arrival_delays.modeling.train_evaluate_save_metrics import (
-    choose_threshold,
-    prepare_fold,
+from predicting_flight_arrival_delays.modeling.train_evaluate_save_metrics import prepare_fold
+from predicting_flight_arrival_delays.utils import (
+    register_model_bundle,
+    safe_relative_path,
+    get_dvc_data_hash,
+    get_git_dirty,
 )
-from predicting_flight_arrival_delays.utils import register_model_bundle, safe_relative_path, get_dvc_data_hash, get_git_dirty
 
 app = typer.Typer()
+
+
+def choose_threshold(y_true: pd.Series, y_prob: np.ndarray, beta: float = 1.0) -> float:
+    """Find the threshold that maximises the F-beta score.
+
+    Args:
+        y_true: Observed labels.
+        y_prob: Predicted probabilities.
+        beta: the beta in F-beta score.
+
+    Returns:
+        The cutoff with the highest F-beta score.
+    """
+    precision, recall, thresholds = precision_recall_curve(y_true, y_prob)
+    precision, recall = precision[:-1], recall[:-1]
+
+    b2 = beta**2
+    denom = b2 * precision + recall
+    f = np.where(denom > 0, (1 + b2) * precision * recall / np.where(denom > 0, denom, 1), 0)
+    return float(thresholds[int(np.argmax(f))])
 
 
 def load_metrics(variant: str) -> dict[tuple[str, str], dict[str, float]]:
@@ -56,107 +88,33 @@ def load_metrics(variant: str) -> dict[tuple[str, str], dict[str, float]]:
     return {tuple(f.stem.split("__")): json.loads(f.read_text()) for f in files}
 
 
-def final_split_dir(variant: str) -> Path:
-    """Locate the fold used for the final, deployed refit.
+def all_fold_dirs(variant: str) -> list[Path]:
+    """List every walk-forward fold's directory, in order.
 
     Args:
         variant: Which variant to use.
 
     Returns:
-        The path to that fold's directory.
+        Fold directories, sorted by fold number.
 
+    Raises:
+        FileNotFoundError: If no fold directories are found, or any is missing
+            train/validation/test.
     """
-    variant_dir = PROCESSED_DATA_DIR / "final" / variant
-    if not (variant_dir / "train.parquet").exists() or not (variant_dir / "validation.parquet").exists():
-        raise FileNotFoundError(
-            f"No train/validation split found under {safe_relative_path(variant_dir)}."
-        )
-    return variant_dir
-
-
-def _fit_transform_all(
-    df: pd.DataFrame,
-    encoding: str,
-    resample: str,
-) -> tuple[pd.DataFrame, pd.Series, Transformer]:
-    """Fit a fresh Transformer on the whole of df and return its encoded output.
-
-    Args:
-        df: The full dataset to fit and transform.
-        encoding: Either "onehot" or "native".
-        resample: Training-set rebalancing strategy.
-
-    Returns:
-        Tuple of (encoded X, y, the fitted Transformer).
-    """
-    X, y = build_xy(df)
-
-    transformer = Transformer(encoding=encoding).fit(X, y)
-    X = transformer.transform(X)
-
-    transformer.select_features(X, y)
-    X = transformer.apply_selection(X)
-
-    cat_cols = [c for c in transformer.categorical_columns if c in X.columns]
-    X = encode_categoricals(X, cat_cols, encoding)
-
-    X, y = resample_training_data(X, y, resample, encoding)
-
-    return X, y, transformer
-
-
-def fit_final(
-    variant: str,
-    algorithm: str,
-    config: str,
-    resample: str,
-    calibrate: bool = True,
-) -> tuple[BaseEstimator, Transformer, pd.DataFrame, pd.DataFrame, float]:
-    """Refit the chosen configuration for deployment.
-
-    Stage 1 fits on train.parquet and picks the operating threshold on validation.parquet.
-    Stage 2 refits from scratch on train+validation combined with the threshold kept fixed.
-
-    Args:
-        variant: Which feature set variant to use.
-        algorithm: Which estimator to train.
-        config: Which named hyperparameter set to use.
-        resample: Training-set rebalancing strategy.
-        calibrate: Whether to calibrate predicted probabilities.
-
-    Returns:
-        Tuple of (final model, its transformer, the final fitted feature matrix,
-        the raw train+validation dataframe used to produce it - pre-Transformer,
-        as it corresponds directly to the DVC-tracked parquet files - and the
-        operating threshold chosen in Stage 1).
-    """
-    encoding = ENCODING[algorithm]
-
-    fold_dir = final_split_dir(variant)
-    train_df = pd.read_parquet(fold_dir / "train.parquet")
-    validation_df = pd.read_parquet(fold_dir / "validation.parquet")
-
-    # --- Stage 1: threshold selection, on data never used to fit this model ---
-    X_fit, y_fit, X_val, y_val, _, _ = prepare_fold(
-        train_df, validation_df, encoding, validation_df, resample,
+    variant_dir = PROCESSED_DATA_DIR / "selection" / variant
+    fold_dirs = sorted(
+        (d for d in variant_dir.glob("fold_*") if d.is_dir()),
+        key=lambda d: int(d.name.split("_")[1]),
     )
-    model_temp = train_model(
-        X_fit, y_fit, algorithm, config, calibrate, X_val=X_val, y_val=y_val
-    )
-    raw_estimator = model_temp.estimator if hasattr(model_temp, "estimator") else model_temp
-    best_n_estimators = getattr(raw_estimator, "best_iteration_", None)    
-    threshold = choose_threshold(y_val, model_temp.predict_proba(X_val)[:, 1])
+    if not fold_dirs:
+        raise FileNotFoundError(f"No folds found under {safe_relative_path(variant_dir)}.")
 
-    # --- Stage 2: refit from scratch on the whole fold, threshold kept fixed ---
-    full_df = pd.concat([train_df, validation_df], ignore_index=True)
-    X_full, y_full, transformer = _fit_transform_all(full_df, encoding, resample)
-    if best_n_estimators is not None:
-        config_stage2 = {**HYPERPARAMS[algorithm][config], "n_estimators": best_n_estimators}
-        model = train_model(X_full, y_full, algorithm, config, calibrate, json_config=config_stage2)
-    else:
-        model = train_model(X_full, y_full, algorithm, config, calibrate)
-
-    return model, transformer, X_full, full_df, threshold
+    required = ["train.parquet", "validation.parquet", "test.parquet"]
+    for d in fold_dirs:
+        missing = [f for f in required if not (d / f).exists()]
+        if missing:
+            raise FileNotFoundError(f"Fold {safe_relative_path(d)} is missing {missing}.")
+    return fold_dirs
 
 
 def register_winner(
@@ -164,19 +122,17 @@ def register_winner(
     algorithm: str,
     config: str,
     resample: str,
-    metrics: dict[str, float],
     calibrate: bool,
     alias: str | None = None,
     models_path: Path | None = None,
 ) -> None:
-    """Refit the winning configuration; register to MLflow, optionally save locally.
+    """Score the winner, then refit it and register it.
 
     Args:
         variant: Which production variant is being registered.
         algorithm: The winning estimator for that variant.
         config: The winning hyperparameter configuration.
         resample: Training-set rebalancing strategy.
-        metrics: Cross-validated (fold-averaged) metrics to attach to the run.
         calibrate: Whether to calibrate predicted probabilities.
         alias: If given, promote this version under this alias immediately (e.g."champion").
         models_path: If given, also save model/transformer/columns locally under
@@ -184,44 +140,106 @@ def register_winner(
             intended way to persist this model, local saving is mainly for
             debugging/inspection.
     """
+    encoding = ENCODING[algorithm]
+    all_folds = all_fold_dirs(variant)
+    fold_dir = all_folds[-1]  # the last fold: used for Step 2, the model registration
+    train_df = pd.read_parquet(fold_dir / "train.parquet")
+    validation_df = pd.read_parquet(fold_dir / "validation.parquet")
+    test_df = pd.read_parquet(fold_dir / "test.parquet")
+
     with mlflow.start_run(run_name=f"{variant}__final__{algorithm}"):
-        model, transformer, X, full_df, threshold = fit_final(
-            variant, algorithm, config, resample, calibrate
+        # --- Step 1: evaluation, averaged across every fold
+        per_fold_metrics = []
+        per_fold_baseline = []
+        for fold in all_folds:
+            fold_train_df = pd.read_parquet(fold / "train.parquet")
+            fold_validation_df = pd.read_parquet(fold / "validation.parquet")
+            fold_test_df = pd.read_parquet(fold / "test.parquet")
+
+            X_fit_f, y_fit_f, X_val_f, y_val_f, X_test_f, y_test_f = prepare_fold(
+                fold_train_df, encoding, test_df=fold_test_df,
+                validation_df=fold_validation_df, resample=resample,
+            )
+            fold_model = train_model(
+                X_fit_f, y_fit_f, algorithm, config, calibrate, X_val=X_val_f, y_val=y_val_f
+            )
+            fold_threshold = choose_threshold(y_val_f, fold_model.predict_proba(X_val_f)[:, 1], 1.2)
+            per_fold_metrics.append(
+                evaluate.evaluate(X_test_f, y_test_f, fold_model, fold_threshold, 1.2)
+            )
+            per_fold_baseline.append(float(y_test_f.mean()))
+
+        metrics = {
+            k: float(np.mean([m[k] for m in per_fold_metrics]))
+            for k in per_fold_metrics[0]
+        }
+        metrics["roc_auc_std"] = float(np.std([m["roc_auc"] for m in per_fold_metrics]))
+
+        baseline = float(np.mean(per_fold_baseline))
+
+        if metrics["pr_auc"] <= baseline:
+            logger.error(
+                f"{variant}: {algorithm}/{config} test PR-AUC {metrics['pr_auc']:.3f} "
+                f"does not beat the majority-class baseline {baseline:.3f} - not registering"
+            )
+            return
+
+        # --- Step 2: the model that is registered.
+        full_train_df = pd.concat([train_df, validation_df], ignore_index=True)
+        X_full, y_full = build_xy(full_train_df)
+
+        transformer = Transformer(encoding=encoding).fit(X_full, y_full)
+        X_full = transformer.transform(X_full)
+        transformer.select_features(X_full, y_full)
+        X_full = transformer.apply_selection(X_full)
+        cat_cols = [c for c in transformer.categorical_columns if c in X_full.columns]
+        X_full = encode_categoricals(X_full, cat_cols, encoding)
+        X_full, y_full = resample_training_data(X_full, y_full, resample, encoding)
+
+        X_test2, y_test2 = build_xy(test_df)
+        X_test2 = transformer.transform(X_test2)
+        X_test2 = transformer.apply_selection(X_test2)
+        X_test2 = encode_categoricals(X_test2, cat_cols, encoding)
+        X_test2 = X_test2.reindex(columns=X_full.columns, fill_value=0)
+
+        model = train_model(
+            X_full, y_full, algorithm, config, calibrate, X_val=X_test2, y_val=y_test2
         )
+        final_threshold = choose_threshold(y_test2, model.predict_proba(X_test2)[:, 1], 1.2)
 
         dataset = from_pandas(
-            full_df,
-            source=METRICS_DIR / variant,
+            pd.concat([full_train_df, test_df], ignore_index=True),
+            source=str(fold_dir),
             name=f"{variant}_final_train",
-            digest= get_dvc_data_hash(METRICS_DIR / variant),
+            digest=get_dvc_data_hash(PROCESSED_DATA_DIR / "selection"),
         )
-        mlflow.log_input(dataset, context="training")
+        mlflow.log_input(dataset)
         mlflow.set_tag("git_dirty", get_git_dirty())
 
         mlflow.log_params({
             "variant": variant,
             "algorithm": algorithm,
             "config": config,
-            "encoding": ENCODING[algorithm],
+            "encoding": encoding,
             "calibrated": calibrate,
             "resample": resample,
             "final": True,
-            "n_features": X.shape[1],
             **{f"hp_{k}": v for k, v in HYPERPARAMS[algorithm][config].items()},
         })
         mlflow.log_metrics(metrics)
-        mlflow.log_metric("operating_threshold", threshold)
+        mlflow.log_metric("operating_threshold", final_threshold)
 
         register_model_bundle(
             model=model,
             transformer=transformer,
-            columns=list(X.columns),
+            columns=list(X_full.columns),
             registered_model_name=f"flight-delay-{variant}",
-            signature_sample=X.head(100),
+            signature_sample=X_full.head(100),
             alias=alias,
         )
         logger.success(
-            f"Registered flight-delay-{variant} ({X.shape[1]} features)"
+            f"Registered flight-delay-{variant} ({X_full.shape[1]} features) "
+            f"test PR-AUC {metrics['pr_auc']:.3f}"
             + (f", promoted as '{alias}'" if alias else "")
         )
 
@@ -235,7 +253,7 @@ def register_winner(
 
             joblib.dump(model, model_file)
             transformer.save(transformer_file)
-            columns_file.write_text(json.dumps(list(X.columns)))
+            columns_file.write_text(json.dumps(list(X_full.columns)))
 
             logger.info(f"Model also saved locally to {safe_relative_path(model_file)}")
             logger.info(f"Transformer also saved locally to {safe_relative_path(transformer_file)}")
@@ -244,7 +262,7 @@ def register_winner(
 
 @app.command()
 def run(
-    experiment: str = typer.Option("flight-delay", help="MLflow experiment name"),
+    experiment: str = typer.Option("flight-delay-v2", help="MLflow experiment name"),
     calibrate: bool = typer.Option(True, help="Wrap estimators in isotonic calibration"),
     alias: str | None = typer.Option(
         "champion",
@@ -254,10 +272,10 @@ def run(
         None,
         help="If given, also save model/transformer/columns locally under "
         "models_path/variant/algorithm__config/. None (the default) disables "
-        "local saving -- MLflow registration is the intended way to persist the "
+        "local saving - MLflow registration is the intended way to persist the "
         "winning model.",
     ),
-    repo_owner: str = typer.Option("beviale", help="DagsHub repository owner"),
+    repo_owner: str = typer.Option("Beviale", help="DagsHub repository owner"),
     repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
 ) -> None:
     """Pick the best algorithm per production variant and register it.
@@ -276,29 +294,17 @@ def run(
 
         for variant in PRODUCTION_VARIANTS:
             candidates = load_metrics(variant)
-            algorithm, config = max(candidates, key=lambda k: candidates[k]["pr_auc"])
-
-            winner_metrics = dict(candidates[(algorithm, config)])
-            resample = winner_metrics.pop("resample")
-
-            fold_dir = final_split_dir(variant)
-            validation_df = pd.read_parquet(fold_dir / "validation.parquet")
-            baseline = validation_df["IsDelayed"].mean()
-
-            if winner_metrics["pr_auc"] <= baseline:
-                logger.error(
-                    f"{variant}: best PR-AUC {winner_metrics['pr_auc']:.3f} "
-                    f"does not beat the majority-class baseline {baseline:.3f} -- not registering"
-                )
-                continue
+            algorithm, config = max(candidates, key=lambda k: candidates[k]["pr_auc_val"])
+            winner = candidates[(algorithm, config)]
+            resample = winner["resample"]
 
             logger.success(
                 f"{variant}: winner is {algorithm}/{config} "
-                f"(PR-AUC {winner_metrics['pr_auc']:.3f}, resample={resample})"
+                f"(validation PR-AUC {winner['pr_auc_val']:.3f}, resample={resample})"
             )
             register_winner(
                 variant, algorithm, config, resample,
-                winner_metrics, calibrate, alias=alias, models_path=models_path,
+                calibrate, alias=alias, models_path=models_path,
             )
     except Exception as e:
         logger.exception(f"An error occurred while selecting the winner model: {e}")

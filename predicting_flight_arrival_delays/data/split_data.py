@@ -19,7 +19,6 @@ from predicting_flight_arrival_delays.config import (
     DATE_COLUMN,
     INTERIM_DATA_DIR,
     PROCESSED_DATA_DIR,
-    PRODUCTION_VARIANTS,
 )
 from predicting_flight_arrival_delays.data.features import select_features_variant, VARIANTS
 from predicting_flight_arrival_delays.utils import safe_relative_path
@@ -178,67 +177,6 @@ def split_folds(
         logger.exception(f"An error occurred while creating the folds: {e}")
         raise typer.Exit(code=1) from None
 
-
-
-@app.command()
-def split_final_folds(
-    input_path: Path = typer.Option(
-        INTERIM_DATA_DIR / "flights_preprocessed.parquet",
-        help="Path to preprocessed Parquet dataset",
-    ),
-    output_dir: Path = typer.Option(
-        PROCESSED_DATA_DIR / "final",
-        help="Root directory where processed fold subdirectories will be created",
-    ),
-    variants: List[str] = typer.Option(
-        PRODUCTION_VARIANTS,
-        help="List of feature variants to generate splits for",
-    ),
-    val_frac: float = typer.Option(
-        0.2,
-        help="Fraction of data to reserve for validation split (0.0 disables validation)",
-    ),
-) -> None:
-    """Generates a fold for each variant and writes train and validation Parquet splits to disk.
-
-    Args:
-        input_path (Path): File path to input preprocessed Parquet dataset.
-        output_dir (Path): Destination base directory for processed splits.
-        variants (List[str]): Feature set variants to generate splits for.
-        val_frac (float): Fraction of data to reserve for validation split.
-    """
-    try:
-        complete_df = pd.read_parquet(input_path)
-        complete_df[DATE_COLUMN] = pd.to_datetime(complete_df[DATE_COLUMN]).astype("datetime64[ns]")
-        complete_df = complete_df.sort_values(DATE_COLUMN)
-
-    
-        for variant in variants:
-            logger.info(f"Processing variant '{variant}'...")
-            df = select_features_variant(complete_df.copy(), variant)
-
-            cutoff = df[DATE_COLUMN].quantile(1 - val_frac)
-            train_df = df[df[DATE_COLUMN] <= cutoff]
-            validation_df = df[df[DATE_COLUMN] > cutoff]
-    
-            variant_dir = output_dir / variant
-            variant_dir.mkdir(parents=True, exist_ok=True)
-        
-            train_path = variant_dir / "train.parquet"
-            validation_path = variant_dir / "validation.parquet"
-    
-            train_df.to_parquet(train_path, index=False)
-            validation_df.to_parquet(validation_path, index=False)
-    
-            logger.info(
-                f"{variant}: train={len(train_df)} rows -> {safe_relative_path(train_path)} | "
-                f"val={len(validation_df)} rows -> {safe_relative_path(validation_path)}"
-            )
-    
-        logger.success(f"Final train/validation splits written to {output_dir}")
-    except Exception as e:
-        logger.exception(f"An error occurred while creating the folds: {e}")
-        raise typer.Exit(code=1) from None
 
 if __name__ == "__main__":
     app()

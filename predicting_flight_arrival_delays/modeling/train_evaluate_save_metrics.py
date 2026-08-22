@@ -1,4 +1,4 @@
-"""Training, model selection and metrics calculation"""
+"""Training on train sets and metrics calculation on valid sets"""
 
 import json
 from pathlib import Path
@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import typer
 from loguru import logger
-from sklearn.metrics import precision_recall_curve, precision_score, recall_score
 from predicting_flight_arrival_delays.config import ENCODING, METRICS_DIR, PROCESSED_DATA_DIR, RESAMPLE_METHODS
 from predicting_flight_arrival_delays.data.features import VARIANTS, build_xy
 from predicting_flight_arrival_delays.data.transform import (
@@ -24,100 +23,46 @@ from predicting_flight_arrival_delays.utils import safe_relative_path, get_dvc_d
 app = typer.Typer()
 
 
-
-def choose_threshold(y_true: pd.Series, y_prob: np.ndarray, beta: float = 1.0) -> float:
-    """Find the threshold that maximises the F-beta score.
-
-    Args:
-        y_true: Observed labels.
-        y_prob: Predicted probabilities.
-        beta: the beta in F-beta score.
-
-    Returns:
-        The cutoff with the highest F-beta score.
-    """
-    precision, recall, thresholds = precision_recall_curve(y_true, y_prob)
-    precision, recall = precision[:-1], recall[:-1]
-
-    b2 = beta**2
-    denom = b2 * precision + recall
-    f = np.where(denom > 0, (1 + b2) * precision * recall / np.where(denom > 0, denom, 1), 0)
-    return float(thresholds[int(np.argmax(f))])
-
-
-def compare_betas(
-    y_true: pd.Series,
-    y_prob: np.ndarray,
-    betas: tuple[float, ...] = (1.0, 1.5, 2.0),
-) -> pd.DataFrame:
-    """Report the operating point each beta would produce.
-
-    Args:
-        y_true: Observed labels.
-        y_prob: Predicted probabilities.
-        betas: Beta values to compare.
-
-    Returns:
-        One row per beta, with the chosen threshold, alert rate, precision and recall.
-    """
-    rows = []
-    for beta in betas:
-        thr = choose_threshold(y_true, y_prob, beta=beta)
-        pred = (y_prob >= thr).astype(int)
-        rows.append({
-            "beta": beta,
-            "threshold": thr,
-            "alert_rate": float(pred.mean()),
-            "precision": precision_score(y_true, pred, zero_division=0),
-            "recall": recall_score(y_true, pred),
-        })
-    return pd.DataFrame(rows)
-
-
 def prepare_fold(
     train_df: pd.DataFrame,
-    test_df: pd.DataFrame,
     encoding: str,
+    test_df: pd.DataFrame | None = None,
     validation_df: pd.DataFrame | None = None,
     resample: str = "none",
 ) -> tuple[
     pd.DataFrame, pd.Series,
     pd.DataFrame | None, pd.Series | None,
-    pd.DataFrame, pd.Series,
+    pd.DataFrame | None, pd.Series | None,
 ]:
     """Fit the transformer on train, transform every split, then resample train only.
 
     Args:
         train_df: Raw training dataframe for this fold.
-        test_df: Raw test dataframe for this fold.
+        test_df: Raw test dataframe for this fold. Optional.
         encoding: Either "onehot" or "native"; determines how categoricals are
             encoded, and which resample methods are compatible.
-        validation_df: Raw validation dataframe for this fold. Optional; omit when
-            no held-out validation split applies.
+        validation_df: Raw validation dataframe for this fold. Optional.
         resample: Training-set rebalancing strategy. One of "none", "undersample",
             "oversample", "smote" ("smote" requires encoding="onehot"). Defaults to
             "none" (no rebalancing).
 
     Returns:
         Tuple of (X_fit, y_fit, X_val, y_val, X_test, y_test).
-        X_fit/y_fit reflect the resampling; the other splits are untouched. X_val/
-        y_val are (None, None) when validation_df is not given.
+        X_fit/y_fit reflect the resampling; the other splits are untouched. 
+        X_val/y_val are (None, None) when validation_df is not given.
+        X_test/y_test are (None, None) when test_df is not given.
+
     """
     X_fit, y_fit = build_xy(train_df)
-    X_test, y_test = build_xy(test_df)
 
     transformer = Transformer().fit(X_fit, y_fit)
     X_fit = transformer.transform(X_fit)
-    X_test = transformer.transform(X_test)
 
     transformer.select_features(X_fit, y_fit)
     X_fit = transformer.apply_selection(X_fit)
-    X_test = transformer.apply_selection(X_test)
 
     cat_cols = [c for c in transformer.categorical_columns if c in X_fit.columns]
     X_fit = encode_categoricals(X_fit, cat_cols, encoding)
-    X_test = encode_categoricals(X_test, cat_cols, encoding)
-    X_fit, X_test = align_columns(X_fit, X_test, encoding)
 
     X_val, y_val = None, None
     if validation_df is not None:
@@ -126,6 +71,14 @@ def prepare_fold(
         X_val = transformer.apply_selection(X_val)
         X_val = encode_categoricals(X_val, cat_cols, encoding)
         X_fit, X_val = align_columns(X_fit, X_val, encoding)
+
+    X_test, y_test = None, None
+    if test_df is not None:
+        X_test, y_test = build_xy(test_df)
+        X_test = transformer.transform(X_test)
+        X_test = transformer.apply_selection(X_test)
+        X_test = encode_categoricals(X_test, cat_cols, encoding)
+        X_fit, X_test = align_columns(X_fit, X_test, encoding)
 
     X_fit, y_fit = resample_training_data(X_fit, y_fit, resample, encoding)
 
@@ -137,28 +90,25 @@ def train_and_evaluate(
     variant: str,
     model: str,
     config: str,
-    calibrate: bool = True,
     resample: str = "none",
 ) -> dict[str, float]:
-    """Run the full fit/validate/test cycle across every fold, and average the results.
+    """Run the full fit/validate cycle across every fold, and average the results.
 
     For each fold: prepares the data (with resampling on train only), fits the
-    estimator (with LightGBM early stopping if X_val/y_val are supported), picks the
-    F1-optimal threshold on the validation set, evaluates on the held-out test set,
+    estimator (with LightGBM early stopping if X_val/y_val are supported), evaluates on the validation set,
     and logs everything to the active MLflow run.
 
     Args:
-        folds_dir: One directory per fold, each containing train/validation/test
+        folds_dir: One directory per fold, each containing train/validation
             parquet files.
         variant: Feature set variant name (e.g. 'all', 'noweather', 'nocarrier'); only
             used for logging.
         model: Algorithm key.
         config: Hyperparameter configuration key for that model.
-        calibrate: Whether to wrap the estimator in isotonic calibration.
         resample: Training-set rebalancing strategy.
 
     Returns:
-        Per-metric averages across folds, plus "roc_auc_std" (their standard
+        Per-metric averages across folds, plus "roc_auc_val_std" (their standard
         deviation), giving a sense of how stable the estimate is across folds.
     """
     encoding = ENCODING[model]
@@ -167,16 +117,14 @@ def train_and_evaluate(
     for index, fold in enumerate(folds_dir):
         train_df = pd.read_parquet(fold / "train.parquet")
         validation_df = pd.read_parquet(fold / "validation.parquet")
-        test_df = pd.read_parquet(fold / "test.parquet")
 
-        X_fit, y_fit, X_val, y_val, X_test, y_test = prepare_fold(
-            train_df, test_df, encoding, validation_df=validation_df, resample=resample
+        X_fit, y_fit, X_val, y_val, _, _ = prepare_fold(
+            train_df, encoding, validation_df=validation_df, resample=resample
         )
 
         estimator = train.train(
-            X_fit, y_fit, model, config, calibrate, X_val=X_val, y_val=y_val
+            X_fit, y_fit, model, config, False, X_val=X_val, y_val=y_val
         )
-
 
         if index == 0:
             raw_estimator = estimator.estimator if hasattr(estimator, "estimator") else estimator
@@ -195,31 +143,23 @@ def train_and_evaluate(
             if importances is not None:
                 logger.info(f"Top feature importances for {variant}/{model}:\n{importances}")
 
-        val_prob = estimator.predict_proba(X_val)[:, 1]
-        threshold = choose_threshold(y_val, val_prob)
+        metrics_val = evaluate.evaluate(X_val, y_val, estimator) 
 
-        if index == 0:
-            logger.info(
-                f"threshold options for {variant}/{model}:\n"
-                f"{compare_betas(y_val, val_prob)}"
-            )
+        combined = {f"{k}_val": v for k, v in metrics_val.items()}
 
-        metrics = evaluate.evaluate(X_test, y_test, estimator, threshold)
+        mlflow.log_metrics({f"fold_{k}": v for k, v in combined.items()}, step=index)
 
-        mlflow.log_metrics({f"fold_{k}": v for k, v in metrics.items()}, step=index)
-
-        fold_metrics.append(metrics)
+        fold_metrics.append(combined)
         logger.info(
             f"{variant}/{model} fold {index}: "
-            f"ROC-AUC {metrics['roc_auc']:.3f}, PR-AUC {metrics['pr_auc']:.3f}, "
-            f"recall {metrics['recall']:.3f}, threshold {threshold:.3f}"
+            f"val ROC-AUC {combined['roc_auc_val']:.3f}, val PR-AUC {combined['pr_auc_val']:.3f} | "
         )
 
     if not fold_metrics:
         raise RuntimeError(f"No usable folds for {variant}/{model}")
 
     averages = {k: float(np.mean([m[k] for m in fold_metrics])) for k in fold_metrics[0]}
-    averages["roc_auc_std"] = float(np.std([m["roc_auc"] for m in fold_metrics]))
+    averages["roc_auc_val_std"] = float(np.std([m["roc_auc_val"] for m in fold_metrics]))
     return averages
 
 
@@ -229,8 +169,7 @@ def run(
     model: str = typer.Option(..., help="Which algorithm to train"),
     config: str = typer.Option("default", help="Which hyperparameter set to use"),
     data_path: Path = typer.Option(PROCESSED_DATA_DIR / "selection"),
-    experiment: str = typer.Option("flight-delay", help="MLflow experiment name"),
-    calibrate: bool = typer.Option(True, help="Wrap estimators in isotonic calibration"),
+    experiment: str = typer.Option("flight-delay-v2", help="MLflow experiment name"),
     resample: str = typer.Option(
         "none",
         help="Training rebalancing strategy: 'none', 'undersample', 'oversample', "
@@ -245,9 +184,8 @@ def run(
         variant: Feature set variant to train.
         model: Algorithm name key to train.
         config: Hyperparameter configuration key to use.
-        data_path: Root directory containing one subfolder per variant, each with train/validation/test parquet files.
+        data_path: Root directory containing one subfolder per variant, each with train/validation parquet files.
         experiment: MLflow experiment name to log this run under.
-        calibrate: Whether to wrap the estimator in isotonic calibration.
         resample: Training-set rebalancing strategy.
         repo_owner: DagsHub repository owner, used to route MLflow tracking.
         repo_name: DagsHub repository name, used to route MLflow tracking.
@@ -296,14 +234,15 @@ def run(
                 "algorithm": model,
                 "config": config,
                 "encoding": ENCODING[model],
-                "calibrated": calibrate,
+                "calibrated": False,
                 "resample": resample,
+                "final": False,
                 "n_folds": len(val_fold_dirs),
-                "dvc_data_hash": get_dvc_data_hash(data_path / variant),
+                "dvc_data_hash": get_dvc_data_hash(data_path),
                 **{f"hp_{k}": v for k, v in HYPERPARAMS[model][config].items()},
             })
             metrics = train_and_evaluate(
-                val_fold_dirs, variant, model, config, calibrate, resample
+                val_fold_dirs, variant, model, config, resample
             )
             mlflow.set_tag("git_dirty", get_git_dirty())
             mlflow.log_metrics(metrics)
