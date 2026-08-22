@@ -52,6 +52,10 @@ include = ["pyproject.toml", "predicting_flight_arrival_delays/**/*.py"]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Add import sorting
+ignore = [
+    "B008",
+    "BLE001",
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["predicting_flight_arrival_delays"]

@@ -2,22 +2,25 @@
 """
 
 from pathlib import Path
+
+import holidays
+from loguru import logger
 import numpy as np
 import pandas as pd
 import typer
-from loguru import logger
-import holidays
+
 from predicting_flight_arrival_delays.config import (
-EXTERNAL_DATA_DIR, 
-DATE_COLUMN, 
-INTERIM_DATA_DIR, 
-MAX_LEAD_DAYS, 
-KEEP_COLUMNS, 
-FULL_LEAD_COVERAGE_START, 
-RAW_DATA_DIR,
-WEATHER_COLUMNS,
-SEED,
+    DATE_COLUMN,
+    EXTERNAL_DATA_DIR,
+    FULL_LEAD_COVERAGE_START,
+    INTERIM_DATA_DIR,
+    KEEP_COLUMNS,
+    MAX_LEAD_DAYS,
+    RAW_DATA_DIR,
+    SEED,
+    WEATHER_COLUMNS,
 )
+
 FULL_LEAD_COVERAGE_START = pd.Timestamp(FULL_LEAD_COVERAGE_START)
 from predicting_flight_arrival_delays.data.weather import load_weather
 from predicting_flight_arrival_delays.utils import to_pascal_case

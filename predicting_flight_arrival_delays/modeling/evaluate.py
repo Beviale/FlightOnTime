@@ -3,11 +3,11 @@
 
 import json
 from pathlib import Path
+
 import dagshub
 import joblib
-import pandas as pd
-import typer
 from loguru import logger
+import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.metrics import (
     average_precision_score,
@@ -17,6 +17,7 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
+import typer
 
 from predicting_flight_arrival_delays.config import METRICS_DIR
 from predicting_flight_arrival_delays.data.features import build_xy
@@ -26,7 +27,11 @@ from predicting_flight_arrival_delays.data.transform import (
     align_columns,
     encode_categoricals,
 )
-from predicting_flight_arrival_delays.utils import load_model_bundle, safe_relative_path, get_run_params
+from predicting_flight_arrival_delays.utils import (
+    get_run_params,
+    load_model_bundle,
+    safe_relative_path,
+)
 
 app = typer.Typer()
 

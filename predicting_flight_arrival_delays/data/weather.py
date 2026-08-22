@@ -16,23 +16,26 @@ One API call covers an entire date range for one (airport, lead time) pair, so t
 number of calls is (airports x lead times actually needed).
 """
 
-import time
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
+import time
+
+from loguru import logger
 import pandas as pd
 import requests
-import typer
-from loguru import logger
 from tqdm import tqdm
+import typer
+
 from predicting_flight_arrival_delays.config import (
-HISTORICAL_FORECAST_URL, 
-INTERIM_DATA_DIR, 
-PREVIOUS_RUNS_URL,
-WEATHER_MODEL, 
-WEATHER_VARS, 
-EXTERNAL_DATA_DIR,
-MAX_LEAD_DAYS)
-from predicting_flight_arrival_delays.utils import to_pascal_case, fetch
+    EXTERNAL_DATA_DIR,
+    HISTORICAL_FORECAST_URL,
+    INTERIM_DATA_DIR,
+    MAX_LEAD_DAYS,
+    PREVIOUS_RUNS_URL,
+    WEATHER_MODEL,
+    WEATHER_VARS,
+)
+from predicting_flight_arrival_delays.utils import fetch, to_pascal_case
 
 app = typer.Typer()
 

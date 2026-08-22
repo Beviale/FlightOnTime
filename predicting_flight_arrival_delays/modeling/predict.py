@@ -11,10 +11,12 @@ Which variant is used depends on the input: flights carrying weather features go
 
 from functools import lru_cache
 from pathlib import Path
+
 import dagshub
+from loguru import logger
 import pandas as pd
 import typer
-from loguru import logger
+
 from predicting_flight_arrival_delays.config import INTERIM_DATA_DIR, WEATHER_COLUMNS
 from predicting_flight_arrival_delays.data.features import get_feature_columns
 from predicting_flight_arrival_delays.data.transform import Transformer, encode_categoricals

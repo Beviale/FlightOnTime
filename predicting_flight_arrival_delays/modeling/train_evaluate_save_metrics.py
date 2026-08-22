@@ -2,13 +2,20 @@
 
 import json
 from pathlib import Path
+
 import dagshub
+from loguru import logger
 import mlflow
 import numpy as np
 import pandas as pd
 import typer
-from loguru import logger
-from predicting_flight_arrival_delays.config import ENCODING, METRICS_DIR, PROCESSED_DATA_DIR, RESAMPLE_METHODS
+
+from predicting_flight_arrival_delays.config import (
+    ENCODING,
+    METRICS_DIR,
+    PROCESSED_DATA_DIR,
+    RESAMPLE_METHODS,
+)
 from predicting_flight_arrival_delays.data.features import VARIANTS, build_xy
 from predicting_flight_arrival_delays.data.transform import (
     Transformer,
@@ -18,7 +25,11 @@ from predicting_flight_arrival_delays.data.transform import (
 )
 from predicting_flight_arrival_delays.modeling import evaluate, train
 from predicting_flight_arrival_delays.modeling.train import BUILDERS, HYPERPARAMS
-from predicting_flight_arrival_delays.utils import safe_relative_path, get_dvc_data_hash, get_git_dirty
+from predicting_flight_arrival_delays.utils import (
+    get_dvc_data_hash,
+    get_git_dirty,
+    safe_relative_path,
+)
 
 app = typer.Typer()
 

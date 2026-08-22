@@ -1,19 +1,20 @@
 """Build airports.csv from BTS's own T_MASTER_CORD table."""
 
-import zipfile
 from pathlib import Path
-import pandas as pd
-import typer
+import zipfile
+
 from loguru import logger
+import pandas as pd
 from playwright.sync_api import sync_playwright
 from timezonefinder import TimezoneFinder
+import typer
 
 from predicting_flight_arrival_delays.config import (
     EXTERNAL_DATA_DIR,
     EXTERNAL_RAW_DATA_DIR,
     MASTER_CORD_PAGE,
+    REQUIRED_AIRPORTS_COLUMNS,
     T_MASTER_CORD_FILE_NAME,
-    REQUIRED_AIRPORTS_COLUMNS
 )
 from predicting_flight_arrival_delays.utils import safe_relative_path, to_pascal_case
 

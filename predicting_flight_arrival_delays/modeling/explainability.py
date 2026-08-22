@@ -1,8 +1,11 @@
 """Per-prediction explanations for the flight-delay classifiers."""
 from __future__ import annotations
+
 from pathlib import Path
 from typing import Any
+
 import matplotlib
+
 matplotlib.use("Agg")
 from loguru import logger
 import matplotlib.pyplot as plt
@@ -136,7 +139,7 @@ def explain_prediction(
             shap_vec = values[0]
 
         elif values.ndim == 3:
-            n_samples, dim2, dim3 = values.shape
+            _, dim2, dim3 = values.shape
 
             if dim2 == x.shape[1]:
                 n_outputs = dim3

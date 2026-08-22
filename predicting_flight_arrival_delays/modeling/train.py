@@ -1,26 +1,32 @@
 """Model training.
 """
 
+import json
 from pathlib import Path
 from typing import Any
-import json
-import mlflow
+
+import dagshub
 import joblib
-import pandas as pd
-import typer
-import yaml
 from lightgbm import LGBMClassifier, early_stopping, log_evaluation
 from loguru import logger
+import mlflow
+import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.frozen import FrozenEstimator
 from sklearn.linear_model import LogisticRegression
-import dagshub
-from predicting_flight_arrival_delays.config import ENCODING, MODELS_DIR, HYPERPARAMS_PATH, SEED
+import typer
+import yaml
+
+from predicting_flight_arrival_delays.config import ENCODING, HYPERPARAMS_PATH, MODELS_DIR, SEED
 from predicting_flight_arrival_delays.data.features import VARIANTS, build_xy
-from predicting_flight_arrival_delays.data.transform import Transformer, align_columns, encode_categoricals
-from predicting_flight_arrival_delays.utils import safe_relative_path, register_model_bundle
+from predicting_flight_arrival_delays.data.transform import (
+    Transformer,
+    align_columns,
+    encode_categoricals,
+)
+from predicting_flight_arrival_delays.utils import register_model_bundle, safe_relative_path
 
 app = typer.Typer()
 
@@ -49,7 +55,7 @@ def _load_hyperparams(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
     with open(path) as f:
         hyperparams = yaml.safe_load(f)
 
-    for algorithm, configs in hyperparams.items():
+    for configs in hyperparams.values():
         for params in configs.values():
             params["random_state"] = SEED
     return hyperparams

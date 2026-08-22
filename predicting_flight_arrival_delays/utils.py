@@ -1,17 +1,19 @@
 """Generic utility methods"""
 
 import json
-import tempfile
 from pathlib import Path
+import subprocess
+import tempfile
 from typing import Any
+
 import joblib
+from loguru import logger
 import mlflow
 import mlflow.artifacts
+from mlflow.models import infer_signature
 import mlflow.sklearn
 import pandas as pd
 import requests
-import subprocess
-from mlflow.models import infer_signature
 import yaml
 
 
@@ -229,8 +231,8 @@ def get_dvc_data_hash(output_path: str, dvc_lock_path: Path = Path("dvc.lock")) 
             for out in stage.get("outs", []):
                 if out["path"] == output_path:
                     return out["md5"]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.exception(f"Could not resolve DVC hash: {e}")
     return "not_found"
 
 # ---------------------------------------------------------------------------

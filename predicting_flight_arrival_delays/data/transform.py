@@ -1,25 +1,27 @@
 """Transformations fitted on the training fold only."""
 
 from dataclasses import dataclass, field
-from pathlib import Path
-import joblib
-import numpy as np
-import pandas as pd
-from loguru import logger
-from sklearn.feature_selection import mutual_info_classif
-from sklearn.preprocessing import StandardScaler
 from itertools import combinations
-from scipy.stats import chi2_contingency
+from pathlib import Path
+
 from imblearn.over_sampling import SMOTE, RandomOverSampler
 from imblearn.under_sampling import RandomUnderSampler
+import joblib
+from loguru import logger
+import numpy as np
+import pandas as pd
+from scipy.stats import chi2_contingency
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.preprocessing import StandardScaler
+
 from predicting_flight_arrival_delays.config import (
-    SEED,
-    MIN_CATEGORY_COUNT,
-    CORRELATION_THRESHOLD,
     CATEGORICAL_ASSOCIATION_THRESHOLD,
-    MIN_MUTUAL_INFO,
-    MI_SAMPLE_SIZE,
+    CORRELATION_THRESHOLD,
     DATE_COLUMN,
+    MI_SAMPLE_SIZE,
+    MIN_CATEGORY_COUNT,
+    MIN_MUTUAL_INFO,
+    SEED,
     SERVICE_COLUMNS2,
 )
 
@@ -544,7 +546,7 @@ def resample_training_data(
         ValueError: If method is unknown, or method="smote" with encoding="native".
     """
     if method == "none":
-        logger.warning(f"No resampling applied (method='none')")
+        logger.warning("No resampling applied (method='none')")
         return X, y
 
     if method == "smote" and encoding != "onehot":

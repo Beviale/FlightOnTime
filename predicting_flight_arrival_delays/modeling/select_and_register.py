@@ -15,15 +15,16 @@ then for that winner:
 
 import json
 from pathlib import Path
+
 import dagshub
 import joblib
+from loguru import logger
 import mlflow
+from mlflow.data.pandas_dataset import from_pandas
 import numpy as np
 import pandas as pd
-import typer
-from loguru import logger
-from mlflow.data.pandas_dataset import from_pandas
 from sklearn.metrics import precision_recall_curve
+import typer
 
 from predicting_flight_arrival_delays.config import (
     ENCODING,
@@ -42,10 +43,10 @@ from predicting_flight_arrival_delays.modeling.train import HYPERPARAMS
 from predicting_flight_arrival_delays.modeling.train import train as train_model
 from predicting_flight_arrival_delays.modeling.train_evaluate_save_metrics import prepare_fold
 from predicting_flight_arrival_delays.utils import (
-    register_model_bundle,
-    safe_relative_path,
     get_dvc_data_hash,
     get_git_dirty,
+    register_model_bundle,
+    safe_relative_path,
 )
 
 app = typer.Typer()

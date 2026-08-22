@@ -11,16 +11,17 @@ which also shows how stable performance is over time.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
-import pandas as pd
+
 from loguru import logger
+import pandas as pd
 import typer
+
 from predicting_flight_arrival_delays.config import (
     DATE_COLUMN,
     INTERIM_DATA_DIR,
     PROCESSED_DATA_DIR,
 )
-from predicting_flight_arrival_delays.data.features import select_features_variant, VARIANTS
+from predicting_flight_arrival_delays.data.features import VARIANTS, select_features_variant
 from predicting_flight_arrival_delays.utils import safe_relative_path
 
 app = typer.Typer()
@@ -99,7 +100,7 @@ def split_folds(
         PROCESSED_DATA_DIR / "selection",
         help="Root directory where processed fold subdirectories will be created",
     ),
-    variants: List[str] = typer.Option(
+    variants: list[str] = typer.Option(
         VARIANTS,
         help="List of feature variants to generate splits for",
     ),
