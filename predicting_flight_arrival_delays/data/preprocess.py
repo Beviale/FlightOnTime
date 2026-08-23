@@ -316,13 +316,15 @@ def join_weather_to_flights(flights: pd.DataFrame, weather_dir: Path) -> pd.Data
         ("OriginAirportID", "DepUtcHour", "Origin"),
         ("DestAirportID", "ArrUtcHour", "Dest"),
     ]:
-        side = weather.rename(columns={v: f"{v}{suffix}" for v in WEATHER_COLUMNS})
-        flights = flights.merge(
-            side,
-            left_on=[airport_col, hour_col, "LeadDays"],
-            right_on=["AirportId", "Time", "LeadDays"],
-            how="left",
-        ).drop(columns=["AirportId", "Time"])
+        side = weather.rename(
+            columns={
+                **{v: f"{v}{suffix}" for v in WEATHER_COLUMNS},
+                "AirportId": airport_col,
+                "Time": hour_col,
+            },
+            copy=False,
+        )
+        flights = flights.merge(side, on=[airport_col, hour_col, "LeadDays"], how="left")
 
         del side
 
@@ -394,8 +396,7 @@ def join_weather(
         output_path: Where the joined result is written.
     """
     try:
-        df = pd.read_parquet(flights_path)
-        df = join_weather_to_flights(df, weather_dir)
+        df = join_weather_to_flights(pd.read_parquet(flights_path), weather_dir)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(output_path, index=False)

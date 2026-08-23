@@ -184,7 +184,23 @@ def load_weather(weather_dir: Path) -> pd.DataFrame:
     if not files:
         raise FileNotFoundError(f"No weather files in {weather_dir} -- run download_weather first.")
     logger.info(f"Loading {len(files)} weather files from {weather_dir}")
-    return pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+
+    frames = []
+    for path in files:
+        frame = pd.read_parquet(path)
+        for column in frame.columns:
+            if frame[column].dtype == "float64":
+                frame[column] = frame[column].astype("float32")
+        if "WeatherCode" in frame.columns:
+            frame["WeatherCode"] = frame["WeatherCode"].astype("float32")
+        frames.append(frame)
+
+    weather = pd.concat(frames, ignore_index=True)
+    logger.info(
+        f"Weather series: {len(weather)} rows, "
+        f"{weather.memory_usage(deep=True).sum() / 1024**3:.2f} GB in memory"
+    )
+    return weather
 
 
 # ---------------------------------------------------------------------------
