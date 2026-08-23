@@ -6,6 +6,7 @@ from lightgbm import LGBMClassifier
 import numpy as np
 import pandas as pd
 import pytest
+import scipy.sparse as sp
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.frozen import FrozenEstimator
@@ -237,22 +238,41 @@ class TestTrain:
 
 
 class TestTrainWithTransformer:
-    def test_returns_transformer_estimator_and_features(self, flights_df, small_transformer):
-        transformer, estimator, X_fit = train_with_transformer(
+    def test_returns_transformer_estimator_features_and_columns(
+        self, flights_df, small_transformer
+    ):
+        transformer, estimator, X_fit, columns = train_with_transformer(
             flights_df, "noweather", "logistic_regression", "default", calibrate=False
         )
 
         assert isinstance(transformer, Transformer)
         assert isinstance(estimator, LogisticRegression)
+        assert X_fit.shape[0] == len(flights_df)
+        assert len(columns) == X_fit.shape[1]
+
+    def test_onehot_features_reach_the_model_as_a_sparse_matrix(
+        self, flights_df, small_transformer
+    ):
+        _, _, X_fit, _ = train_with_transformer(
+            flights_df, "noweather", "logistic_regression", "default", calibrate=False
+        )
+
+        assert sp.issparse(X_fit)
+
+    def test_native_features_stay_a_dataframe(self, flights_df, small_transformer):
+        """LightGBM reads category dtype directly, so nothing is converted."""
+        _, _, X_fit, _ = train_with_transformer(
+            flights_df, "noweather", "lightgbm", "fast", calibrate=False
+        )
+
         assert isinstance(X_fit, pd.DataFrame)
-        assert len(X_fit) == len(flights_df)
 
     def test_the_transformer_matches_the_model_encoding(self, flights_df, small_transformer):
         """Scikit-learn cannot read string categories; LightGBM can."""
-        onehot, _, _ = train_with_transformer(
+        onehot, _, _, _ = train_with_transformer(
             flights_df, "noweather", "logistic_regression", "default", calibrate=False
         )
-        native, _, _ = train_with_transformer(
+        native, _, _, _ = train_with_transformer(
             flights_df, "noweather", "lightgbm", "fast", calibrate=False
         )
 
@@ -260,32 +280,35 @@ class TestTrainWithTransformer:
         assert native.encoding == "native"
 
     def test_the_date_never_reaches_the_model(self, flights_df, small_transformer):
-        _, _, X_fit = train_with_transformer(
+        _, _, _, columns = train_with_transformer(
             flights_df, "noweather", "logistic_regression", "default", calibrate=False
         )
 
-        assert "FlightDate" not in X_fit.columns
+        assert "FlightDate" not in columns
 
-    def test_feature_names_are_recoverable_for_registration(
+    def test_the_columns_describe_the_matrix_the_model_was_fitted_on(
         self, flights_df, small_transformer
     ):
-        """train.run() reads feature_names_in_ to write columns.json."""
-        _, estimator, X_fit = train_with_transformer(
+        """The matrix carries only positions, so this list is the only record of
+        what each of them means. train.run() writes it to columns.json."""
+        _, _, X_fit, columns = train_with_transformer(
             flights_df, "noweather", "logistic_regression", "default", calibrate=False
         )
 
-        assert list(estimator.feature_names_in_) == list(X_fit.columns)
+        assert len(columns) == X_fit.shape[1]
+        assert any(c.startswith("Origin_") for c in columns)
+        assert "Origin" not in columns
 
     def test_validation_frame_is_aligned_to_training(self, flights_df, small_transformer):
         train_df, validation_df = flights_df.iloc[:200], flights_df.iloc[200:]
 
-        _, estimator, X_fit = train_with_transformer(
+        _, _, X_fit, columns = train_with_transformer(
             train_df, "noweather", "logistic_regression", "default",
             calibrate=False, evaluation_df=validation_df,
         )
 
-        assert len(X_fit) == len(train_df)
-        assert list(estimator.feature_names_in_) == list(X_fit.columns)
+        assert X_fit.shape[0] == len(train_df)
+        assert len(columns) == X_fit.shape[1]
 
     def test_unknown_variant_is_rejected(self, flights_df, small_transformer):
         with pytest.raises(ValueError, match="Unknown variant"):

@@ -67,6 +67,8 @@ addopts = "-ra --strict-markers"
 filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::FutureWarning",
+    "ignore:.*DataFrame with sparse columns found.*:UserWarning",
+    "ignore:X has feature names, but .* was fitted without feature names:UserWarning",
 ]
 
 [tool.coverage.run]

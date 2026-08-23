@@ -32,6 +32,8 @@ from predicting_flight_arrival_delays.data.transform import (
     Transformer,
     align_columns,
     encode_categoricals,
+    sparse_column_order,
+    to_sparse_matrix,
 )
 from predicting_flight_arrival_delays.utils import register_model_bundle, safe_relative_path
 
@@ -162,7 +164,7 @@ def train_with_transformer(
     config: str,
     calibrate: bool,
     evaluation_df: pd.DataFrame | None = None,
-) -> tuple[Transformer, BaseEstimator, pd.DataFrame]:
+) -> tuple[Transformer, BaseEstimator, Any, list[str]]:
     """Fit a Transformer, then fit the estimator on the transformed data.
 
     If evaluation_df is given, the features are transformed with the same (train-fitted)
@@ -177,7 +179,10 @@ def train_with_transformer(
         evaluation_df: Validation matrix. Optional.
 
     Returns:
-        Tuple of (fitted Transformer, fitted estimator, the final encoded X_fit).
+        Tuple of (fitted Transformer, fitted estimator, the features the estimator
+        was fitted on, the column names describing them). For onehot encoding the
+        features are a scipy.sparse matrix and carry no names of their own, which
+        is what the fourth element is for; for native they stay a DataFrame.
     """
     X_fit, y_fit = build_xy(train_df, variant)
     encoding_type = ENCODING.get(model, "onehot")
@@ -200,9 +205,19 @@ def train_with_transformer(
         X_val = encode_categoricals(X_val, cat_cols, encoding_type)
         X_fit, X_val = align_columns(X_fit, X_val, encoding_type)
 
+    feature_columns = (
+        sparse_column_order(X_fit) if encoding_type == "onehot" else list(X_fit.columns)
+    )
+
+
+    if encoding_type == "onehot":
+        X_fit = to_sparse_matrix(X_fit)
+        if X_val is not None:
+            X_val = to_sparse_matrix(X_val)
+
     estimator = train(X_fit, y_fit, model, config, calibrate, X_val=X_val, y_val=y_val)
 
-    return transformer, estimator, X_fit
+    return transformer, estimator, X_fit, feature_columns
 
 
 @app.command()
@@ -288,10 +303,9 @@ def run(
 
 
         logger.info(f"Training {model} ({config}) for variant '{variant}'...")
-        transformer, estimator, X_fit = train_with_transformer(
+        transformer, estimator, X_fit, columns = train_with_transformer(
             train_df, variant, model, config, calibrate, validation_df
         )
-        columns = list(estimator.feature_names_in_)
 
         if models_path is not None:
             save_dir = models_path / variant / f"{model}__{config}"
@@ -324,7 +338,9 @@ def run(
                     transformer=transformer,
                     columns=columns,
                     registered_model_name=registered_model_name,
-                    signature_sample=X_fit.head(100),
+                    signature_sample=(
+                        X_fit[:100].toarray() if hasattr(X_fit, "toarray") else X_fit.head(100)
+                    ),
                     alias=alias,
                 )
             logger.info(f"Registered to MLflow as '{registered_model_name}'")

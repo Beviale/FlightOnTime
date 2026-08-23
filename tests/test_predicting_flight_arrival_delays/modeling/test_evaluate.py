@@ -111,10 +111,10 @@ class TestEvaluateOnDataframe:
     @pytest.fixture
     def bundle(self, flights_df, small_transformer):
         df = select_features_variant(flights_df, "noweather")
-        transformer, estimator, X_fit = train_with_transformer(
+        transformer, estimator, X_fit, columns = train_with_transformer(
             df, "noweather", "logistic_regression", "default", calibrate=False
         )
-        return df, transformer, estimator, X_fit, list(estimator.feature_names_in_)
+        return df, transformer, estimator, X_fit, columns
 
     def test_it_returns_the_full_metric_set(self, bundle):
         df, transformer, estimator, _, columns = bundle
@@ -127,11 +127,12 @@ class TestEvaluateOnDataframe:
         """Same rows, same model: preparing them for scoring must reproduce the
         matrix the training path built for them."""
         df, transformer, estimator, X_fit, columns = bundle
-        rows = df.index[df["Origin"] == "ATL"]
+        
+        rows = (df["Origin"] == "ATL").to_numpy()
 
-        expected = evaluate(X_fit.loc[rows], df.loc[rows, TARGET], estimator, 0.5)
+        expected = evaluate(X_fit[rows], df.loc[rows, TARGET], estimator, 0.5)
         actual = _evaluate_on_dataframe(
-            df.loc[rows], "noweather", estimator, transformer, columns, 0.5
+            df[rows], "noweather", estimator, transformer, columns, 0.5
         )
 
         assert actual["pr_auc"] == pytest.approx(expected["pr_auc"])
@@ -165,7 +166,7 @@ def saved_bundle(tmp_path, flights_df, monkeypatch):
     monkeypatch.setattr(train_module, "Transformer", build)
 
     df = select_features_variant(flights_df, "noweather")
-    transformer, estimator, _ = train_with_transformer(
+    transformer, estimator, _, columns = train_with_transformer(
         df, "noweather", "logistic_regression", "default", calibrate=False
     )
 
@@ -173,7 +174,7 @@ def saved_bundle(tmp_path, flights_df, monkeypatch):
     save_dir.mkdir(parents=True)
     joblib.dump(estimator, save_dir / "model.joblib")
     joblib.dump(transformer, save_dir / "transformer.joblib")
-    (save_dir / "columns.json").write_text(json.dumps(list(estimator.feature_names_in_)))
+    (save_dir / "columns.json").write_text(json.dumps(columns))
 
     data_path = tmp_path / "test.parquet"
     df.to_parquet(data_path, index=False)
@@ -242,8 +243,9 @@ class TestEvaluateFromLocalPathHappyPath:
 class TestEvaluateFromMlflow:
     @pytest.fixture
     def registry(self, monkeypatch, saved_bundle):
-        _, _, estimator, transformer = saved_bundle
-        columns = list(estimator.feature_names_in_)
+        save_dir, _, estimator, transformer = saved_bundle
+      
+        columns = json.loads((save_dir / "columns.json").read_text())
         requested = {}
 
         def fake_load_bundle(registered_model_name, stage="None"):
