@@ -5,8 +5,8 @@ stages:
     deps:
     - path: predicting_flight_arrival_delays/data/dataset.py
       hash: md5
-      md5: 77582110fbb503fe3a53b35db1d4c6d2
-      size: 4491
+      md5: 6102e7d5261ed6ca519a8bf73dffa40b
+      size: 4470
     params:
       predicting_flight_arrival_delays/config.py:
         BTS_BASE_URL: 
@@ -22,16 +22,16 @@ stages:
       nfiles: 18
   build_airports:
     cmd: uv run predicting_flight_arrival_delays/data/build_airports.py 
-      --force_download
+      --force-download
     deps:
     - path: predicting_flight_arrival_delays/data/build_airports.py
       hash: md5
-      md5: e5c94c2ae9df553a86cfa7db393f71bb
-      size: 5528
+      md5: 9584f633e40924b6191c58d39d625f19
+      size: 5568
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 26e19dda807d3f8b656f5e112545a34d
-      size: 9134
+      md5: c3d11d57c5754cbc2991f03ef0afa802
+      size: 9938
     params:
       predicting_flight_arrival_delays/config.py:
         MASTER_CORD_PAGE: 
@@ -68,12 +68,12 @@ stages:
       nfiles: 18
     - path: predicting_flight_arrival_delays/data/preprocess.py
       hash: md5
-      md5: 4005fbabab1d3019a5a7ab88f2a13fbe
-      size: 15242
+      md5: d603e6fd7b2b4be19d362e1e86ffd15d
+      size: 15992
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 26e19dda807d3f8b656f5e112545a34d
-      size: 9134
+      md5: c3d11d57c5754cbc2991f03ef0afa802
+      size: 9938
     params:
       predicting_flight_arrival_delays/config.py:
         DATE_COLUMN: FlightDate
@@ -104,8 +104,8 @@ stages:
     outs:
     - path: data/interim/flights_features.parquet
       hash: md5
-      md5: ae0e2722c77aed42d7c5217a29813daa
-      size: 317191287
+      md5: 525d035dafaa17169387d0a39f3c2d05
+      size: 317198209
   download_weather:
     cmd: uv run predicting_flight_arrival_delays/data/weather.py
     deps:
@@ -115,16 +115,16 @@ stages:
       size: 155210
     - path: data/interim/flights_features.parquet
       hash: md5
-      md5: ae0e2722c77aed42d7c5217a29813daa
-      size: 317191287
+      md5: 525d035dafaa17169387d0a39f3c2d05
+      size: 317198209
     - path: predicting_flight_arrival_delays/data/weather.py
       hash: md5
-      md5: 4f4b8b436b298066bd3cbb6f78229eb4
-      size: 9478
+      md5: 2e7f5269a506965b8dbd93d0aeb38332
+      size: 10714
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 26e19dda807d3f8b656f5e112545a34d
-      size: 9134
+      md5: c3d11d57c5754cbc2991f03ef0afa802
+      size: 9938
     params:
       predicting_flight_arrival_delays/config.py:
         HISTORICAL_FORECAST_URL: 
@@ -155,16 +155,16 @@ stages:
       nfiles: 2863
     - path: data/interim/flights_features.parquet
       hash: md5
-      md5: ae0e2722c77aed42d7c5217a29813daa
-      size: 317191287
+      md5: 525d035dafaa17169387d0a39f3c2d05
+      size: 317198209
     - path: predicting_flight_arrival_delays/data/preprocess.py
       hash: md5
-      md5: 4005fbabab1d3019a5a7ab88f2a13fbe
-      size: 15242
+      md5: d603e6fd7b2b4be19d362e1e86ffd15d
+      size: 15992
     - path: predicting_flight_arrival_delays/data/weather.py
       hash: md5
-      md5: 4f4b8b436b298066bd3cbb6f78229eb4
-      size: 9478
+      md5: 2e7f5269a506965b8dbd93d0aeb38332
+      size: 10714
     params:
       predicting_flight_arrival_delays/config.py:
         WEATHER_COLUMNS:
@@ -177,27 +177,27 @@ stages:
     outs:
     - path: data/interim/flights_preprocessed.parquet
       hash: md5
-      md5: 3a3ad622347847b894c70203dbff34c5
-      size: 405035598
+      md5: 577daa9471cc5bcbc1fa89a5edd0a130
+      size: 405162690
   split_data_cv:
-    cmd: uv run predicting_flight_arrival_delays/data/split_data.py split-folds
+    cmd: uv run predicting_flight_arrival_delays/data/split_data.py
     deps:
     - path: data/interim/flights_preprocessed.parquet
       hash: md5
-      md5: 3a3ad622347847b894c70203dbff34c5
-      size: 405035598
+      md5: 577daa9471cc5bcbc1fa89a5edd0a130
+      size: 405162690
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: 6c7fb091ca0a2c0e36898f7316d6597e
-      size: 4848
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
     - path: predicting_flight_arrival_delays/data/split_data.py
       hash: md5
-      md5: 1f6d2f71d50bafe566ffe93d5b1fa9c9
-      size: 7090
+      md5: 9dad337b5c3a6c29f5a21338a7b7ae11
+      size: 7069
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 26e19dda807d3f8b656f5e112545a34d
-      size: 9134
+      md5: c3d11d57c5754cbc2991f03ef0afa802
+      size: 9938
     params:
       predicting_flight_arrival_delays/config.py:
         DATE_COLUMN: FlightDate
@@ -220,6 +220,6 @@ stages:
     outs:
     - path: data/processed/selection
       hash: md5
-      md5: 5d0ba9444367c48fe55ba19efc57f159.dir
-      size: 1787072486
+      md5: 7f9bbd300570312770ecf116ff4bef9d.dir
+      size: 1785587450
       nfiles: 27
