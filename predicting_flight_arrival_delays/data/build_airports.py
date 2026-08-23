@@ -16,7 +16,7 @@ from predicting_flight_arrival_delays.config import (
     REQUIRED_AIRPORTS_COLUMNS,
     T_MASTER_CORD_FILE_NAME,
 )
-from predicting_flight_arrival_delays.utils import safe_relative_path, to_pascal_case
+from predicting_flight_arrival_delays.utils import safe_relative_path
 
 app = typer.Typer()
 
@@ -103,8 +103,11 @@ def _build(output_path: Path) -> None:
 
     result = cord[["AIRPORT_ID", "AIRPORT", "LATITUDE", "LONGITUDE", "TIMEZONE"]].rename(
         columns={
+            "AIRPORT_ID": "AirportId",
             "AIRPORT": "Iata",
-            **{c: to_pascal_case(c) for c in ["AIRPORT_ID", "LATITUDE", "LONGITUDE", "TIMEZONE"]},
+            "LATITUDE": "Latitude",
+            "LONGITUDE": "Longitude",
+            "TIMEZONE": "Timezone",
         }
     )
 

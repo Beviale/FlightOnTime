@@ -22,9 +22,8 @@ import typer
 from predicting_flight_arrival_delays.config import METRICS_DIR
 from predicting_flight_arrival_delays.data.features import build_xy
 from predicting_flight_arrival_delays.data.transform import (
-    OTHER,
     Transformer,
-    align_columns,
+    align_to_training_columns,
     encode_categoricals,
 )
 from predicting_flight_arrival_delays.utils import (
@@ -34,26 +33,6 @@ from predicting_flight_arrival_delays.utils import (
 )
 
 app = typer.Typer()
-
-
-def _build_reference_stub(columns: list[str], transformer: Transformer) -> pd.DataFrame:
-    """Build an empty "train"-shaped stub so align_columns() can be reused here.
-
-    Args:
-        columns: The exact column names/order the model was trained on.
-        transformer: The fitted Transformer, for its categorical_columns and
-            category_keep (used only when transformer.encoding == "native").
-
-    Returns:
-        A zero-row DataFrame with those columns, dtyped for alignment purposes only.
-    """
-    stub = pd.DataFrame(columns=columns)
-    if transformer.encoding == "native":
-        for col in transformer.categorical_columns:
-            if col in stub.columns:
-                categories = sorted(transformer.category_keep.get(col, set())) + [OTHER]
-                stub[col] = pd.Categorical([], categories=categories)
-    return stub
 
 
 def evaluate(
@@ -127,8 +106,7 @@ def _evaluate_on_dataframe(
     X_test = encode_categoricals(X_test, cat_cols, transformer.encoding)
 
     if training_columns is not None:
-        reference_stub = _build_reference_stub(training_columns, transformer)
-        _, X_test = align_columns(reference_stub, X_test, transformer.encoding)
+        X_test = align_to_training_columns(X_test, training_columns, transformer)
     else:
         logger.warning(
             "No training column list available; assuming evaluate_df already "

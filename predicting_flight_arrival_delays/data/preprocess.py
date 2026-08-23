@@ -141,9 +141,10 @@ def add_holiday_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df["IsHoliday"] = dates.map(lambda d: d in US_HOLIDAYS).astype(int)
 
-    holiday_dates = sorted(
-        d for d in US_HOLIDAYS[df[DATE_COLUMN].min():df[DATE_COLUMN].max()]
-    )
+
+    start = df[DATE_COLUMN].min() - pd.DateOffset(years=1)
+    end = df[DATE_COLUMN].max() + pd.DateOffset(years=1)
+    holiday_dates = sorted(d for d in US_HOLIDAYS[start:end])
     holiday_series = pd.Series(pd.to_datetime(holiday_dates))
 
     def _days_to_nearest(d):
@@ -327,8 +328,9 @@ def join_weather_to_flights(flights: pd.DataFrame, weather_dir: Path) -> pd.Data
 
     for col in ["WeatherCodeOrigin", "WeatherCodeDest"]:
         if col in flights.columns:
-            flights[col] = flights[col].astype("Int64").astype(str)
-            
+            codes = flights[col].astype("Int64")
+            flights[col] = codes.astype(str).mask(codes.isna())
+
     return flights
 
 

@@ -10,6 +10,7 @@ import joblib
 from loguru import logger
 import numpy as np
 import pandas as pd
+import scipy.sparse as sp
 from scipy.stats import chi2_contingency
 from sklearn.feature_selection import mutual_info_classif
 from sklearn.preprocessing import StandardScaler
@@ -64,7 +65,7 @@ class Transformer:
     scaler: StandardScaler | None = field(default=None, init=False)
     dropped_features: list[str] = field(default_factory=list, init=False)
 
-    delay_rate_columns: list[str] = field(default_factory=lambda: ["Origin", "Dest", "OriginCarrier", "DestCarrier"])    
+    delay_rate_columns: list[str] = field(default_factory=lambda: ["Origin", "Dest", "OriginCarrier", "DestCarrier"])
     delay_rate_shrinkage: float = 50.0
     delay_rate_stats_: dict[str, dict[str, pd.Series]] = field(default_factory=dict, init=False)
     global_delay_rate_: float | None = field(default=None, init=False)
@@ -75,7 +76,6 @@ class Transformer:
     def __post_init__(self) -> None:
         self._categorical_columns_given = bool(self.categorical_columns)
         self._numeric_columns_given = bool(self.numeric_columns)
-
 
     # ------------------------------------------------------------------
     # Historical delay rates
@@ -179,7 +179,7 @@ class Transformer:
             dates = df[DATE_COLUMN]
             rate_cols = self._fit_delay_rates_internal(df, y, dates)
             df = pd.concat([df, rate_cols], axis=1)
-        
+
         df = df.drop(columns=[c for c in SERVICE_COLUMNS2 if c in df.columns])
 
         if not self._categorical_columns_given:
@@ -206,8 +206,6 @@ class Transformer:
         self.scaler = StandardScaler().fit(prepared[self.numeric_columns])
 
         return self
-
-
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         """Apply the fitted transformation to any set of rows.
@@ -238,8 +236,6 @@ class Transformer:
         df[self.numeric_columns] = self.scaler.transform(df[self.numeric_columns])
         return df
 
-
-
     def fit_transform(self, X: pd.DataFrame, y: pd.Series) -> pd.DataFrame:
         """Fit on X and transform it in one call.
 
@@ -252,7 +248,6 @@ class Transformer:
             (e.g. "FlightDate") - both fit() and transform() drop it internally.
         """
         return self.fit(X, y).transform(X)
-
 
     def _apply_categories(self, X: pd.DataFrame) -> pd.DataFrame:
         """Replace rare, unseen and missing category values with OTHER.
@@ -331,7 +326,6 @@ class Transformer:
                 logger.info(f"Correlated, dropped: {correlated}")
             dropped.extend(correlated)
 
-
         if len(X) > self.mi_sample_size:
             positions = np.random.default_rng(self.seed).choice(
                 len(X), self.mi_sample_size, replace=False
@@ -384,8 +378,6 @@ class Transformer:
         )
         return self
 
-
-
     def apply_selection(self, X: pd.DataFrame) -> pd.DataFrame:
         """Drop the columns chosen by select_features.
 
@@ -396,7 +388,6 @@ class Transformer:
             The same rows without the dropped columns.
         """
         return X.drop(columns=[c for c in self.dropped_features if c in X.columns])
-
 
     # ------------------------------------------------------------------
     # Persistence
@@ -434,7 +425,11 @@ def encode_categoricals(
 
     Two schemes:
 
-    -onehot: one binary column per category.
+    -onehot: one binary column per category, stored SPARSE (pandas SparseDtype) to
+        keep the DataFrame itself lightweight. Numeric columns are downcast to
+        float32. This is still a DataFrame (needed for align_columns, which relies
+        on column names) - call to_sparse_matrix() afterwards, once alignment is
+        done, to get a true scipy.sparse matrix for fitting/resampling.
     -native: pandas category dtype.
 
     Applied after OTHER-grouping.
@@ -459,12 +454,72 @@ def encode_categoricals(
         return X
 
     if encoding == "onehot":
-        encoded = pd.get_dummies(X, columns=present, drop_first=False)
-        bool_cols = encoded.select_dtypes(include="bool").columns
-        encoded[bool_cols] = encoded[bool_cols].astype("int8")
+        encoded = pd.get_dummies(X, columns=present, drop_first=False, sparse=True)
+        dense_numeric = [
+            c for c in encoded.columns if not isinstance(encoded[c].dtype, pd.SparseDtype)
+        ]
+        for c in dense_numeric:
+            if pd.api.types.is_float_dtype(encoded[c]):
+                encoded[c] = encoded[c].astype("float32")
         return encoded
 
     raise ValueError(f"Unknown encoding '{encoding}'. Use 'onehot' or 'native'.")
+
+
+def _split_sparse_columns(X: pd.DataFrame) -> tuple[list[str], list[str]]:
+    """Separate the dense columns from the sparse (one-hot) ones, order preserved."""
+    sparse_cols = [c for c in X.columns if isinstance(X[c].dtype, pd.SparseDtype)]
+    dense_cols = [c for c in X.columns if c not in sparse_cols]
+    return dense_cols, sparse_cols
+
+
+def sparse_column_order(X: pd.DataFrame) -> list[str]:
+    """The column order to_sparse_matrix() will produce for X.
+
+    The matrix loses the names, so anything that needs to reproduce its layout
+    later - a registered model's columns.json, above all - has to record this
+    order rather than X's own.
+
+    Args:
+        X: A onehot-encoded DataFrame, as passed to to_sparse_matrix().
+
+    Returns:
+        Dense column names first, then the sparse ones.
+    """
+    dense_cols, sparse_cols = _split_sparse_columns(X)
+    return dense_cols + sparse_cols
+
+
+def to_sparse_matrix(X: pd.DataFrame) -> sp.csr_matrix:
+    """Convert a onehot-encoded DataFrame (mix of dense numeric + sparse dummy
+    columns) into a single scipy.sparse CSR matrix, ready for model fitting or
+    resampling.
+
+    Call this after align_columns() - alignment needs column names, which are
+    lost once converted to a raw sparse matrix. Column order is preserved as
+    dense columns first, then sparse (one-hot) columns; the same split is applied
+    consistently to any DataFrame passed in, so calling this separately on
+    already-aligned train/validation/test features yields matrices whose columns
+    correspond to each other.
+
+    Args:
+        X: A DataFrame as returned by encode_categoricals(..., encoding="onehot"),
+            optionally already passed through align_columns().
+
+    Returns:
+        A CSR sparse matrix, float32, with X.shape[0] rows and X.shape[1] columns.
+    """
+    dense_cols, sparse_cols = _split_sparse_columns(X)
+
+    parts = []
+    if dense_cols:
+        parts.append(sp.csr_matrix(X[dense_cols].astype("float32").to_numpy()))
+    if sparse_cols:
+        parts.append(X[sparse_cols].sparse.to_coo().tocsr().astype("float32"))
+
+    if not parts:
+        raise ValueError("X has no columns to convert.")
+    return sp.hstack(parts, format="csr") if len(parts) > 1 else parts[0]
 
 
 def cramers_v(x: pd.Series, y: pd.Series) -> float:
@@ -513,23 +568,59 @@ def align_columns(
     missing = [c for c in train.columns if c not in test.columns]
     test = test.copy()
     for c in missing:
-        test[c] = 0
+        test[c] = pd.Series(False, index=test.index).astype(train[c].dtype)
     if missing:
         logger.info(f"Added {len(missing)} missing one-hot columns to test set")
 
     return train, test[train.columns]
 
 
-def resample_training_data(
+def align_to_training_columns(
     X: pd.DataFrame,
+    training_columns: list[str] | tuple[str, ...],
+    transformer: Transformer,
+) -> pd.DataFrame:
+    """Rebuild the exact matrix a fitted model expects, from encoded features.
+
+    Used by every path that scores rows with an already-fitted model -
+    inference and offline evaluation alike. Unlike align_columns(), which pairs
+    two live DataFrames during training, this one aligns against a recorded list
+    of column names, so it needs no reference frame and cannot be thrown off by
+    dtypes.
+
+    Args:
+        X: Encoded features for a batch, from encode_categoricals.
+        training_columns: The columns, in order, the model was fitted on.
+        transformer: The transformer that produced X, for its categorical
+            columns and their training-time category sets.
+
+    Returns:
+        X reindexed to the training-time columns, in the training-time order.
+        Columns the batch does not carry are filled with zeros.
+    """
+    X = X.reindex(columns=list(training_columns), fill_value=0)
+
+    if transformer.encoding == "native":
+        for col in transformer.categorical_columns:
+            if col in X.columns:
+                categories = sorted(transformer.category_keep.get(col, set())) + [OTHER]
+                X[col] = X[col].astype(pd.CategoricalDtype(categories=categories))
+
+    return X
+
+
+def resample_training_data(
+    X: pd.DataFrame | sp.csr_matrix,
     y: pd.Series,
     method: str,
     encoding: str,
     random_state: int = SEED,
-) -> tuple[pd.DataFrame, pd.Series]:
+) -> tuple[pd.DataFrame | sp.csr_matrix, pd.Series]:
     """Rebalance the training fold only.
 
-    Must be called after encode_categoricals()/align_columns().
+    Must be called after encode_categoricals()/align_columns() (and, for onehot
+    encoding, after to_sparse_matrix() - X may be either a DataFrame or a scipy
+    sparse matrix; all supported resamplers accept both).
 
     Args:
         X: Training features, already encoded and column-aligned.

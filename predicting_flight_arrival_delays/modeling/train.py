@@ -176,7 +176,7 @@ def train_with_transformer(
     encoding_type = ENCODING.get(model, "onehot")
 
     transformer = Transformer(encoding=encoding_type)
-    X_fit = transformer.fit_transform(X_fit)
+    X_fit = transformer.fit_transform(X_fit, y_fit)
 
     transformer.select_features(X_fit, y_fit)
     X_fit = transformer.apply_selection(X_fit)
