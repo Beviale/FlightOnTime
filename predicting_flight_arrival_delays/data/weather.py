@@ -16,23 +16,26 @@ One API call covers an entire date range for one (airport, lead time) pair, so t
 number of calls is (airports x lead times actually needed).
 """
 
-import time
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
+import time
+
+from loguru import logger
 import pandas as pd
 import requests
-import typer
-from loguru import logger
 from tqdm import tqdm
+import typer
+
 from predicting_flight_arrival_delays.config import (
-HISTORICAL_FORECAST_URL, 
-INTERIM_DATA_DIR, 
-PREVIOUS_RUNS_URL,
-WEATHER_MODEL, 
-WEATHER_VARS, 
-EXTERNAL_DATA_DIR,
-MAX_LEAD_DAYS)
-from predicting_flight_arrival_delays.utils import to_pascal_case, fetch
+    EXTERNAL_DATA_DIR,
+    HISTORICAL_FORECAST_URL,
+    INTERIM_DATA_DIR,
+    MAX_LEAD_DAYS,
+    PREVIOUS_RUNS_URL,
+    WEATHER_MODEL,
+    WEATHER_VARS,
+)
+from predicting_flight_arrival_delays.utils import fetch, to_pascal_case
 
 app = typer.Typer()
 
@@ -181,7 +184,23 @@ def load_weather(weather_dir: Path) -> pd.DataFrame:
     if not files:
         raise FileNotFoundError(f"No weather files in {weather_dir} -- run download_weather first.")
     logger.info(f"Loading {len(files)} weather files from {weather_dir}")
-    return pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+
+    frames = []
+    for path in files:
+        frame = pd.read_parquet(path)
+        for column in frame.columns:
+            if frame[column].dtype == "float64":
+                frame[column] = frame[column].astype("float32")
+        if "WeatherCode" in frame.columns:
+            frame["WeatherCode"] = frame["WeatherCode"].astype("float32")
+        frames.append(frame)
+
+    weather = pd.concat(frames, ignore_index=True)
+    logger.info(
+        f"Weather series: {len(weather)} rows, "
+        f"{weather.memory_usage(deep=True).sum() / 1024**3:.2f} GB in memory"
+    )
+    return weather
 
 
 # ---------------------------------------------------------------------------

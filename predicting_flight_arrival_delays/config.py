@@ -1,8 +1,7 @@
 from pathlib import Path
+
 from dotenv import load_dotenv
 from loguru import logger
-import pandas as pd
-
 
 # Load environment variables from .env file if it exists
 load_dotenv()
@@ -117,6 +116,12 @@ METRICS_DIR = PROJ_ROOT / "metrics"
 HYPERPARAMS_PATH = Path(__file__).resolve().parent / "modeling" / "hyperparams.yaml"
 RESAMPLE_METHODS = ("none", "undersample", "oversample", "smote")
 # ------END Training and Model Selection--------
+
+
+# ------START MLflow tracking (DagsHub)--------
+DAGSHUB_REPO_OWNER = "Beviale"
+DAGSHUB_REPO_NAME = "FlightOnTime"
+# ------END MLflow tracking--------
 
 
 

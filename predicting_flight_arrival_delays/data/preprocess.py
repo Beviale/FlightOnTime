@@ -2,22 +2,25 @@
 """
 
 from pathlib import Path
+
+import holidays
+from loguru import logger
 import numpy as np
 import pandas as pd
 import typer
-from loguru import logger
-import holidays
+
 from predicting_flight_arrival_delays.config import (
-EXTERNAL_DATA_DIR, 
-DATE_COLUMN, 
-INTERIM_DATA_DIR, 
-MAX_LEAD_DAYS, 
-KEEP_COLUMNS, 
-FULL_LEAD_COVERAGE_START, 
-RAW_DATA_DIR,
-WEATHER_COLUMNS,
-SEED,
+    DATE_COLUMN,
+    EXTERNAL_DATA_DIR,
+    FULL_LEAD_COVERAGE_START,
+    INTERIM_DATA_DIR,
+    KEEP_COLUMNS,
+    MAX_LEAD_DAYS,
+    RAW_DATA_DIR,
+    SEED,
+    WEATHER_COLUMNS,
 )
+
 FULL_LEAD_COVERAGE_START = pd.Timestamp(FULL_LEAD_COVERAGE_START)
 from predicting_flight_arrival_delays.data.weather import load_weather
 from predicting_flight_arrival_delays.utils import to_pascal_case
@@ -138,9 +141,10 @@ def add_holiday_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df["IsHoliday"] = dates.map(lambda d: d in US_HOLIDAYS).astype(int)
 
-    holiday_dates = sorted(
-        d for d in US_HOLIDAYS[df[DATE_COLUMN].min():df[DATE_COLUMN].max()]
-    )
+
+    start = df[DATE_COLUMN].min() - pd.DateOffset(years=1)
+    end = df[DATE_COLUMN].max() + pd.DateOffset(years=1)
+    holiday_dates = sorted(d for d in US_HOLIDAYS[start:end])
     holiday_series = pd.Series(pd.to_datetime(holiday_dates))
 
     def _days_to_nearest(d):
@@ -312,20 +316,23 @@ def join_weather_to_flights(flights: pd.DataFrame, weather_dir: Path) -> pd.Data
         ("OriginAirportID", "DepUtcHour", "Origin"),
         ("DestAirportID", "ArrUtcHour", "Dest"),
     ]:
-        side = weather.rename(columns={v: f"{v}{suffix}" for v in WEATHER_COLUMNS})
-        flights = flights.merge(
-            side,
-            left_on=[airport_col, hour_col, "LeadDays"],
-            right_on=["AirportId", "Time", "LeadDays"],
-            how="left",
-        ).drop(columns=["AirportId", "Time"])
+        side = weather.rename(
+            columns={
+                **{v: f"{v}{suffix}" for v in WEATHER_COLUMNS},
+                "AirportId": airport_col,
+                "Time": hour_col,
+            },
+            copy=False,
+        )
+        flights = flights.merge(side, on=[airport_col, hour_col, "LeadDays"], how="left")
 
         del side
 
     for col in ["WeatherCodeOrigin", "WeatherCodeDest"]:
         if col in flights.columns:
-            flights[col] = flights[col].astype("Int64").astype(str)
-            
+            codes = flights[col].astype("Int64")
+            flights[col] = codes.astype(str).mask(codes.isna())
+
     return flights
 
 
@@ -389,8 +396,7 @@ def join_weather(
         output_path: Where the joined result is written.
     """
     try:
-        df = pd.read_parquet(flights_path)
-        df = join_weather_to_flights(df, weather_dir)
+        df = join_weather_to_flights(pd.read_parquet(flights_path), weather_dir)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         df.to_parquet(output_path, index=False)

@@ -2,23 +2,24 @@
 
 import shutil
 import zipfile
-from typing import List
-import requests
-import typer
+
 from loguru import logger
+import requests
+from tqdm import tqdm
+import typer
+
 from predicting_flight_arrival_delays.config import (
     BTS_BASE_URL,
     RAW_DATA_DIR,
     YEARS_DATA,
 )
-from tqdm import tqdm
 
 app = typer.Typer()
 
 
 @app.command()
 def download_bts_data(
-    years: List[int] = typer.Option(list(YEARS_DATA), "--year", help="Year(s) to download."),
+    years: list[int] = typer.Option(list(YEARS_DATA), "--year", help="Year(s) to download."),
     force: bool = typer.Option(
         False, "--force", help="Re-download months already present, overwriting them."
     ),
@@ -52,7 +53,7 @@ def download_bts_data(
                     continue
                 months_to_download.append((year, month))
 
-        failed_months: List[str] = []
+        failed_months: list[str] = []
 
         # Second pass: download
         for year, month in tqdm(months_to_download, desc="Downloading BTS data"):

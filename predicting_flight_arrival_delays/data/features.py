@@ -13,13 +13,10 @@ Three variants:
                airports it serves
 """
 
-import pandas as pd
 from loguru import logger
-from predicting_flight_arrival_delays.config import(
-TARGET,
-SERVICE_COLUMNS,
-WEATHER_COLUMNS
-)
+import pandas as pd
+
+from predicting_flight_arrival_delays.config import SERVICE_COLUMNS, TARGET, WEATHER_COLUMNS
 
 CARRIER_COLUMNS = ["ReportingAirline", "FlightNumberReportingAirline", "OriginCarrier", "DestCarrier"]
 WEATHER_COLUMNS_ORIGIN = [col + "Origin" for col in WEATHER_COLUMNS]

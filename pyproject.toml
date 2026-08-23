@@ -19,6 +19,7 @@ dependencies = [
     "dagshub>=0.7.1",
     "dvc>=3.67.1",
     "dvc-s3>=3.3.0",
+    "great-expectations>=1.21.0",
     "holidays>=0.101",
     "imbalanced-learn>=0.14.2",
     "ipython",
@@ -33,11 +34,10 @@ dependencies = [
     "pip",
     "playwright>=1.62.0",
     "pyarrow>=25.0.0",
-    "pytest",
     "python-dotenv",
-    "ruff",
     "scikit-learn",
     "seaborn>=0.13.2",
+    "shap>=0.52.0",
     "timezonefinder>=8.2.5",
     "tqdm",
     "typer",
@@ -52,8 +52,39 @@ include = ["pyproject.toml", "predicting_flight_arrival_delays/**/*.py"]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Add import sorting
+ignore = [
+    "B008",
+    "BLE001",
+]
 
 [tool.ruff.lint.isort]
 known-first-party = ["predicting_flight_arrival_delays"]
 force-sort-within-sections = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::FutureWarning",
+    "ignore:.*DataFrame with sparse columns found.*:UserWarning",
+    "ignore:X has feature names, but .* was fitted without feature names:UserWarning",
+]
+
+[tool.coverage.run]
+# Without an explicit source, modules no test ever imports are simply absent
+# from the report instead of showing up as 0%.
+source = ["predicting_flight_arrival_delays"]
+
+[tool.coverage.report]
+exclude_also = ['if __name__ == "__main__":']
+
+[dependency-groups]
+dev = [
+    "click<8.2",
+    "pynblint>=0.1.6",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.4",
+]
 

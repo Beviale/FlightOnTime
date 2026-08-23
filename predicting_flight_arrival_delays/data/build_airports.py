@@ -1,21 +1,22 @@
 """Build airports.csv from BTS's own T_MASTER_CORD table."""
 
-import zipfile
 from pathlib import Path
-import pandas as pd
-import typer
+import zipfile
+
 from loguru import logger
+import pandas as pd
 from playwright.sync_api import sync_playwright
 from timezonefinder import TimezoneFinder
+import typer
 
 from predicting_flight_arrival_delays.config import (
     EXTERNAL_DATA_DIR,
     EXTERNAL_RAW_DATA_DIR,
     MASTER_CORD_PAGE,
+    REQUIRED_AIRPORTS_COLUMNS,
     T_MASTER_CORD_FILE_NAME,
-    REQUIRED_AIRPORTS_COLUMNS
 )
-from predicting_flight_arrival_delays.utils import safe_relative_path, to_pascal_case
+from predicting_flight_arrival_delays.utils import safe_relative_path
 
 app = typer.Typer()
 
@@ -23,7 +24,7 @@ app = typer.Typer()
 # Download
 # ---------------------------------------------------------------------------
 
-def _download() -> None:
+def download() -> None:
     """Download and extract the T_MASTER_CORD table via Playwright.
 
     Automates a headless browser session to navigate to the BTS TranStats page,
@@ -58,7 +59,7 @@ def _download() -> None:
 # Build
 # ---------------------------------------------------------------------------
 
-def _build(output_path: Path) -> None:
+def build(output_path: Path) -> None:
     """Build the airport reference table used by the rest of the pipeline.
 
     Reads the raw T_MASTER_CORD CSV, filters for active US airports, converts
@@ -102,8 +103,11 @@ def _build(output_path: Path) -> None:
 
     result = cord[["AIRPORT_ID", "AIRPORT", "LATITUDE", "LONGITUDE", "TIMEZONE"]].rename(
         columns={
+            "AIRPORT_ID": "AirportId",
             "AIRPORT": "Iata",
-            **{c: to_pascal_case(c) for c in ["AIRPORT_ID", "LATITUDE", "LONGITUDE", "TIMEZONE"]},
+            "LATITUDE": "Latitude",
+            "LONGITUDE": "Longitude",
+            "TIMEZONE": "Timezone",
         }
     )
 
@@ -135,8 +139,8 @@ def run(
     try:
         csv_path = EXTERNAL_RAW_DATA_DIR / f"{T_MASTER_CORD_FILE_NAME}.csv"
         if force_download or not csv_path.exists():
-            _download()
-        _build(output_path)
+            download()
+        build(output_path)
     except Exception as e:
         logger.exception(f"An error occurred while creating the airport reference table: {e}")
         raise typer.Exit(code=1) from None

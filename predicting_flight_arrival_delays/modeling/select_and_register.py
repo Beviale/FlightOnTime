@@ -15,17 +15,20 @@ then for that winner:
 
 import json
 from pathlib import Path
+
 import dagshub
 import joblib
+from loguru import logger
 import mlflow
+from mlflow.data.pandas_dataset import from_pandas
 import numpy as np
 import pandas as pd
-import typer
-from loguru import logger
-from mlflow.data.pandas_dataset import from_pandas
 from sklearn.metrics import precision_recall_curve
+import typer
 
 from predicting_flight_arrival_delays.config import (
+    DAGSHUB_REPO_NAME,
+    DAGSHUB_REPO_OWNER,
     ENCODING,
     METRICS_DIR,
     PROCESSED_DATA_DIR,
@@ -34,18 +37,21 @@ from predicting_flight_arrival_delays.config import (
 from predicting_flight_arrival_delays.data.features import build_xy
 from predicting_flight_arrival_delays.data.transform import (
     Transformer,
+    align_columns,
     encode_categoricals,
     resample_training_data,
+    sparse_column_order,
+    to_sparse_matrix,
 )
 from predicting_flight_arrival_delays.modeling import evaluate
 from predicting_flight_arrival_delays.modeling.train import HYPERPARAMS
 from predicting_flight_arrival_delays.modeling.train import train as train_model
 from predicting_flight_arrival_delays.modeling.train_evaluate_save_metrics import prepare_fold
 from predicting_flight_arrival_delays.utils import (
-    register_model_bundle,
-    safe_relative_path,
     get_dvc_data_hash,
     get_git_dirty,
+    register_model_bundle,
+    safe_relative_path,
 )
 
 app = typer.Typer()
@@ -184,7 +190,7 @@ def register_winner(
         if metrics["pr_auc"] <= baseline:
             logger.error(
                 f"{variant}: {algorithm}/{config} test PR-AUC {metrics['pr_auc']:.3f} "
-                f"does not beat the majority-class baseline {baseline:.3f} - not registering"
+                f"does not beat the random-guess PR-AUC baseline {baseline:.3f} - not registering"
             )
             return
 
@@ -198,13 +204,23 @@ def register_winner(
         X_full = transformer.apply_selection(X_full)
         cat_cols = [c for c in transformer.categorical_columns if c in X_full.columns]
         X_full = encode_categoricals(X_full, cat_cols, encoding)
-        X_full, y_full = resample_training_data(X_full, y_full, resample, encoding)
 
         X_test2, y_test2 = build_xy(test_df)
         X_test2 = transformer.transform(X_test2)
         X_test2 = transformer.apply_selection(X_test2)
         X_test2 = encode_categoricals(X_test2, cat_cols, encoding)
-        X_test2 = X_test2.reindex(columns=X_full.columns, fill_value=0)
+        X_full, X_test2 = align_columns(X_full, X_test2, encoding)
+        if encoding == "onehot":
+            X_test2 = to_sparse_matrix(X_test2)
+
+        X_full, y_full = resample_training_data(X_full, y_full, resample, encoding)
+
+        feature_columns = (
+            sparse_column_order(X_full) if encoding == "onehot" else list(X_full.columns)
+        )
+
+        if encoding == "onehot":
+            X_full = to_sparse_matrix(X_full)
 
         model = train_model(
             X_full, y_full, algorithm, config, calibrate, X_val=X_test2, y_val=y_test2
@@ -220,6 +236,8 @@ def register_winner(
         mlflow.log_input(dataset)
         mlflow.set_tag("git_dirty", get_git_dirty())
 
+        n_features = X_full.shape[1]
+
         mlflow.log_params({
             "variant": variant,
             "algorithm": algorithm,
@@ -228,6 +246,7 @@ def register_winner(
             "calibrated": calibrate,
             "resample": resample,
             "final": True,
+            "n_features": n_features,
             **{f"hp_{k}": v for k, v in HYPERPARAMS[algorithm][config].items()},
         })
         mlflow.log_metrics(metrics)
@@ -236,13 +255,13 @@ def register_winner(
         register_model_bundle(
             model=model,
             transformer=transformer,
-            columns=list(X_full.columns),
+            columns=feature_columns,
             registered_model_name=f"flight-delay-{variant}",
-            signature_sample=X_full.head(100),
+            signature_sample=X_full[:100].toarray() if hasattr(X_full, "toarray") else X_full.head(100),
             alias=alias,
         )
         logger.success(
-            f"Registered flight-delay-{variant} ({X_full.shape[1]} features) "
+            f"Registered flight-delay-{variant} ({n_features} features) "
             f"test PR-AUC {metrics['pr_auc']:.3f}"
             + (f", promoted as '{alias}'" if alias else "")
         )
@@ -257,7 +276,7 @@ def register_winner(
 
             joblib.dump(model, model_file)
             transformer.save(transformer_file)
-            columns_file.write_text(json.dumps(list(X_full.columns)))
+            columns_file.write_text(json.dumps(feature_columns))
 
             logger.info(f"Model also saved locally to {safe_relative_path(model_file)}")
             logger.info(f"Transformer also saved locally to {safe_relative_path(transformer_file)}")
@@ -279,8 +298,8 @@ def run(
         "local saving - MLflow registration is the intended way to persist the "
         "winning model.",
     ),
-    repo_owner: str = typer.Option("Beviale", help="DagsHub repository owner"),
-    repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
+    repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
+    repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> None:
     """Pick the best algorithm per production variant and register it.
 

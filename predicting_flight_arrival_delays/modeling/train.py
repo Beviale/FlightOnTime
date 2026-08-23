@@ -1,26 +1,41 @@
 """Model training.
 """
 
+import json
 from pathlib import Path
 from typing import Any
-import json
-import mlflow
+
+import dagshub
 import joblib
-import pandas as pd
-import typer
-import yaml
 from lightgbm import LGBMClassifier, early_stopping, log_evaluation
 from loguru import logger
+import mlflow
+import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.frozen import FrozenEstimator
 from sklearn.linear_model import LogisticRegression
-import dagshub
-from predicting_flight_arrival_delays.config import ENCODING, MODELS_DIR, HYPERPARAMS_PATH, SEED
+import typer
+import yaml
+
+from predicting_flight_arrival_delays.config import (
+    DAGSHUB_REPO_NAME,
+    DAGSHUB_REPO_OWNER,
+    ENCODING,
+    HYPERPARAMS_PATH,
+    MODELS_DIR,
+    SEED,
+)
 from predicting_flight_arrival_delays.data.features import VARIANTS, build_xy
-from predicting_flight_arrival_delays.data.transform import Transformer, align_columns, encode_categoricals
-from predicting_flight_arrival_delays.utils import safe_relative_path, register_model_bundle
+from predicting_flight_arrival_delays.data.transform import (
+    Transformer,
+    align_columns,
+    encode_categoricals,
+    sparse_column_order,
+    to_sparse_matrix,
+)
+from predicting_flight_arrival_delays.utils import register_model_bundle, safe_relative_path
 
 app = typer.Typer()
 
@@ -49,7 +64,7 @@ def _load_hyperparams(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
     with open(path) as f:
         hyperparams = yaml.safe_load(f)
 
-    for algorithm, configs in hyperparams.items():
+    for configs in hyperparams.values():
         for params in configs.values():
             params["random_state"] = SEED
     return hyperparams
@@ -149,7 +164,7 @@ def train_with_transformer(
     config: str,
     calibrate: bool,
     evaluation_df: pd.DataFrame | None = None,
-) -> tuple[Transformer, BaseEstimator, pd.DataFrame]:
+) -> tuple[Transformer, BaseEstimator, Any, list[str]]:
     """Fit a Transformer, then fit the estimator on the transformed data.
 
     If evaluation_df is given, the features are transformed with the same (train-fitted)
@@ -164,13 +179,16 @@ def train_with_transformer(
         evaluation_df: Validation matrix. Optional.
 
     Returns:
-        Tuple of (fitted Transformer, fitted estimator, the final encoded X_fit).
+        Tuple of (fitted Transformer, fitted estimator, the features the estimator
+        was fitted on, the column names describing them). For onehot encoding the
+        features are a scipy.sparse matrix and carry no names of their own, which
+        is what the fourth element is for; for native they stay a DataFrame.
     """
     X_fit, y_fit = build_xy(train_df, variant)
     encoding_type = ENCODING.get(model, "onehot")
 
     transformer = Transformer(encoding=encoding_type)
-    X_fit = transformer.fit_transform(X_fit)
+    X_fit = transformer.fit_transform(X_fit, y_fit)
 
     transformer.select_features(X_fit, y_fit)
     X_fit = transformer.apply_selection(X_fit)
@@ -187,9 +205,19 @@ def train_with_transformer(
         X_val = encode_categoricals(X_val, cat_cols, encoding_type)
         X_fit, X_val = align_columns(X_fit, X_val, encoding_type)
 
+    feature_columns = (
+        sparse_column_order(X_fit) if encoding_type == "onehot" else list(X_fit.columns)
+    )
+
+
+    if encoding_type == "onehot":
+        X_fit = to_sparse_matrix(X_fit)
+        if X_val is not None:
+            X_val = to_sparse_matrix(X_val)
+
     estimator = train(X_fit, y_fit, model, config, calibrate, X_val=X_val, y_val=y_val)
 
-    return transformer, estimator, X_fit
+    return transformer, estimator, X_fit, feature_columns
 
 
 @app.command()
@@ -217,8 +245,8 @@ def run(
         None,
         help="MLflow alias.",
     ),
-    repo_owner: str = typer.Option("beviale", help="DagsHub repository owner"),
-    repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
+    repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
+    repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> tuple[BaseEstimator, Transformer, list[str]]:
     """Train one model/config; optionally save locally and/or register to MLflow.
 
@@ -275,10 +303,9 @@ def run(
 
 
         logger.info(f"Training {model} ({config}) for variant '{variant}'...")
-        transformer, estimator, X_fit = train_with_transformer(
+        transformer, estimator, X_fit, columns = train_with_transformer(
             train_df, variant, model, config, calibrate, validation_df
         )
-        columns = list(estimator.feature_names_in_)
 
         if models_path is not None:
             save_dir = models_path / variant / f"{model}__{config}"
@@ -311,7 +338,9 @@ def run(
                     transformer=transformer,
                     columns=columns,
                     registered_model_name=registered_model_name,
-                    signature_sample=X_fit.head(100),
+                    signature_sample=(
+                        X_fit[:100].toarray() if hasattr(X_fit, "toarray") else X_fit.head(100)
+                    ),
                     alias=alias,
                 )
             logger.info(f"Registered to MLflow as '{registered_model_name}'")

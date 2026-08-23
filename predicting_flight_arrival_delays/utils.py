@@ -1,18 +1,22 @@
 """Generic utility methods"""
 
 import json
-import tempfile
 from pathlib import Path
+import subprocess
+import tempfile
 from typing import Any
+
 import joblib
+from loguru import logger
 import mlflow
 import mlflow.artifacts
+from mlflow.models import infer_signature
 import mlflow.sklearn
 import pandas as pd
 import requests
-import subprocess
-from mlflow.models import infer_signature
 import yaml
+
+from predicting_flight_arrival_delays.config import PROJ_ROOT
 
 
 def to_pascal_case(name: str) -> str:
@@ -211,26 +215,44 @@ def get_run_params(run_id: str) -> dict[str, str]:
 # DVC
 # ---------------------------------------------------------------------------
 
-def get_dvc_data_hash(output_path: str, dvc_lock_path: Path = Path("dvc.lock")) -> str:
+def get_dvc_data_hash(
+    output_path: str | Path, dvc_lock_path: Path = PROJ_ROOT / "dvc.lock"
+) -> str:
     """The DVC hash currently recorded for a specific pipeline output path.
 
     Args:
-        output_path: The path as it appears in dvc.lock's "outs", e.g.
-            "data/processed/final/all".
+        output_path: The pipeline output to look up. Either the string as it
+            appears in dvc.lock's "outs" (e.g. "data/processed/selection") or a
+            Path; absolute paths are made relative to the directory holding
+            dvc.lock, which is what DVC records them against.
         dvc_lock_path: Path to dvc.lock. Defaults to the repo root's dvc.lock.
 
     Returns:
         The md5 hash DVC has recorded for that output, or "not_found" if
-        dvc.lock is missing or does not list that path.
+        dvc.lock is missing, does not list that path, or the path lies outside
+        the repository.
     """
+    dvc_lock_path = Path(dvc_lock_path)
+    target = Path(output_path)
+
+    if target.is_absolute():
+        repo_root = dvc_lock_path.resolve().parent
+        try:
+            target = target.relative_to(repo_root)
+        except ValueError:
+            logger.warning(f"{target} lies outside the DVC repository at {repo_root}")
+            return "not_found"
+
+    target = target.as_posix()
+
     try:
         lock = yaml.safe_load(dvc_lock_path.read_text())
         for stage in lock["stages"].values():
             for out in stage.get("outs", []):
-                if out["path"] == output_path:
+                if out["path"] == target:
                     return out["md5"]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.exception(f"Could not resolve DVC hash: {e}")
     return "not_found"
 
 # ---------------------------------------------------------------------------

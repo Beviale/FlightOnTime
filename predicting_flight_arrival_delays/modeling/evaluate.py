@@ -3,11 +3,11 @@
 
 import json
 from pathlib import Path
+
 import dagshub
 import joblib
-import pandas as pd
-import typer
 from loguru import logger
+import pandas as pd
 from sklearn.base import BaseEstimator
 from sklearn.metrics import (
     average_precision_score,
@@ -17,38 +17,26 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
+import typer
 
-from predicting_flight_arrival_delays.config import METRICS_DIR
+from predicting_flight_arrival_delays.config import (
+    DAGSHUB_REPO_NAME,
+    DAGSHUB_REPO_OWNER,
+    METRICS_DIR,
+)
 from predicting_flight_arrival_delays.data.features import build_xy
 from predicting_flight_arrival_delays.data.transform import (
-    OTHER,
     Transformer,
-    align_columns,
+    align_to_training_columns,
     encode_categoricals,
 )
-from predicting_flight_arrival_delays.utils import load_model_bundle, safe_relative_path, get_run_params
+from predicting_flight_arrival_delays.utils import (
+    get_run_params,
+    load_model_bundle,
+    safe_relative_path,
+)
 
 app = typer.Typer()
-
-
-def _build_reference_stub(columns: list[str], transformer: Transformer) -> pd.DataFrame:
-    """Build an empty "train"-shaped stub so align_columns() can be reused here.
-
-    Args:
-        columns: The exact column names/order the model was trained on.
-        transformer: The fitted Transformer, for its categorical_columns and
-            category_keep (used only when transformer.encoding == "native").
-
-    Returns:
-        A zero-row DataFrame with those columns, dtyped for alignment purposes only.
-    """
-    stub = pd.DataFrame(columns=columns)
-    if transformer.encoding == "native":
-        for col in transformer.categorical_columns:
-            if col in stub.columns:
-                categories = sorted(transformer.category_keep.get(col, set())) + [OTHER]
-                stub[col] = pd.Categorical([], categories=categories)
-    return stub
 
 
 def evaluate(
@@ -122,8 +110,7 @@ def _evaluate_on_dataframe(
     X_test = encode_categoricals(X_test, cat_cols, transformer.encoding)
 
     if training_columns is not None:
-        reference_stub = _build_reference_stub(training_columns, transformer)
-        _, X_test = align_columns(reference_stub, X_test, transformer.encoding)
+        X_test = align_to_training_columns(X_test, training_columns, transformer)
     else:
         logger.warning(
             "No training column list available; assuming evaluate_df already "
@@ -231,8 +218,8 @@ def evaluate_from_mlflow(
     threshold: float = typer.Option(
         0.5, help="Decision threshold for classification metrics"
     ),
-    repo_owner: str = typer.Option("se4ai2526-uniba", help="DagsHub repository owner"),
-    repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
+    repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
+    repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> dict[str, float]:
     """Load a model straight from the MLflow registry, evaluate it, write metrics JSON.
 

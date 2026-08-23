@@ -11,18 +11,35 @@ Which variant is used depends on the input: flights carrying weather features go
 
 from functools import lru_cache
 from pathlib import Path
+
 import dagshub
+from loguru import logger
 import pandas as pd
 import typer
-from loguru import logger
-from predicting_flight_arrival_delays.config import INTERIM_DATA_DIR, WEATHER_COLUMNS
-from predicting_flight_arrival_delays.data.features import get_feature_columns
-from predicting_flight_arrival_delays.data.transform import Transformer, encode_categoricals
+
+from predicting_flight_arrival_delays.config import (
+    DAGSHUB_REPO_NAME,
+    DAGSHUB_REPO_OWNER,
+    INTERIM_DATA_DIR,
+)
+from predicting_flight_arrival_delays.data.features import (
+    WEATHER_COLUMNS_DESTINATION,
+    WEATHER_COLUMNS_ORIGIN,
+    get_feature_columns,
+)
+from predicting_flight_arrival_delays.data.transform import (
+    Transformer,
+    align_to_training_columns,
+    encode_categoricals,
+)
 from predicting_flight_arrival_delays.utils import load_model_bundle
 
 app = typer.Typer()
 
 DEFAULT_STAGE = "None"
+
+
+WEATHER_FEATURE_COLUMNS = WEATHER_COLUMNS_ORIGIN + WEATHER_COLUMNS_DESTINATION
 
 
 @lru_cache(maxsize=4)
@@ -43,32 +60,6 @@ def _load_bundle(variant: str, stage: str = DEFAULT_STAGE):
     return load_model_bundle(f"flight-delay-{variant}", stage=stage)
 
 
-def align_to_training_columns(
-    X: pd.DataFrame,
-    training_columns: tuple[str, ...],
-    transformer: Transformer,
-) -> pd.DataFrame:
-    """Reindex encoded features to exactly the columns the model was fitted on.
-
-    Args:
-        X: Encoded features for a live batch, from encode_categoricals.
-        training_columns: The columns (and order) the model was fitted on.
-        transformer: The transformer that produced X, used to know which columns
-            are categorical (for the dtype re-cast described above).
-
-    Returns:
-        X reindexed to the training-time columns, in the training-time order.
-    """
-    X = X.reindex(columns=list(training_columns), fill_value=0)
-
-    if transformer.encoding == "native":
-        for col in transformer.categorical_columns:
-            if col in X.columns:
-                X[col] = X[col].astype("category")
-
-    return X
-
-
 def has_weather(df: pd.DataFrame) -> pd.Series:
     """Flag rows that carry usable weather features.
 
@@ -78,10 +69,10 @@ def has_weather(df: pd.DataFrame) -> pd.Series:
     Returns:
         A boolean Series, True where every weather column is present and non-null.
     """
-    present = [c for c in WEATHER_COLUMNS if c in df.columns]
-    if not present:
+    missing = [c for c in WEATHER_FEATURE_COLUMNS if c not in df.columns]
+    if missing:
         return pd.Series(False, index=df.index)
-    return df[present].notna().all(axis=1)
+    return df[WEATHER_FEATURE_COLUMNS].notna().all(axis=1)
 
 
 def prepare_for_inference(
@@ -183,8 +174,8 @@ def run(
     output_path: Path = typer.Option(INTERIM_DATA_DIR / "predictions.parquet"),
     threshold_all: float = typer.Option(0.5, help="Operating threshold for `all`"),
     threshold_noweather: float = typer.Option(0.5, help="Operating threshold for `noweather`"),
-    repo_owner: str = typer.Option("Beviale", help="DagsHub repository owner"),
-    repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
+    repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
+    repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> None:
     """Score a batch of flights and write the predictions to disk.
 
