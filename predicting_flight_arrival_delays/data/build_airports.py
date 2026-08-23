@@ -24,7 +24,7 @@ app = typer.Typer()
 # Download
 # ---------------------------------------------------------------------------
 
-def _download() -> None:
+def download() -> None:
     """Download and extract the T_MASTER_CORD table via Playwright.
 
     Automates a headless browser session to navigate to the BTS TranStats page,
@@ -59,7 +59,7 @@ def _download() -> None:
 # Build
 # ---------------------------------------------------------------------------
 
-def _build(output_path: Path) -> None:
+def build(output_path: Path) -> None:
     """Build the airport reference table used by the rest of the pipeline.
 
     Reads the raw T_MASTER_CORD CSV, filters for active US airports, converts
@@ -139,8 +139,8 @@ def run(
     try:
         csv_path = EXTERNAL_RAW_DATA_DIR / f"{T_MASTER_CORD_FILE_NAME}.csv"
         if force_download or not csv_path.exists():
-            _download()
-        _build(output_path)
+            download()
+        build(output_path)
     except Exception as e:
         logger.exception(f"An error occurred while creating the airport reference table: {e}")
         raise typer.Exit(code=1) from None
