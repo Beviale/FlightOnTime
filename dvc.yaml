@@ -89,6 +89,10 @@ stages:
 
   train_evaluate_save_metrics:
     foreach:
+      - { variant: all, model: lightgbm, config: default}
+      - { variant: all, model: lightgbm, config: fast}
+      - { variant: all, model: lightgbm, config: deep}
+      - { variant: all, model: lightgbm, config: regularised}
       - { variant: all, model: random_forest, config: default}
       - { variant: all, model: random_forest, config: deep}
       - { variant: all, model: random_forest, config: shallow}
@@ -96,10 +100,6 @@ stages:
       - { variant: all, model: logistic_regression, config: weak_l2}
       - { variant: all, model: logistic_regression, config: strong_l2}
       - { variant: all, model: logistic_regression, config: elasticnet}
-      - { variant: all, model: lightgbm, config: default}
-      - { variant: all, model: lightgbm, config: fast}
-      - { variant: all, model: lightgbm, config: deep}
-      - { variant: all, model: lightgbm, config: regularised}
       - { variant: noweather, model: logistic_regression, config: default}
       - { variant: noweather, model: logistic_regression, config: weak_l2}
       - { variant: noweather, model: logistic_regression, config: strong_l2}
