@@ -19,7 +19,11 @@ from sklearn.metrics import (
 )
 import typer
 
-from predicting_flight_arrival_delays.config import METRICS_DIR
+from predicting_flight_arrival_delays.config import (
+    DAGSHUB_REPO_NAME,
+    DAGSHUB_REPO_OWNER,
+    METRICS_DIR,
+)
 from predicting_flight_arrival_delays.data.features import build_xy
 from predicting_flight_arrival_delays.data.transform import (
     Transformer,
@@ -214,8 +218,8 @@ def evaluate_from_mlflow(
     threshold: float = typer.Option(
         0.5, help="Decision threshold for classification metrics"
     ),
-    repo_owner: str = typer.Option("se4ai2526-uniba", help="DagsHub repository owner"),
-    repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
+    repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
+    repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> dict[str, float]:
     """Load a model straight from the MLflow registry, evaluate it, write metrics JSON.
 

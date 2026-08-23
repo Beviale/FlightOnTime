@@ -152,7 +152,8 @@ stages:
           - MI_SAMPLE_SIZE
           - DATE_COLUMN
           - SERVICE_COLUMNS2
-          - ENCODING
+          - DAGSHUB_REPO_OWNER
+          - DAGSHUB_REPO_NAME
       metrics:
         - metrics/selection/${item.variant}/${item.model}__${item.config}.json:
             cache: false
@@ -174,10 +175,8 @@ stages:
     params:
       - predicting_flight_arrival_delays/config.py:
           - ENCODING
-          - METRICS_DIR
-          - MODELS_DIR
-          - PROCESSED_DATA_DIR
           - PRODUCTION_VARIANTS
+          - DAGSHUB_REPO_OWNER
+          - DAGSHUB_REPO_NAME
     outs:
-      - metrics/final
-      - models
+      - metrics/winner

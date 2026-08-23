@@ -27,6 +27,8 @@ from sklearn.metrics import precision_recall_curve
 import typer
 
 from predicting_flight_arrival_delays.config import (
+    DAGSHUB_REPO_NAME,
+    DAGSHUB_REPO_OWNER,
     ENCODING,
     METRICS_DIR,
     PROCESSED_DATA_DIR,
@@ -296,8 +298,8 @@ def run(
         "local saving - MLflow registration is the intended way to persist the "
         "winning model.",
     ),
-    repo_owner: str = typer.Option("Beviale", help="DagsHub repository owner"),
-    repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
+    repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
+    repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> None:
     """Pick the best algorithm per production variant and register it.
 

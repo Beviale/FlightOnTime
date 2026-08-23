@@ -118,6 +118,12 @@ RESAMPLE_METHODS = ("none", "undersample", "oversample", "smote")
 # ------END Training and Model Selection--------
 
 
+# ------START MLflow tracking (DagsHub)--------
+DAGSHUB_REPO_OWNER = "Beviale"
+DAGSHUB_REPO_NAME = "FlightOnTime"
+# ------END MLflow tracking--------
+
+
 
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135

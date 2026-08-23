@@ -17,7 +17,11 @@ from loguru import logger
 import pandas as pd
 import typer
 
-from predicting_flight_arrival_delays.config import INTERIM_DATA_DIR
+from predicting_flight_arrival_delays.config import (
+    DAGSHUB_REPO_NAME,
+    DAGSHUB_REPO_OWNER,
+    INTERIM_DATA_DIR,
+)
 from predicting_flight_arrival_delays.data.features import (
     WEATHER_COLUMNS_DESTINATION,
     WEATHER_COLUMNS_ORIGIN,
@@ -170,8 +174,8 @@ def run(
     output_path: Path = typer.Option(INTERIM_DATA_DIR / "predictions.parquet"),
     threshold_all: float = typer.Option(0.5, help="Operating threshold for `all`"),
     threshold_noweather: float = typer.Option(0.5, help="Operating threshold for `noweather`"),
-    repo_owner: str = typer.Option("Beviale", help="DagsHub repository owner"),
-    repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
+    repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
+    repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> None:
     """Score a batch of flights and write the predictions to disk.
 

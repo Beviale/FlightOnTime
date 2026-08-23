@@ -11,6 +11,8 @@ import pandas as pd
 import typer
 
 from predicting_flight_arrival_delays.config import (
+    DAGSHUB_REPO_NAME,
+    DAGSHUB_REPO_OWNER,
     ENCODING,
     METRICS_DIR,
     PROCESSED_DATA_DIR,
@@ -179,8 +181,8 @@ def run(
         help="Training rebalancing strategy: 'none', 'undersample', 'oversample', "
         "'smote' ('smote' only valid with one-hot encoded models).",
     ),
-    repo_owner: str = typer.Option("Beviale", help="DagsHub repository owner"),
-    repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
+    repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
+    repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> None:
     """Cross-validate one model/config over every fold of a variant, and log averaged results.
 

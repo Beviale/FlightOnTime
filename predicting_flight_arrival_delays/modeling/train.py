@@ -19,7 +19,14 @@ from sklearn.linear_model import LogisticRegression
 import typer
 import yaml
 
-from predicting_flight_arrival_delays.config import ENCODING, HYPERPARAMS_PATH, MODELS_DIR, SEED
+from predicting_flight_arrival_delays.config import (
+    DAGSHUB_REPO_NAME,
+    DAGSHUB_REPO_OWNER,
+    ENCODING,
+    HYPERPARAMS_PATH,
+    MODELS_DIR,
+    SEED,
+)
 from predicting_flight_arrival_delays.data.features import VARIANTS, build_xy
 from predicting_flight_arrival_delays.data.transform import (
     Transformer,
@@ -223,8 +230,8 @@ def run(
         None,
         help="MLflow alias.",
     ),
-    repo_owner: str = typer.Option("beviale", help="DagsHub repository owner"),
-    repo_name: str = typer.Option("FlightOnTime", help="DagsHub repository name"),
+    repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
+    repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> tuple[BaseEstimator, Transformer, list[str]]:
     """Train one model/config; optionally save locally and/or register to MLflow.
 
