@@ -33,6 +33,7 @@ from predicting_flight_arrival_delays.config import (
     METRICS_DIR,
     PROCESSED_DATA_DIR,
     PRODUCTION_VARIANTS,
+    WINNER_MODEL_STAGE,
 )
 from predicting_flight_arrival_delays.data.features import build_xy
 from predicting_flight_arrival_delays.data.transform import (
@@ -288,7 +289,7 @@ def run(
     experiment: str = typer.Option("flight-delay-v2", help="MLflow experiment name"),
     calibrate: bool = typer.Option(True, help="Wrap estimators in isotonic calibration"),
     alias: str | None = typer.Option(
-        "champion",
+        WINNER_MODEL_STAGE,
         help="Alias to promote each variant's winning model version under.",
     ),
     models_path: Path | None = typer.Option(

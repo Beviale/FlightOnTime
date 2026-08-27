@@ -210,6 +210,18 @@ def get_run_params(run_id: str) -> dict[str, str]:
     return mlflow.MlflowClient().get_run(run_id).data.params
 
 
+def get_run_metrics(run_id: str) -> dict[str, float]:
+    """Fetch all metrics logged on an MLflow run.
+
+    Args:
+        run_id: The run to fetch metrics from.
+
+    Returns:
+        Mapping of metric name to its last logged value.
+    """
+    return mlflow.MlflowClient().get_run(run_id).data.metrics
+
+
 
 # ---------------------------------------------------------------------------
 # DVC

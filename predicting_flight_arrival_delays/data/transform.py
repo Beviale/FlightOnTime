@@ -19,6 +19,7 @@ from predicting_flight_arrival_delays.config import (
     CATEGORICAL_ASSOCIATION_THRESHOLD,
     CORRELATION_THRESHOLD,
     DATE_COLUMN,
+    MAX_ONEHOT_CATEGORIES,
     MI_SAMPLE_SIZE,
     MIN_CATEGORY_COUNT,
     MIN_MUTUAL_INFO,
@@ -44,8 +45,12 @@ class Transformer:
     mi_sample_size: mutual information is expensive on millions of rows; it is estimated
         on a random sample of this size.
     seed: seed to use for random operations.
-    delay_rate_columns: categorical columns (e.g. Origin, Dest) to also derive a
-        historical-delay-rate numeric feature from. Optional;
+    id_columns: Numeric columns that are actually categorical.   
+    max_onehot_categories: a categorical holding more values than this is not worth a
+        column per category. It is given a historical delay rate like the columns
+        below, and under onehot encoding the original is then dropped.
+    delay_rate_columns: Columns used to derive historical delay-rate features. 
+        Original columns are retained regardless of their width or encoding assigned to the model. Optional.
     delay_rate_shrinkage: shrinkage strength (the "k" in
         (sum + k*global_rate) / (count + k)) pulling rare categories' rates toward
         the global rate.
@@ -59,16 +64,23 @@ class Transformer:
 
     categorical_columns: list[str] = field(default_factory=list)
     numeric_columns: list[str] = field(default_factory=list)
+    id_columns: list[str] = field(
+        default_factory=lambda: ["OriginAirportID", "DestAirportID"]
+    )
 
     category_keep: dict[str, set] = field(default_factory=dict, init=False)
     impute_values: dict[str, float] = field(default_factory=dict, init=False)
     scaler: StandardScaler | None = field(default=None, init=False)
     dropped_features: list[str] = field(default_factory=list, init=False)
 
-    delay_rate_columns: list[str] = field(default_factory=lambda: ["Origin", "Dest", "OriginCarrier", "DestCarrier"])
+    delay_rate_columns: list[str] = field(default_factory=list)
     delay_rate_shrinkage: float = 50.0
     delay_rate_stats_: dict[str, dict[str, pd.Series]] = field(default_factory=dict, init=False)
     global_delay_rate_: float | None = field(default=None, init=False)
+
+    max_onehot_categories: int = MAX_ONEHOT_CATEGORIES
+
+    wide_columns_: list[str] = field(default_factory=list, init=False)
 
     encoding: str = "onehot"
     seed: int = SEED
@@ -77,9 +89,75 @@ class Transformer:
         self._categorical_columns_given = bool(self.categorical_columns)
         self._numeric_columns_given = bool(self.numeric_columns)
 
+    def _ids_as_labels(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Read the id columns as labels rather than as magnitudes.
+
+        Args:
+            X: Features to modify in place.
+
+        Returns:
+            The same DataFrame, with the id columns holding strings.
+        """
+        for col in self.id_columns:
+            if col in X.columns and not pd.api.types.is_object_dtype(X[col]):
+                X[col] = X[col].astype("Int64").astype("string").astype(object)
+        return X
+
     # ------------------------------------------------------------------
     # Historical delay rates
     # ------------------------------------------------------------------
+
+    def rate_columns(self) -> list[str]:
+        """Every column a historical delay rate is computed for.
+
+        Returns:
+            The column names, named ones first.
+        """
+        return list(self.delay_rate_columns) + [
+            c for c in self.wide_columns_ if c not in self.delay_rate_columns
+        ]
+
+    def _find_wide_columns(self, X: pd.DataFrame) -> list[str]:
+        """Pick out the categoricals too wide to spend one column per category on.
+
+        Args:
+            X: Training features, ids already read as labels.
+
+        Returns:
+            The object columns holding more than max_onehot_categories values, minus
+            those already named in delay_rate_columns.
+        """
+        wide = [
+            c
+            for c in X.columns
+            if pd.api.types.is_object_dtype(X[c])
+            and c not in self.delay_rate_columns
+            and X[c].nunique(dropna=False) > self.max_onehot_categories
+        ]
+        if wide:
+            logger.info(
+                f"Too wide to one-hot (over {self.max_onehot_categories} values): {wide}. "
+                f"They are kept as a delay rate"
+                + (", and as themselves under native encoding." if self.encoding == "native"
+                   else " only, the original being dropped.")
+            )
+        return wide
+
+    def _drop_wide_originals(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Remove the wide originals, but only where they would cost a column each.
+
+        Under native encoding a category costs nothing extra, so the column stays and
+        the model gets both readings of it.
+
+        Args:
+            df: Features, rates already attached.
+
+        Returns:
+            The same frame, minus the wide originals under onehot encoding.
+        """
+        if self.encoding != "onehot":
+            return df
+        return df.drop(columns=[c for c in self.wide_columns_ if c in df.columns])
 
     def _fit_delay_rates_internal(self, X: pd.DataFrame, y: pd.Series, dates: pd.Series) -> pd.DataFrame:
         """Learn per-category historical delay rates, with shrinkage for rare ones.
@@ -99,7 +177,7 @@ class Transformer:
         result = pd.DataFrame(index=X.index)
         self.delay_rate_stats_ = {}
 
-        for col in self.delay_rate_columns:
+        for col in self.rate_columns():
             if col not in X.columns:
                 continue
             values_sorted = X[col].to_numpy()[order]
@@ -145,7 +223,7 @@ class Transformer:
         result = pd.DataFrame(index=X.index)
         k = self.delay_rate_shrinkage
 
-        for col in self.delay_rate_columns:
+        for col in self.rate_columns():
             if col not in X.columns:
                 continue
             stats = self.delay_rate_stats_.get(
@@ -171,15 +249,17 @@ class Transformer:
         Returns:
             The fitted transformer, for chaining.
         """
-        df = X.copy()
+        df = self._ids_as_labels(X.copy())
         self.category_keep = {}
         self.impute_values = {}
+        self.wide_columns_ = self._find_wide_columns(df)
 
-        if self.delay_rate_columns:
+        if self.rate_columns():
             dates = df[DATE_COLUMN]
             rate_cols = self._fit_delay_rates_internal(df, y, dates)
             df = pd.concat([df, rate_cols], axis=1)
 
+        df = self._drop_wide_originals(df)
         df = df.drop(columns=[c for c in SERVICE_COLUMNS2 if c in df.columns])
 
         if not self._categorical_columns_given:
@@ -223,12 +303,13 @@ class Transformer:
         """
         if self.scaler is None:
             raise RuntimeError("Transformer must be fitted before transform()")
-        df = X.copy()
+        df = self._ids_as_labels(X.copy())
 
-        if self.delay_rate_columns:
+        if self.rate_columns():
             rate_cols = self._apply_delay_rates_internal(df)
             df = pd.concat([df, rate_cols], axis=1)
 
+        df = self._drop_wide_originals(df)
         df = df.drop(columns=[c for c in SERVICE_COLUMNS2 if c in df.columns])
 
         df = self._apply_categories(df)

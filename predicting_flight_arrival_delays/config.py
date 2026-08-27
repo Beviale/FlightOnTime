@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -89,17 +90,19 @@ SERVICE_COLUMNS = [
     "ArrUtcHour",
     "DepHour",    
     "ArrHour",
-    "TailNumber"
+    "TailNumber",
+    "Origin",
+    "Dest",
 ]
+
 SERVICE_COLUMNS2 = [
     "FlightDate",
-    "OriginCarrier", 
-    "DestCarrier"
 ]
 DATE_COLUMN = "FlightDate"
 
 #Transform
 MIN_CATEGORY_COUNT = 1000
+MAX_ONEHOT_CATEGORIES = 50
 CORRELATION_THRESHOLD = 0.98
 CATEGORICAL_ASSOCIATION_THRESHOLD = 0.98
 MIN_MUTUAL_INFO = 1e-5
@@ -122,6 +125,24 @@ RESAMPLE_METHODS = ("none", "undersample", "oversample", "smote")
 DAGSHUB_REPO_OWNER = "Beviale"
 DAGSHUB_REPO_NAME = "FlightOnTime"
 # ------END MLflow tracking--------
+
+
+# ------START Serving--------
+API_URL = os.environ.get("API_URL", "http://localhost:7860")
+WINNER_MODEL_STAGE = "Champion" 
+SERVED_VARIANTS = PRODUCTION_VARIANTS
+DEFAULT_THRESHOLD = 0.5 
+MAX_BATCH_SIZE = 200  # flights per batch request
+
+FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+FORECAST_TIMEOUT_SECONDS = 8
+
+
+# ---- Auto-lookup: flight schedules from AeroDataBox, via RapidAPI ----
+AERODATABOX_HOST = "aerodatabox.p.rapidapi.com"
+AERODATABOX_TIMEOUT_SECONDS = 12
+DOMESTIC_COUNTRY_CODES = frozenset({"us", "pr", "vi", "gu", "mp", "as"})
+# ------END Serving--------
 
 
 
