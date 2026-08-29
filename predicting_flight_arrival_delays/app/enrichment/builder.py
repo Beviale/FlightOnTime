@@ -29,18 +29,10 @@ from predicting_flight_arrival_delays.data.features import (
 )
 from predicting_flight_arrival_delays.data.preprocess import add_utc_columns
 
+
 FEATURE_FRAME_COLUMNS = [
-    "Month", "DayofMonth", "DayOfWeek", DATE_COLUMN,
-    "ReportingAirline", "FlightNumberReportingAirline",
-    "OriginAirportID", "Origin", "OriginCityName", "OriginState",
-    "DestAirportID", "Dest", "DestCityName", "DestState",
-    "CRSElapsedTime", "Distance", "DistanceGroup",
-    "OriginCongestion", "DestCongestion",
-    "DepTimeDecimal", "ArrTimeDecimal",
-    "IsHoliday", "DaysToNearestHoliday",
-    "AircraftDailyLegs", "LegPosition",
-    "LeadDays", "ScheduledTurnaround",
-    "OriginCarrier", "DestCarrier",
+    *FlightRequest.model_fields,
+    "LeadDays",
     *WEATHER_COLUMNS_ORIGIN,
     *WEATHER_COLUMNS_DESTINATION,
 ]
