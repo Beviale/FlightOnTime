@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from predicting_flight_arrival_delays.config import DATE_COLUMN
 from predicting_flight_arrival_delays.data.features import select_features_variant
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import select_and_register as sar_module
@@ -121,7 +122,7 @@ def scores(monkeypatch):
 @pytest.fixture
 def folds(tmp_path, flights_df, monkeypatch):
     """Two walk-forward folds on disk, with an expanding training window."""
-    df = select_features_variant(flights_df, "noweather").sort_values("FlightDate")
+    df = select_features_variant(flights_df, "noweather").sort_values(DATE_COLUMN)
     layout = [
         (slice(0, 100), slice(100, 130), slice(130, 160)),
         (slice(0, 160), slice(160, 200), slice(200, 300)),
@@ -271,7 +272,7 @@ class TestRegisteredModel:
         columns = registry.registrations[0]["columns"]
 
         assert len(columns) == registry.mlflow.params["n_features"]
-        assert any(c.startswith("Origin_") for c in columns)
+        assert any(c.startswith("OriginCarrier_") for c in columns)
         assert "Origin" not in columns
 
     def test_a_fresh_operating_threshold_is_logged(self, folds, registry, scores):
@@ -372,7 +373,7 @@ class TestTheRegisteredBundleIsUsable:
         fresh = select_features_variant(flights_df, "noweather").head(5)
         X = prepare_for_inference(fresh, "noweather", transformer, columns)
 
-        dummies = [c for c in X.columns if c.startswith("Origin_")]
+        dummies = [c for c in X.columns if c.startswith("OriginCarrier_")]
         assert dummies
         assert (X[dummies].sum(axis=1) == 1).all()
 

@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sp
 
-from predicting_flight_arrival_delays.config import TARGET
+from predicting_flight_arrival_delays.config import TARGET, DATE_COLUMN
 from predicting_flight_arrival_delays.data.features import select_features_variant
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import (
@@ -26,7 +26,7 @@ def small_transformer(monkeypatch):
 @pytest.fixture
 def fold(flights_df):
     """One walk-forward fold: train, validation and test, split by date."""
-    df = select_features_variant(flights_df, "noweather").sort_values("FlightDate")
+    df = select_features_variant(flights_df, "noweather").sort_values(DATE_COLUMN)
     return df.iloc[:180], df.iloc[180:240], df.iloc[240:]
 
 

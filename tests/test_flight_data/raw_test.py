@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from util import failures, show_results, validate
 
-from predicting_flight_arrival_delays.config import KEEP_COLUMNS, RAW_DATA_DIR
+from predicting_flight_arrival_delays.config import KEEP_COLUMNS, RAW_DATA_DIR, DATE_COLUMN
 
 SAMPLE_ROWS = 200_000
 
@@ -49,7 +49,7 @@ def build_expectations() -> list:
 
     # --- Identity
     expectations += [
-        gx.expectations.ExpectColumnValuesToNotBeNull(column="FlightDate"),
+        gx.expectations.ExpectColumnValuesToNotBeNull(column=DATE_COLUMN),
         gx.expectations.ExpectColumnValuesToMatchRegex(column="Origin", regex=r"^[A-Z]{3}$"),
         gx.expectations.ExpectColumnValuesToMatchRegex(column="Dest", regex=r"^[A-Z]{3}$"),
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Tail_Number", mostly=0.95),

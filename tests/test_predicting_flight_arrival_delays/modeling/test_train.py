@@ -13,6 +13,7 @@ from sklearn.frozen import FrozenEstimator
 from sklearn.linear_model import LogisticRegression
 import yaml
 
+from predicting_flight_arrival_delays.config import DATE_COLUMN
 from predicting_flight_arrival_delays.config import SEED
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import train as train_module
@@ -284,7 +285,7 @@ class TestTrainWithTransformer:
             flights_df, "noweather", "logistic_regression", "default", calibrate=False
         )
 
-        assert "FlightDate" not in columns
+        assert DATE_COLUMN not in columns
 
     def test_the_columns_describe_the_matrix_the_model_was_fitted_on(
         self, flights_df, small_transformer
@@ -296,7 +297,7 @@ class TestTrainWithTransformer:
         )
 
         assert len(columns) == X_fit.shape[1]
-        assert any(c.startswith("Origin_") for c in columns)
+        assert any(c.startswith("OriginCarrier_") for c in columns)
         assert "Origin" not in columns
 
     def test_validation_frame_is_aligned_to_training(self, flights_df, small_transformer):
@@ -496,7 +497,7 @@ class TestRunCommandRegistration:
         )
         columns = tracking["bundles"][0]["columns"]
 
-        assert any(c.startswith("Origin_") for c in columns)
+        assert any(c.startswith("OriginCarrier_") for c in columns)
         assert "Origin" not in columns
 
 

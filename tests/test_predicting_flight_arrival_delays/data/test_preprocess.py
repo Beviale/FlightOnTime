@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from typer.testing import CliRunner
 
-from predicting_flight_arrival_delays.config import MAX_LEAD_DAYS
+from predicting_flight_arrival_delays.config import MAX_LEAD_DAYS, DATE_COLUMN
 from predicting_flight_arrival_delays.data import preprocess as preprocess_module
 from predicting_flight_arrival_delays.data.preprocess import (
     FULL_LEAD_COVERAGE_START,
@@ -30,7 +30,7 @@ class TestAddCongestionFeatures:
         """Three flights leaving ATL in the 08:00 hour, one in the 09:00 hour."""
         return pd.DataFrame(
             {
-                "FlightDate": pd.to_datetime(["2025-03-01"] * 4 + ["2025-03-02"]),
+                DATE_COLUMN: pd.to_datetime(["2025-03-01"] * 4 + ["2025-03-02"]),
                 "Origin": ["ATL", "ATL", "ATL", "ATL", "ATL"],
                 "Dest": ["JFK", "JFK", "LAX", "JFK", "JFK"],
                 "CRSDepTime": [800, 830, 845, 905, 800],
@@ -58,7 +58,7 @@ class TestAddCongestionFeatures:
         """BTS writes midnight as 2400; 2400 and 0 are the same hour."""
         df = pd.DataFrame(
             {
-                "FlightDate": pd.to_datetime(["2025-03-01"] * 2),
+                DATE_COLUMN: pd.to_datetime(["2025-03-01"] * 2),
                 "Origin": ["ATL", "ATL"],
                 "Dest": ["JFK", "JFK"],
                 "CRSDepTime": [2400, 15],
@@ -112,7 +112,7 @@ class TestAddTemporalFeatures:
     def scheduled(self):
         return pd.DataFrame(
             {
-                "FlightDate": ["2025-03-01", "2025-03-01", "2025-03-01"],
+                DATE_COLUMN: ["2025-03-01", "2025-03-01", "2025-03-01"],
                 "CRSDepTime": [1455, 2400, 0],
                 "CRSArrTime": [1730, 30, 100],
             }
@@ -121,7 +121,7 @@ class TestAddTemporalFeatures:
     def test_flight_date_becomes_datetime(self, scheduled):
         out = add_temporal_features(scheduled)
 
-        assert pd.api.types.is_datetime64_any_dtype(out["FlightDate"])
+        assert pd.api.types.is_datetime64_any_dtype(out[DATE_COLUMN])
 
     def test_hour_is_the_integer_part(self, scheduled):
         out = add_temporal_features(scheduled)
@@ -152,7 +152,7 @@ class TestAddHolidayFeatures:
     def around_july_fourth(self):
         return pd.DataFrame(
             {
-                "FlightDate": pd.to_datetime(
+                DATE_COLUMN: pd.to_datetime(
                     ["2025-07-01", "2025-07-04", "2025-07-06", "2025-12-25"]
                 )
             }
@@ -180,7 +180,7 @@ class TestAddHolidayFeatures:
     def test_same_date_gets_the_same_value(self):
         """The distance is computed per unique date, then mapped back to every row."""
         df = pd.DataFrame(
-            {"FlightDate": pd.to_datetime(["2025-07-01"] * 3 + ["2025-07-06"])}
+            {DATE_COLUMN: pd.to_datetime(["2025-07-01"] * 3 + ["2025-07-06"])}
         )
         out = add_holiday_features(df)
 
@@ -190,7 +190,7 @@ class TestAddHolidayFeatures:
     def test_the_calendar_is_not_cut_to_the_data(self):
         """August carries no federal holiday. The nearest is Labor Day, which no
         window derived from these two flights would ever contain."""
-        df = pd.DataFrame({"FlightDate": pd.to_datetime(["2025-08-05", "2025-08-06"])})
+        df = pd.DataFrame({DATE_COLUMN: pd.to_datetime(["2025-08-05", "2025-08-06"])})
         out = add_holiday_features(df)
 
         assert list(out["IsHoliday"]) == [0, 0]
@@ -199,20 +199,20 @@ class TestAddHolidayFeatures:
     def test_a_holiday_just_past_the_last_flight_is_still_seen(self):
         """Independence Day is days ahead of these flights but outside their range;
         measuring against Juneteenth instead is wrong in both size and sign."""
-        df = pd.DataFrame({"FlightDate": pd.to_datetime(["2025-06-28", "2025-06-30"])})
+        df = pd.DataFrame({DATE_COLUMN: pd.to_datetime(["2025-06-28", "2025-06-30"])})
         out = add_holiday_features(df)
 
         assert list(out["DaysToNearestHoliday"]) == [6, 4]  # 2025-07-04
 
     def test_a_holiday_just_before_the_first_flight_is_still_seen(self):
-        df = pd.DataFrame({"FlightDate": pd.to_datetime(["2025-07-07", "2025-07-08"])})
+        df = pd.DataFrame({DATE_COLUMN: pd.to_datetime(["2025-07-07", "2025-07-08"])})
         out = add_holiday_features(df)
 
         assert list(out["DaysToNearestHoliday"]) == [-3, -4]  # 2025-07-04
 
     def test_the_two_holiday_columns_never_contradict_each_other(self):
         """IsHoliday reads the full calendar, so the distance must agree with it."""
-        df = pd.DataFrame({"FlightDate": pd.to_datetime(["2025-07-01", "2025-07-04"])})
+        df = pd.DataFrame({DATE_COLUMN: pd.to_datetime(["2025-07-01", "2025-07-04"])})
         out = add_holiday_features(df)
 
         assert out["IsHoliday"].iloc[1] == 1
@@ -221,7 +221,7 @@ class TestAddHolidayFeatures:
     def test_the_distance_is_numeric(self):
         """An object column would be treated as categorical by the Transformer
         and one-hot encoded instead of scaled."""
-        df = pd.DataFrame({"FlightDate": pd.to_datetime(["2025-08-05"])})
+        df = pd.DataFrame({DATE_COLUMN: pd.to_datetime(["2025-08-05"])})
         out = add_holiday_features(df)
 
         assert pd.api.types.is_numeric_dtype(out["DaysToNearestHoliday"])
@@ -233,7 +233,7 @@ class TestAddAircraftScheduleFeatures:
         return pd.DataFrame(
             {
                 "TailNumber": ["N1", "N1", "N1", "N2", "N1"],
-                "FlightDate": pd.to_datetime(
+                DATE_COLUMN: pd.to_datetime(
                     ["2025-03-01", "2025-03-01", "2025-03-01", "2025-03-01", "2025-03-02"]
                 ),
                 "CRSDepTime": [1200, 800, 1600, 900, 700],
@@ -242,21 +242,21 @@ class TestAddAircraftScheduleFeatures:
 
     def test_daily_leg_count_is_per_aircraft_and_day(self, legs):
         out = add_aircraft_schedule_features(legs)
-        n1_day1 = out[(out["TailNumber"] == "N1") & (out["FlightDate"] == "2025-03-01")]
+        n1_day1 = out[(out["TailNumber"] == "N1") & (out[DATE_COLUMN] == "2025-03-01")]
 
         assert set(n1_day1["AircraftDailyLegs"]) == {3}
 
     def test_leg_position_follows_the_schedule(self, legs):
         """Position is 1-based and ordered by scheduled departure time."""
         out = add_aircraft_schedule_features(legs)
-        n1_day1 = out[(out["TailNumber"] == "N1") & (out["FlightDate"] == "2025-03-01")]
+        n1_day1 = out[(out["TailNumber"] == "N1") & (out[DATE_COLUMN] == "2025-03-01")]
 
         assert list(n1_day1["CRSDepTime"]) == [800, 1200, 1600]
         assert list(n1_day1["LegPosition"]) == [1, 2, 3]
 
     def test_a_new_day_restarts_the_count(self, legs):
         out = add_aircraft_schedule_features(legs)
-        n1_day2 = out[(out["TailNumber"] == "N1") & (out["FlightDate"] == "2025-03-02")]
+        n1_day2 = out[(out["TailNumber"] == "N1") & (out[DATE_COLUMN] == "2025-03-02")]
 
         assert list(n1_day2["AircraftDailyLegs"]) == [1]
         assert list(n1_day2["LegPosition"]) == [1]
@@ -266,7 +266,7 @@ class TestAssignLeadDays:
     @pytest.fixture
     def dated(self):
         dates = pd.to_datetime(["2024-06-01", "2024-11-30"] + ["2025-03-01"] * 48)
-        return pd.DataFrame({"FlightDate": dates})
+        return pd.DataFrame({DATE_COLUMN: dates})
 
     def test_lead_days_stay_in_range(self, dated):
         out = assign_lead_days(dated)
@@ -276,7 +276,7 @@ class TestAssignLeadDays:
     def test_dates_before_coverage_are_forced_to_zero(self, dated):
         """The weather source has no older lead times for that period."""
         out = assign_lead_days(dated)
-        early = out[out["FlightDate"] < FULL_LEAD_COVERAGE_START]
+        early = out[out[DATE_COLUMN] < FULL_LEAD_COVERAGE_START]
 
         assert (early["LeadDays"] == 0).all()
         assert len(early) == 2
@@ -308,7 +308,7 @@ class TestAddUtcColumns:
     def flights(self):
         return pd.DataFrame(
             {
-                "FlightDate": pd.to_datetime(["2025-03-01", "2025-03-01"]),
+                DATE_COLUMN: pd.to_datetime(["2025-03-01", "2025-03-01"]),
                 "OriginAirportID": [10397, 12892],
                 "DepHour": [8, 8],
                 "CRSElapsedTime": [120, 90],
@@ -392,14 +392,40 @@ class TestAddTurnaroundFeatures:
 
 
 class TestAddCarrierFeatures:
-    def test_airport_and_carrier_are_concatenated(self):
-        df = pd.DataFrame(
-            {"Origin": ["ATL", "DFW"], "Dest": ["JFK", "LAX"], "ReportingAirline": ["DL", "AA"]}
+    @pytest.fixture
+    def two_flights(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            {
+                "OriginAirportID": [10397, 11298],
+                "DestAirportID": [12478, 12892],
+                "Origin": ["ATL", "DFW"],
+                "Dest": ["JFK", "LAX"],
+                "ReportingAirline": ["DL", "AA"],
+            }
         )
-        out = add_carrier_features(df)
 
-        assert list(out["OriginCarrier"]) == ["ATLDL", "DFWAA"]
-        assert list(out["DestCarrier"]) == ["JFKDL", "LAXAA"]
+    def test_airport_and_carrier_are_concatenated(self, two_flights):
+        out = add_carrier_features(two_flights)
+
+        assert list(out["OriginCarrier"]) == ["10397DL", "11298AA"]
+        assert list(out["DestCarrier"]) == ["12478DL", "12892AA"]
+
+    def test_the_airport_half_is_the_id_and_not_the_code(self, two_flights):
+        """Two airports that held the same code in turn must not share a pair, for
+        the reason the airport delay rates are keyed on the id."""
+        same_code = pd.DataFrame(
+            {
+                "OriginAirportID": [10423, 16440],
+                "DestAirportID": [12478, 12478],
+                "Origin": ["AUS", "AUS"],
+                "Dest": ["JFK", "JFK"],
+                "ReportingAirline": ["AA", "AA"],
+            }
+        )
+
+        out = add_carrier_features(same_code)
+
+        assert out["OriginCarrier"].nunique() == 2
 
 
 class TestPrepareFlightsCommand:
@@ -412,7 +438,7 @@ class TestPrepareFlightsCommand:
         directory.mkdir(parents=True)
         pd.DataFrame(
             {
-                "FlightDate": ["2025-03-01"] * 4 + ["2025-03-02"] * 2,
+                DATE_COLUMN: ["2025-03-01"] * 4 + ["2025-03-02"] * 2,
                 "OriginAirportID": [10397, 12892, 10397, 12892, 10397, 12892],
                 "DestAirportID": [12892, 10397, 12892, 10397, 12892, 10397],
                 "Origin": ["ATL", "LAX", "ATL", "LAX", "ATL", "LAX"],

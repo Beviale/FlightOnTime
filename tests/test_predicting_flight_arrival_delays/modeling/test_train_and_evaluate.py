@@ -8,6 +8,7 @@ import pytest
 from typer.testing import CliRunner
 
 from predicting_flight_arrival_delays.data.features import select_features_variant
+from predicting_flight_arrival_delays.config import DATE_COLUMN
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import (
     train_evaluate_save_metrics as tesm_module,
@@ -54,7 +55,7 @@ def make_folds(tmp_path, flights_df):
     Phase 1 must never open test.parquet. Writing garbage there means any
     attempt to read it fails the test loudly instead of passing unnoticed.
     """
-    df = select_features_variant(flights_df, "noweather").sort_values("FlightDate")
+    df = select_features_variant(flights_df, "noweather").sort_values(DATE_COLUMN)
 
     def build(slices, name="selection"):
         root = tmp_path / name
@@ -211,7 +212,7 @@ class TestRunCommand:
     @pytest.fixture
     def variant_root(self, tmp_path, flights_df):
         """A data-path root laid out as split_data writes it: <root>/<variant>/fold_*."""
-        df = select_features_variant(flights_df, "noweather").sort_values("FlightDate")
+        df = select_features_variant(flights_df, "noweather").sort_values(DATE_COLUMN)
         fold = tmp_path / "root" / "noweather" / "fold_1_with_val"
         fold.mkdir(parents=True)
         df.iloc[:120].to_parquet(fold / "train.parquet", index=False)

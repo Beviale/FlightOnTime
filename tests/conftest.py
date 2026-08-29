@@ -15,11 +15,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from predicting_flight_arrival_delays.config import TARGET, WEATHER_COLUMNS, SEED
+from predicting_flight_arrival_delays.config import TARGET, WEATHER_COLUMNS, SEED, DATE_COLUMN
 
 ORIGINS = ["ATL", "DFW", "ORD", "LAX"]
 DESTS = ["JFK", "SEA", "MIA"]
 AIRLINES = ["AA", "DL", "UA"]
+
+# BTS gives every airport a numeric id alongside its code, and keys the historical
+# delay rates on it: a code can be reassigned to another airport, an id cannot.
+AIRPORT_IDS = {
+    "ATL": 10397, "DFW": 11298, "ORD": 13930, "LAX": 12892,
+    "JFK": 12478, "SEA": 14747, "MIA": 13303,
+}
 
 # The coefficients that make the target learnable for the unit tests that fit.
 INTERCEPT = -1.2
@@ -58,11 +65,13 @@ def make_flights():
         dates = pd.to_datetime("2025-01-01") + pd.to_timedelta(np.arange(n) % 90, unit="D")
 
         data = {
-            "FlightDate": dates,
+            DATE_COLUMN: dates,
             "Origin": origin,
             "Dest": dest,
-            "OriginCarrier": [o + a for o, a in zip(origin, airline)],
-            "DestCarrier": [d + a for d, a in zip(dest, airline)],
+            "OriginAirportID": [AIRPORT_IDS[code] for code in origin],
+            "DestAirportID": [AIRPORT_IDS[code] for code in dest],
+            "OriginCarrier": [f"{AIRPORT_IDS[o]}{a}" for o, a in zip(origin, airline)],
+            "DestCarrier": [f"{AIRPORT_IDS[d]}{a}" for d, a in zip(dest, airline)],
             "ReportingAirline": airline,
             "FlightNumberReportingAirline": rng.integers(100, 999, n),
             "Distance": rng.normal(1200, 400, n),
