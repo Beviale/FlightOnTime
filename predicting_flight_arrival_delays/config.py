@@ -70,7 +70,7 @@ WEATHER_VARS = [
 MAX_LEAD_DAYS = 5 # Upper bound on how far ahead a forecast can be requested from the weather source
 FULL_LEAD_COVERAGE_START = "2024-12-01"
 
-
+DATE_COLUMN = "FlightDate"
 # BTS columns to keep
 KEEP_COLUMNS = [
     "OriginAirportID", "DestAirportID",
@@ -98,7 +98,6 @@ SERVICE_COLUMNS = [
 SERVICE_COLUMNS2 = [
     "FlightDate",
 ]
-DATE_COLUMN = "FlightDate"
 
 #Transform
 MIN_CATEGORY_COUNT = 1000
