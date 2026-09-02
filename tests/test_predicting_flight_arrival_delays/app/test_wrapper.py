@@ -138,7 +138,7 @@ class TestPredictLookup:
         await wrapper.predict_lookup("2026-08-26", "aa", "mq", 3500, "DFW", "LBB")
 
         method, path, payload = sent[0]
-        assert (method, path) == ("POST", "/predictions/lookup")
+        assert (method, path) == ("POST", "/predictions/lookup?explain=true")
         assert payload["FlightDate"] == "2026-08-26"
         assert payload["MarketingCarrier"] == "aa"
         assert payload["FlightNumber"] == 3500
@@ -255,6 +255,42 @@ class TestModelPages:
         assert "No model is in service" in page
         assert "Feature selection" not in page
         assert "`Month`" not in page
+
+    @pytest.mark.asyncio
+    async def test_the_reasons_are_rendered_with_their_direction(self, api):
+        api({"data": {"delay_probability": 0.31, "is_delayed": 0, "variant": "all",
+                      "threshold": 0.5, "weather": "ok",
+                      "explanations": [
+                          {"column": "OriginCarrier", "contribution": 0.043},
+                          {"column": "PrecipitationOrigin", "contribution": -0.012},
+                      ]}})
+
+        page = wrapper.render_prediction((await wrapper.call("GET", "/x"))["data"])
+
+        assert "**OriginCarrier** pushed towards a delay" in page
+        assert "**PrecipitationOrigin** pushed towards arriving on time" in page
+
+
+    @pytest.mark.asyncio
+    async def test_missing_important_inputs_are_flagged(self, api):
+        api({"data": {"delay_probability": 0.31, "is_delayed": 0, "variant": "all",
+                      "threshold": 0.5, "weather": "ok",
+                      "approximated": ["OriginCongestion", "OriginCarrier"]}})
+
+        page = wrapper.render_prediction((await wrapper.call("GET", "/x"))["data"])
+
+        assert "less accurate" in page
+        assert "`OriginCongestion`" in page
+        assert "`OriginCarrier`" in page
+
+    @pytest.mark.asyncio
+    async def test_a_complete_request_gets_no_warning(self, api):
+        api({"data": {"delay_probability": 0.31, "is_delayed": 0, "variant": "all",
+                      "threshold": 0.5, "weather": "ok", "approximated": []}})
+
+        page = wrapper.render_prediction((await wrapper.call("GET", "/x"))["data"])
+
+        assert "less accurate" not in page
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

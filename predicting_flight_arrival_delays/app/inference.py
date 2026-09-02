@@ -12,6 +12,21 @@ class ModelUnavailableError(RuntimeError):
     """Raised when the variant a flight needs is not loaded."""
 
 
+def prepared_matrix(df: pd.DataFrame, bundle: Bundle) -> pd.DataFrame:
+    """Build the matrix this model actually reads, for these flights.
+
+    Args:
+        df: Flights, already completed with whatever the request left out.
+        bundle: The variant to prepare for.
+
+    Returns:
+        The transformed, encoded, column-aligned matrix.
+    """
+    return prepare_for_inference(
+        df, bundle.variant, bundle.transformer, tuple(bundle.columns)
+    )
+
+
 def score_variant(df: pd.DataFrame, bundle: Bundle, threshold: float) -> pd.DataFrame:
     """Score a set of flights with one loaded variant.
 
@@ -25,7 +40,7 @@ def score_variant(df: pd.DataFrame, bundle: Bundle, threshold: float) -> pd.Data
         that produced them.
     """
     df = complete_frame(df, bundle.transformer)
-    X = prepare_for_inference(df, bundle.variant, bundle.transformer, tuple(bundle.columns))
+    X = prepared_matrix(df, bundle)
     probability = bundle.model.predict_proba(X)[:, 1]
 
     return pd.DataFrame(

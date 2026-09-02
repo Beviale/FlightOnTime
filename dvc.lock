@@ -30,8 +30,8 @@ stages:
       size: 5564
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: c3d11d57c5754cbc2991f03ef0afa802
-      size: 9938
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
     params:
       predicting_flight_arrival_delays/config.py:
         MASTER_CORD_PAGE: 
@@ -68,12 +68,12 @@ stages:
       nfiles: 18
     - path: predicting_flight_arrival_delays/data/preprocess.py
       hash: md5
-      md5: 9ebf0a980c4a7144f3ebc97f1900232e
-      size: 15381
+      md5: 486d1417e01ff5427031a518b14bf42c
+      size: 15442
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: c3d11d57c5754cbc2991f03ef0afa802
-      size: 9938
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
     params:
       predicting_flight_arrival_delays/config.py:
         DATE_COLUMN: FlightDate
@@ -104,8 +104,8 @@ stages:
     outs:
     - path: data/interim/flights_features.parquet
       hash: md5
-      md5: 525d035dafaa17169387d0a39f3c2d05
-      size: 317198209
+      md5: b05662d3fc8733f2cdfbf6999445a5db
+      size: 317195798
   download_weather:
     cmd: uv run predicting_flight_arrival_delays/data/weather.py
     deps:
@@ -115,18 +115,19 @@ stages:
       size: 155210
     - path: data/interim/flights_features.parquet
       hash: md5
-      md5: 525d035dafaa17169387d0a39f3c2d05
-      size: 317198209
+      md5: b05662d3fc8733f2cdfbf6999445a5db
+      size: 317195798
     - path: predicting_flight_arrival_delays/data/weather.py
       hash: md5
-      md5: 2c5a907ef44d340cafedab813a097eb6
-      size: 10043
+      md5: 9ada9ccc0f82ae39a8f951d5aefeed02
+      size: 10059
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: c3d11d57c5754cbc2991f03ef0afa802
-      size: 9938
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
     params:
       predicting_flight_arrival_delays/config.py:
+        DATE_COLUMN: FlightDate
         HISTORICAL_FORECAST_URL: 
           https://historical-forecast-api.open-meteo.com/v1/forecast
         MAX_LEAD_DAYS: 5
@@ -142,29 +143,29 @@ stages:
     outs:
     - path: data/external/weather
       hash: md5
-      md5: a95bbd3332e9e6f2447857bcc4ce6d0d.dir
-      size: 484937352
+      md5: e3ca971cad0386f8adab473f2d90875c.dir
+      size: 484937355
       nfiles: 2863
   join_weather:
     cmd: uv run predicting_flight_arrival_delays/data/preprocess.py join-weather
     deps:
     - path: data/external/weather
       hash: md5
-      md5: a95bbd3332e9e6f2447857bcc4ce6d0d.dir
-      size: 484937352
+      md5: e3ca971cad0386f8adab473f2d90875c.dir
+      size: 484937355
       nfiles: 2863
     - path: data/interim/flights_features.parquet
       hash: md5
-      md5: 525d035dafaa17169387d0a39f3c2d05
-      size: 317198209
+      md5: b05662d3fc8733f2cdfbf6999445a5db
+      size: 317195798
     - path: predicting_flight_arrival_delays/data/preprocess.py
       hash: md5
-      md5: 9ebf0a980c4a7144f3ebc97f1900232e
-      size: 15381
+      md5: 486d1417e01ff5427031a518b14bf42c
+      size: 15442
     - path: predicting_flight_arrival_delays/data/weather.py
       hash: md5
-      md5: 2c5a907ef44d340cafedab813a097eb6
-      size: 10043
+      md5: 9ada9ccc0f82ae39a8f951d5aefeed02
+      size: 10059
     params:
       predicting_flight_arrival_delays/config.py:
         WEATHER_COLUMNS:
@@ -177,15 +178,15 @@ stages:
     outs:
     - path: data/interim/flights_preprocessed.parquet
       hash: md5
-      md5: 577daa9471cc5bcbc1fa89a5edd0a130
-      size: 405162690
+      md5: 9e930d4fb2d74d5d2f9eb06b1b380b1e
+      size: 405160279
   split_data_cv:
     cmd: uv run predicting_flight_arrival_delays/data/split_data.py
     deps:
     - path: data/interim/flights_preprocessed.parquet
       hash: md5
-      md5: 577daa9471cc5bcbc1fa89a5edd0a130
-      size: 405162690
+      md5: 9e930d4fb2d74d5d2f9eb06b1b380b1e
+      size: 405160279
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
       md5: 5fef2216caa4a1e0aca28854004f3533
@@ -196,8 +197,8 @@ stages:
       size: 7069
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: c3d11d57c5754cbc2991f03ef0afa802
-      size: 9938
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
     params:
       predicting_flight_arrival_delays/config.py:
         DATE_COLUMN: FlightDate
@@ -209,6 +210,8 @@ stages:
         - DepHour
         - ArrHour
         - TailNumber
+        - Origin
+        - Dest
         TARGET: IsDelayed
         WEATHER_COLUMNS:
         - Temperature2m
@@ -220,6 +223,1957 @@ stages:
     outs:
     - path: data/processed/selection
       hash: md5
-      md5: 7f9bbd300570312770ecf116ff4bef9d.dir
-      size: 1785587450
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
       nfiles: 27
+  train_evaluate_save_metrics@0:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant all --model lightgbm --config default
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/all/lightgbm__default.json
+      hash: md5
+      md5: da02ea1a76089949b3e548188caeb97d
+      size: 182
+  train_evaluate_save_metrics@1:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant all --model lightgbm --config fast
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/all/lightgbm__fast.json
+      hash: md5
+      md5: cdad854b4fc9aaa94b92c731e4555c73
+      size: 182
+  train_evaluate_save_metrics@2:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant all --model lightgbm --config deep
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/all/lightgbm__deep.json
+      hash: md5
+      md5: c6ef05205b4d6824e68c78b3ab421875
+      size: 182
+  train_evaluate_save_metrics@3:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant all --model logistic_regression --config default
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/all/logistic_regression__default.json
+      hash: md5
+      md5: 94a928011e40ddbe5c07f49b391e9c89
+      size: 181
+  train_evaluate_save_metrics@6:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant all --model lightgbm --config regularised
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/all/lightgbm__regularised.json
+      hash: md5
+      md5: 486e96554f2819e08997c1637d5e34cf
+      size: 182
+  train_evaluate_save_metrics@4:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant all --model logistic_regression --config weak_l2
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/all/logistic_regression__weak_l2.json
+      hash: md5
+      md5: da88d34385f5f71036a580089ea0343f
+      size: 181
+  train_evaluate_save_metrics@5:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant all --model logistic_regression --config strong_l2
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/all/logistic_regression__strong_l2.json
+      hash: md5
+      md5: f053da391aacaaa1c9c150ed90186518
+      size: 183
+  train_evaluate_save_metrics@7:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant noweather --model logistic_regression --config default
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/noweather/logistic_regression__default.json
+      hash: md5
+      md5: aa7f12a46fdb0061297a1ab7d41015ed
+      size: 183
+  train_evaluate_save_metrics@8:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant noweather --model logistic_regression --config weak_l2
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/noweather/logistic_regression__weak_l2.json
+      hash: md5
+      md5: 9355a4dc3d7ad01c39b05a22779cc8e7
+      size: 182
+  train_evaluate_save_metrics@9:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant noweather --model logistic_regression --config strong_l2
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/noweather/logistic_regression__strong_l2.json
+      hash: md5
+      md5: d73bedd43b19b499efe578880cd4e770
+      size: 181
+  train_evaluate_save_metrics@10:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant noweather --model lightgbm --config default
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/noweather/lightgbm__default.json
+      hash: md5
+      md5: dbdea5c0419c69e3b120f49f7b58c3e5
+      size: 183
+  train_evaluate_save_metrics@11:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant noweather --model lightgbm --config fast
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/noweather/lightgbm__fast.json
+      hash: md5
+      md5: f197ad8ae2f6acddbf7e969151eac6b7
+      size: 183
+  train_evaluate_save_metrics@12:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant noweather --model lightgbm --config deep
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/noweather/lightgbm__deep.json
+      hash: md5
+      md5: 7827ffc6b884c2adecd3da8803c109f7
+      size: 182
+  train_evaluate_save_metrics@13:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant noweather --model lightgbm --config regularised
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/noweather/lightgbm__regularised.json
+      hash: md5
+      md5: b9ebfeea8a74b998fe9a460c02251ea6
+      size: 181
+  train_evaluate_save_metrics@14:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant nocarrier --model logistic_regression --config default
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/nocarrier/logistic_regression__default.json
+      hash: md5
+      md5: 6e382ac804b97bc0b5203abc72d75028
+      size: 182
+  train_evaluate_save_metrics@15:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant nocarrier --model logistic_regression --config weak_l2
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/nocarrier/logistic_regression__weak_l2.json
+      hash: md5
+      md5: 4c63809c6877dac6582b4a20cb582eb5
+      size: 182
+  train_evaluate_save_metrics@16:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant nocarrier --model logistic_regression --config strong_l2
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/nocarrier/logistic_regression__strong_l2.json
+      hash: md5
+      md5: e767930519f20408490f12d4f1430ab8
+      size: 182
+  train_evaluate_save_metrics@17:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant nocarrier --model lightgbm --config default
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/nocarrier/lightgbm__default.json
+      hash: md5
+      md5: 4c09cd215bc0b073c99794d584d6bb94
+      size: 181
+  train_evaluate_save_metrics@18:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant nocarrier --model lightgbm --config fast
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/nocarrier/lightgbm__fast.json
+      hash: md5
+      md5: 4854ede4544d0ce0cdb84773a4f078e8
+      size: 181
+  train_evaluate_save_metrics@19:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant nocarrier --model lightgbm --config deep
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/nocarrier/lightgbm__deep.json
+      hash: md5
+      md5: bf0dba426b0ff7dc68fda184f02511ce
+      size: 181
+  train_evaluate_save_metrics@20:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant nocarrier --model lightgbm --config regularised
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/nocarrier/lightgbm__regularised.json
+      hash: md5
+      md5: 234cfbbfda5e4d09cf97deb74a27db9f
+      size: 182
+  build_airport_identity:
+    cmd: uv run predicting_flight_arrival_delays/data/build_airport_identity.py
+    deps:
+    - path: data/interim/flights_features.parquet
+      hash: md5
+      md5: b05662d3fc8733f2cdfbf6999445a5db
+      size: 317195798
+    - path: predicting_flight_arrival_delays/data/build_airport_identity.py
+      hash: md5
+      md5: 88f98f7b7da967f45de465bd2837c1e9
+      size: 6205
+    params:
+      predicting_flight_arrival_delays/config.py:
+        DATE_COLUMN: FlightDate
+    outs:
+    - path: data/external/airport_identity.csv
+      hash: md5
+      md5: 86ce380209e505fcd5ac9c382df5991d
+      size: 11116
+  train_evaluate_save_metrics@21:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant nocarrier --model random_forest --config default
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/nocarrier/random_forest__default.json
+      hash: md5
+      md5: 264e4789175db8a513fa6fa8f6fe9b9f
+      size: 183
+  train_evaluate_save_metrics@22:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant all --model random_forest --config default
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: daf4c075e64cfd33df18f54e192e848e.dir
+      size: 1636802591
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: 5fef2216caa4a1e0aca28854004f3533
+      size: 4843
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: f32dd6c38ee5c5c1e773040ef368105c
+      size: 28742
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 12f2d7f6a7b437779296456215d80046
+      size: 10825
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: bcbd83c17861a55f66b8ad01f57137db
+      size: 14061
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 730ff54d74cc759ee028476fc9dfeaef
+      size: 10534
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: e8b6a1354506a95e62bbaf91d1fe0366
+      size: 10255
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/all/random_forest__default.json
+      hash: md5
+      md5: ce01884c408f51ec58ec614f1acfc57c
+      size: 180

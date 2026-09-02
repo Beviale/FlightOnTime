@@ -1,6 +1,6 @@
 """Shared plumbing for the serving layer: response shape and model bundles."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from functools import wraps
 from typing import Any
@@ -20,6 +20,7 @@ from predicting_flight_arrival_delays.config import (
 from predicting_flight_arrival_delays.utils import (
     get_run_metrics,
     get_run_params,
+    load_bundle_importance,
     load_model_bundle,
 )
 
@@ -39,6 +40,7 @@ class Bundle:
     threshold: float
     params: dict[str, str]
     metrics: dict[str, float]
+    importance: dict[str, float] = field(default_factory=dict)
 
 
 def registered_name(variant: str) -> str:
@@ -71,6 +73,7 @@ def load_bundle(variant: str, stage: str = WINNER_MODEL_STAGE) -> Bundle:
 
     model, transformer, columns, run_id = load_model_bundle(name, stage=stage)
     params, metrics = get_run_params(run_id), get_run_metrics(run_id)
+    importance = load_bundle_importance(run_id)
 
     threshold = metrics.get(THRESHOLD_METRIC)
     if threshold is None:
@@ -90,6 +93,7 @@ def load_bundle(variant: str, stage: str = WINNER_MODEL_STAGE) -> Bundle:
         threshold=float(threshold),
         params=params,
         metrics=metrics,
+        importance=importance,
     )
 
 

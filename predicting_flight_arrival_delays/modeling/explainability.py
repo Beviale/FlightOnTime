@@ -101,11 +101,14 @@ def explain_prediction(
             )
 
         n = min(len(feature_names), coef.shape[0])
+       
+        values = np.asarray(x.to_numpy(), dtype=float).reshape(-1)
+        contributions = coef[:n] * values[:n]
         explanations = [
             {
                 "feature": feature_names[i],
-                "value": float(coef[i]),
-                "abs_value": float(abs(coef[i])),
+                "value": float(contributions[i]),
+                "abs_value": float(abs(contributions[i])),
             }
             for i in range(n)
         ]
@@ -272,3 +275,140 @@ def save_shap_waterfall_plot(
     except Exception as e:
         logger.error(f"Failed to save SHAP waterfall plot: {e}")
         return None
+
+def _encoded_importance(model: Any, columns: list[str]) -> dict[str, float]:
+    """How much the estimator leans on each of its own input columns.
+
+    Args:
+        model: A fitted estimator, possibly wrapped in calibration.
+        columns: The column names the model was fitted on, in order.
+
+    Returns:
+        One weight per column, or an empty dict if the estimator exposes neither
+        importances nor coefficients, or reports a different number of them.
+    """
+    base = _unwrap_calibration(model)
+
+    if hasattr(base, "feature_importances_"):
+        weights = np.asarray(base.feature_importances_, dtype=float)
+    elif hasattr(base, "coef_"):
+        weights = np.abs(np.asarray(base.coef_, dtype=float)).ravel()
+    else:
+        logger.warning(f"{type(base).__name__} reports no importances - skipping.")
+        return {}
+
+    if len(weights) != len(columns):
+        logger.warning(
+            f"{type(base).__name__} reports {len(weights)} importances for "
+            f"{len(columns)} columns - skipping."
+        )
+        return {}
+
+    return dict(zip(columns, weights, strict=True))
+
+
+def _ancestor(column: str, raw_columns: list[str], transformer: Any) -> str | None:
+    """Trace one of the model's columns back to the request column it came from.
+
+    The inverse of what encoding did, and it has to agree with app.inputs.contributes:
+    a column is either carried through as itself, one-hot expanded, or turned into a
+    delay rate.
+
+    Args:
+        column: A column the model was fitted on.
+        raw_columns: The request columns it could descend from, longest first.
+
+    Returns:
+        The request column it came from, or None if it came from something the
+        caller never sends - the weather, for instance.
+    """
+    if column in raw_columns:
+        return column
+
+    for raw in raw_columns:
+        if column == f"{raw}DelayRate" and raw in transformer.delay_rate_columns:
+            return raw
+        if column.startswith(f"{raw}_") and raw in transformer.category_keep:
+            return raw
+
+    return None
+
+
+def request_column_importance(
+    model: Any, columns: list[str], transformer: Any, raw_columns: list[str]
+) -> dict[str, float]:
+    """Rank the columns a caller sends by how much the model leans on them.
+
+    A request column rarely reaches the model as itself: it arrives as a block of
+    one-hot columns, or as a delay rate, or both. Its weight here is the sum of what
+    its descendants carry.
+
+    Args:
+        model: The fitted estimator.
+        columns: The column names it was fitted on, in order.
+        transformer: The fitted transformer that produced them.
+        raw_columns: The columns a caller can send, from app.inputs.
+
+    Returns:
+        Request column to its share of the total weight, largest first. Shares sum
+        to at most 1: what the service supplies by itself - the weather - is left
+        out, since a caller cannot be warned about a column they do not send.
+        Empty if the estimator reports no importances.
+    """
+    encoded = _encoded_importance(model, columns)
+    if not encoded:
+        return {}
+
+    by_length = sorted(raw_columns, key=len, reverse=True)
+    total = float(sum(encoded.values())) or 1.0
+
+    folded: dict[str, float] = {}
+    for column, weight in encoded.items():
+        raw = _ancestor(column, by_length, transformer)
+        if raw is not None:
+            folded[raw] = folded.get(raw, 0.0) + float(weight) / total
+
+    return dict(sorted(folded.items(), key=lambda item: item[1], reverse=True))
+
+
+def request_column_contributions(
+    model: Any,
+    X: pd.DataFrame,
+    transformer: Any,
+    model_type: str,
+    top_k: int = 5,
+) -> list[dict[str, Any]]:
+    """Explain one prediction in terms of the columns a person recognises.
+
+    Args:
+        model: The fitted estimator that produced the prediction.
+        X: The prepared matrix; only its first row is explained.
+        transformer: The fitted transformer that built the columns.
+        model_type: "logistic_regression" or one of the tree types.
+        top_k: How many columns to report.
+
+    Returns:
+        Up to top_k dicts, largest absolute effect first, each with "column" and
+        "contribution" - positive towards a delay, negative towards an on-time
+        arrival. Empty if the explanation could not be built.
+    """
+    detailed = explain_prediction(model, X, model_type, top_k=len(X.columns))
+    if not detailed:
+        return []
+
+    sources = sorted(
+        set(transformer.category_keep) | set(transformer.delay_rate_columns),
+        key=len,
+        reverse=True,
+    )
+
+    folded: dict[str, float] = {}
+    for item in detailed:
+        column = _ancestor(item["feature"], sources, transformer) or item["feature"]
+        folded[column] = folded.get(column, 0.0) + float(item["value"])
+
+    ranked = sorted(folded.items(), key=lambda item: abs(item[1]), reverse=True)
+    return [
+        {"column": column, "contribution": contribution}
+        for column, contribution in ranked[:top_k]
+    ]

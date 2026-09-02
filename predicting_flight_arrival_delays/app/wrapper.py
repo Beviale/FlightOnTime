@@ -83,6 +83,26 @@ def render_prediction(data: dict[str, Any]) -> str:
             "\n> Without a forecast this estimate is less informed than the one the "
             "main model would have given."
         )
+
+    explanations = data.get("explanations") or []
+    if explanations:
+        lines.append("\n### What pushed this answer")
+        lines += [
+            f"- **{item['column']}** pushed "
+            + ("towards a delay" if item["contribution"] > 0 else "towards arriving on time")
+            + f" ({item['contribution']:+.3f})"
+            for item in explanations
+        ]
+
+    approximated = data.get("approximated") or []
+    if approximated:
+        lines.append(
+            "\n> ⚠️ **This answer may be less accurate than it looks.** The model "
+            "leans heavily on the following, and the request left them out, so a "
+            "training average stood in for each: "
+            + ", ".join(f"`{column}`" for column in approximated)
+            + ". Sending them should give a sharper answer."
+        )
     return "\n".join(lines)
 
 
@@ -113,7 +133,8 @@ async def predict_lookup(
         "Origin": origin,
         "Dest": dest,
     }
-    body = await call("POST", "/predictions/lookup", json=payload)
+
+    body = await call("POST", "/predictions/lookup?explain=true", json=payload)
     if "error" in body:
         return f"### Could not answer\n\n{body['error']}"
 

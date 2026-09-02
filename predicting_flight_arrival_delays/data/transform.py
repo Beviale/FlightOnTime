@@ -45,7 +45,7 @@ class Transformer:
     mi_sample_size: mutual information is expensive on millions of rows; it is estimated
         on a random sample of this size.
     seed: seed to use for random operations.
-    id_columns: Numeric columns that are actually categorical.   
+    label_columns: columns that are numbers on paper but labels in fact.   
     max_onehot_categories: a categorical holding more values than this is not worth a
         column per category. It is given a historical delay rate like the columns
         below, and under onehot encoding the original is then dropped.
@@ -64,8 +64,15 @@ class Transformer:
 
     categorical_columns: list[str] = field(default_factory=list)
     numeric_columns: list[str] = field(default_factory=list)
-    id_columns: list[str] = field(
-        default_factory=lambda: ["OriginAirportID", "DestAirportID"]
+    label_columns: list[str] = field(
+        default_factory=lambda: [
+            "OriginAirportID",
+            "DestAirportID",
+            "Month",
+            "DayOfWeek",
+            "DayofMonth",
+            "IsHoliday",
+        ]
     )
 
     category_keep: dict[str, set] = field(default_factory=dict, init=False)
@@ -89,16 +96,16 @@ class Transformer:
         self._categorical_columns_given = bool(self.categorical_columns)
         self._numeric_columns_given = bool(self.numeric_columns)
 
-    def _ids_as_labels(self, X: pd.DataFrame) -> pd.DataFrame:
-        """Read the id columns as labels rather than as magnitudes.
+    def _as_labels(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Read the label columns as labels rather than as magnitudes.
 
         Args:
             X: Features to modify in place.
 
         Returns:
-            The same DataFrame, with the id columns holding strings.
+            The same DataFrame, with the label columns holding strings.
         """
-        for col in self.id_columns:
+        for col in self.label_columns:
             if col in X.columns and not pd.api.types.is_object_dtype(X[col]):
                 X[col] = X[col].astype("Int64").astype("string").astype(object)
         return X
@@ -249,7 +256,7 @@ class Transformer:
         Returns:
             The fitted transformer, for chaining.
         """
-        df = self._ids_as_labels(X.copy())
+        df = self._as_labels(X.copy())
         self.category_keep = {}
         self.impute_values = {}
         self.wide_columns_ = self._find_wide_columns(df)
@@ -303,7 +310,7 @@ class Transformer:
         """
         if self.scaler is None:
             raise RuntimeError("Transformer must be fitted before transform()")
-        df = self._ids_as_labels(X.copy())
+        df = self._as_labels(X.copy())
 
         if self.rate_columns():
             rate_cols = self._apply_delay_rates_internal(df)

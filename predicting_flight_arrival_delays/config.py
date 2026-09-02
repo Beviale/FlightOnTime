@@ -93,6 +93,7 @@ SERVICE_COLUMNS = [
     "TailNumber",
     "Origin",
     "Dest",
+    "FlightNumberReportingAirline",
 ]
 
 SERVICE_COLUMNS2 = [
@@ -132,6 +133,10 @@ WINNER_MODEL_STAGE = "Champion"
 SERVED_VARIANTS = PRODUCTION_VARIANTS
 DEFAULT_THRESHOLD = 0.5 
 MAX_BATCH_SIZE = 200  # flights per batch request
+
+IMPORTANT_COLUMN_SHARE = 0.05
+
+EXPLANATION_COLUMN_COUNT = 5
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 FORECAST_TIMEOUT_SECONDS = 8

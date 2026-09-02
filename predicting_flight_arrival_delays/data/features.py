@@ -18,7 +18,7 @@ import pandas as pd
 
 from predicting_flight_arrival_delays.config import SERVICE_COLUMNS, TARGET, WEATHER_COLUMNS
 
-CARRIER_COLUMNS = ["ReportingAirline", "FlightNumberReportingAirline", "OriginCarrier", "DestCarrier"]
+CARRIER_COLUMNS = ["ReportingAirline", "OriginCarrier", "DestCarrier"]
 WEATHER_COLUMNS_ORIGIN = [col + "Origin" for col in WEATHER_COLUMNS]
 WEATHER_COLUMNS_DESTINATION = [col + "Dest" for col in WEATHER_COLUMNS]
 NOWEATHER_DROP = WEATHER_COLUMNS_ORIGIN + WEATHER_COLUMNS_DESTINATION + ["LeadDays"]

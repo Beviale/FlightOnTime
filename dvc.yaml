@@ -41,6 +41,17 @@ stages:
     outs:
       - data/interim/flights_features.parquet
 
+  build_airport_identity:
+    cmd: uv run predicting_flight_arrival_delays/data/build_airport_identity.py
+    deps:
+      - predicting_flight_arrival_delays/data/build_airport_identity.py
+      - data/interim/flights_features.parquet
+    params:
+      - predicting_flight_arrival_delays/config.py:
+          - DATE_COLUMN
+    outs:
+      - data/external/airport_identity.csv
+
   download_weather:
     cmd: uv run predicting_flight_arrival_delays/data/weather.py
     deps:
@@ -55,6 +66,7 @@ stages:
           - WEATHER_MODEL
           - WEATHER_VARS
           - MAX_LEAD_DAYS
+          - DATE_COLUMN
     outs:
       - data/external/weather
 
@@ -70,6 +82,7 @@ stages:
           - WEATHER_COLUMNS
     outs:
       - data/interim/flights_preprocessed.parquet
+
 
   split_data_cv:
     cmd: uv run predicting_flight_arrival_delays/data/split_data.py
@@ -92,21 +105,13 @@ stages:
       - { variant: all, model: lightgbm, config: default}
       - { variant: all, model: lightgbm, config: fast}
       - { variant: all, model: lightgbm, config: deep}
-      - { variant: all, model: lightgbm, config: regularised}
-      - { variant: all, model: random_forest, config: default}
-      - { variant: all, model: random_forest, config: deep}
-      - { variant: all, model: random_forest, config: shallow}
       - { variant: all, model: logistic_regression, config: default}
       - { variant: all, model: logistic_regression, config: weak_l2}
       - { variant: all, model: logistic_regression, config: strong_l2}
-      - { variant: all, model: logistic_regression, config: elasticnet}
+      - { variant: all, model: lightgbm, config: regularised}
       - { variant: noweather, model: logistic_regression, config: default}
       - { variant: noweather, model: logistic_regression, config: weak_l2}
       - { variant: noweather, model: logistic_regression, config: strong_l2}
-      - { variant: noweather, model: logistic_regression, config: elasticnet}
-      - { variant: noweather, model: random_forest, config: default}
-      - { variant: noweather, model: random_forest, config: deep}
-      - { variant: noweather, model: random_forest, config: shallow}
       - { variant: noweather, model: lightgbm, config: default}
       - { variant: noweather, model: lightgbm, config: fast}
       - { variant: noweather, model: lightgbm, config: deep}
@@ -114,14 +119,13 @@ stages:
       - { variant: nocarrier, model: logistic_regression, config: default}
       - { variant: nocarrier, model: logistic_regression, config: weak_l2}
       - { variant: nocarrier, model: logistic_regression, config: strong_l2}
-      - { variant: nocarrier, model: logistic_regression, config: elasticnet}
-      - { variant: nocarrier, model: random_forest, config: default}
-      - { variant: nocarrier, model: random_forest, config: deep}
-      - { variant: nocarrier, model: random_forest, config: shallow}
       - { variant: nocarrier, model: lightgbm, config: default}
       - { variant: nocarrier, model: lightgbm, config: fast}
       - { variant: nocarrier, model: lightgbm, config: deep}
       - { variant: nocarrier, model: lightgbm, config: regularised}
+      - { variant: nocarrier, model: random_forest, config: default}
+      - { variant: all, model: random_forest, config: default}
+      - { variant: noweather, model: random_forest, config: default}
     do:
       cmd: >-
         uv run predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
@@ -178,5 +182,6 @@ stages:
           - PRODUCTION_VARIANTS
           - DAGSHUB_REPO_OWNER
           - DAGSHUB_REPO_NAME
+          - WINNER_MODEL_STAGE
     outs:
       - metrics/winner

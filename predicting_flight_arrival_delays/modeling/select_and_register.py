@@ -26,6 +26,7 @@ import pandas as pd
 from sklearn.metrics import precision_recall_curve
 import typer
 
+from predicting_flight_arrival_delays.app.inputs import CANDIDATE_INPUTS
 from predicting_flight_arrival_delays.config import (
     DAGSHUB_REPO_NAME,
     DAGSHUB_REPO_OWNER,
@@ -45,6 +46,9 @@ from predicting_flight_arrival_delays.data.transform import (
     to_sparse_matrix,
 )
 from predicting_flight_arrival_delays.modeling import evaluate
+from predicting_flight_arrival_delays.modeling.explainability import (
+    request_column_importance,
+)
 from predicting_flight_arrival_delays.modeling.train import HYPERPARAMS
 from predicting_flight_arrival_delays.modeling.train import train as train_model
 from predicting_flight_arrival_delays.modeling.train_evaluate_save_metrics import prepare_fold
@@ -253,6 +257,13 @@ def register_winner(
         mlflow.log_metrics(metrics)
         mlflow.log_metric("operating_threshold", final_threshold)
 
+        importance = request_column_importance(
+            model, feature_columns, transformer, CANDIDATE_INPUTS
+        )
+        if importance:
+            leading = list(importance)[:5]
+            logger.info(f"{variant}: the model leans most on {', '.join(leading)}")
+
         register_model_bundle(
             model=model,
             transformer=transformer,
@@ -260,6 +271,7 @@ def register_winner(
             registered_model_name=f"flight-delay-{variant}",
             signature_sample=X_full[:100].toarray() if hasattr(X_full, "toarray") else X_full.head(100),
             alias=alias,
+            importance=importance,
         )
         logger.success(
             f"Registered flight-delay-{variant} ({n_features} features) "
@@ -274,10 +286,13 @@ def register_winner(
             model_file = save_dir / "model.joblib"
             transformer_file = save_dir / "transformer.joblib"
             columns_file = save_dir / "columns.json"
+            importance_file = save_dir / "importance.json"
 
             joblib.dump(model, model_file)
             transformer.save(transformer_file)
             columns_file.write_text(json.dumps(feature_columns))
+            if importance:
+                importance_file.write_text(json.dumps(importance, indent=2))
 
             logger.info(f"Model also saved locally to {safe_relative_path(model_file)}")
             logger.info(f"Transformer also saved locally to {safe_relative_path(transformer_file)}")

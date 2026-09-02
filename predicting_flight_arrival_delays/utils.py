@@ -79,6 +79,7 @@ def register_model_bundle(
     signature_sample: pd.DataFrame | None = None,
     artifact_path: str = "model",
     alias: str | None = None,
+    importance: dict[str, float] | None = None,
 ) -> None:
     """Log a model together with its transformer and training columns as one bundle.
  
@@ -102,6 +103,10 @@ def register_model_bundle(
             columns are stored together under. Defaults to "model".
         alias: If given, this version is promoted under this alias immediately
             after registration. Optional; no alias is set if not given.
+        importance: How much the model leans on each column a caller sends, as
+            produced by explainability.request_column_importance. Logged beside
+            the columns so the serving path can say which missing inputs matter.
+            Optional.
     """
     with tempfile.TemporaryDirectory() as tmp:
         transformer_path = Path(tmp) / "transformer.joblib"
@@ -109,6 +114,10 @@ def register_model_bundle(
  
         transformer.save(transformer_path)
         columns_path.write_text(json.dumps(list(columns)))
+
+        importance_path = Path(tmp) / "importance.json"
+        if importance:
+            importance_path.write_text(json.dumps(importance, indent=2))
  
         signature, input_example = None, None
         if signature_sample is not None:
@@ -126,6 +135,8 @@ def register_model_bundle(
         )
         mlflow.log_artifact(str(transformer_path), artifact_path=artifact_path)
         mlflow.log_artifact(str(columns_path), artifact_path=artifact_path)
+        if importance:
+            mlflow.log_artifact(str(importance_path), artifact_path=artifact_path)
  
         if alias is not None:
             client = mlflow.MlflowClient()
@@ -197,6 +208,27 @@ def load_model_bundle(
     columns = json.loads(Path(columns_path).read_text())
  
     return model, transformer, columns, run_id
+
+def load_bundle_importance(run_id: str, artifact_path: str = "model") -> dict[str, float]:
+    """Return the importance saved in the bundle.
+
+    Args:
+        run_id.
+        artifact_path: Must match the one used in register_model_bundle.
+
+    Returns:
+        The importance json saved in the bundle.
+    """
+    try:
+        path = mlflow.artifacts.download_artifacts(
+            f"runs:/{run_id}/{artifact_path}/importance.json"
+        )
+    except Exception:
+        logger.info(f"Run {run_id} logged no importance.json - no input warnings for it.")
+        return {}
+
+    return json.loads(Path(path).read_text())
+
 
 def get_run_params(run_id: str) -> dict[str, str]:
     """Fetch all parameters logged on an MLflow run.

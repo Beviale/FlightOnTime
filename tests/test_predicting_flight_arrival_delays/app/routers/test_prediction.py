@@ -2,7 +2,12 @@
 
 from datetime import date, timedelta
 
+from dataclasses import replace
+
+import numpy as np
+import pandas as pd
 import pytest
+from sklearn.linear_model import LogisticRegression
 from fastapi.testclient import TestClient
 
 from predicting_flight_arrival_delays.app.enrichment.aerodatabox import (
@@ -45,6 +50,131 @@ def degraded_client(bundles, stub_forecast) -> TestClient:
     """A client whose registry only carries the full model."""
     stub_forecast()
     return serve({"all": bundles["all"]})
+
+
+@pytest.fixture
+def explainable(bundles, stub_forecast):
+
+    stub_forecast()
+
+    rebuilt = {}
+    for variant, bundle in bundles.items():
+        frame = pd.DataFrame(
+            np.random.default_rng(0).normal(size=(40, len(bundle.columns))),
+            columns=bundle.columns,
+        )
+        target = pd.Series([0, 1] * 20)
+        rebuilt[variant] = replace(
+            bundle,
+            model=LogisticRegression(max_iter=200).fit(frame, target),
+            params=bundle.params | {"algorithm": "logistic_regression"},
+        )
+    return serve(rebuilt)
+
+
+class TestExplanations:
+
+    def test_it_scores_and_explains_in_one_answer(self, explainable, a_flight):
+        data = explainable.post("/explanations", json=a_flight()).json()["data"]
+
+        assert 0.0 <= data["delay_probability"] <= 1.0
+        assert data["explanations"]
+
+    def test_the_reasons_are_request_columns_not_matrix_columns(self, explainable, a_flight):
+        data = explainable.post("/explanations", json=a_flight()).json()["data"]
+
+        reported = [item["column"] for item in data["explanations"]]
+
+        assert reported
+        assert not any("_1" in column for column in reported)
+
+    def test_a_contribution_is_signed(self, explainable, a_flight):
+        data = explainable.post("/explanations", json=a_flight()).json()["data"]
+
+        assert all(
+            isinstance(item["contribution"], float) for item in data["explanations"]
+        )
+
+    def test_they_are_ordered_by_how_much_they_moved_the_answer(self, explainable, a_flight):
+        data = explainable.post("/explanations", json=a_flight()).json()["data"]
+
+        weights = [abs(item["contribution"]) for item in data["explanations"]]
+
+        assert weights == sorted(weights, reverse=True)
+
+    def test_it_carries_the_same_context_a_prediction_does(self, explainable, a_flight):
+        data = explainable.post("/explanations", json=a_flight()).json()["data"]
+
+        assert {"variant", "threshold", "weather", "approximated"} <= set(data)
+
+    def test_a_prediction_can_ask_for_them_too(self, explainable, a_flight):
+        data = explainable.post(
+            "/predictions?explain=true", json=a_flight()
+        ).json()["data"]
+
+        assert data["explanations"]
+
+    def test_a_prediction_leaves_them_out_by_default(self, explainable, a_flight):
+        data = explainable.post("/predictions", json=a_flight()).json()["data"]
+
+        assert "explanations" not in data
+
+    def test_a_flight_missing_a_column_the_models_read_is_refused(self, client, a_flight):
+        payload = a_flight()
+        payload.pop("OriginCongestion")
+
+        assert client.post("/explanations", json=payload).status_code == 422
+
+    def test_with_no_model_loaded_it_answers_503(self, stub_forecast, a_flight):
+        stub_forecast()
+
+        assert serve({}).post("/explanations", json=a_flight()).status_code == 503
+
+
+class TestApproximatedInputsAreReported:
+
+    @pytest.fixture
+    def leaning_client(self, bundles, stub_forecast):
+        stub_forecast()
+        ranked = {"OriginCongestion": 0.5, "DestCongestion": 0.3, "Distance": 0.2}
+        return serve({k: replace(v, importance=ranked) for k, v in bundles.items()})
+
+    def test_a_complete_request_reports_nothing(self, leaning_client, body):
+        data = leaning_client.post("/predictions", json=body()).json()["data"]
+
+        assert data["approximated"] == []
+
+    def test_a_column_sent_as_null_is_named(self, leaning_client, body):
+        data = leaning_client.post(
+            "/predictions", json=body(OriginCongestion=None)
+        ).json()["data"]
+
+        assert data["approximated"] == ["OriginCongestion"]
+
+    def test_the_flight_is_still_scored(self, leaning_client, body):
+        data = leaning_client.post(
+            "/predictions", json=body(OriginCongestion=None)
+        ).json()["data"]
+
+        assert 0.0 <= data["delay_probability"] <= 1.0
+
+    def test_a_model_with_no_ranking_reports_nothing(self, client, body):
+        data = client.post(
+            "/predictions", json=body(OriginCongestion=None)
+        ).json()["data"]
+
+        assert data["approximated"] == []
+
+    def test_every_row_of_a_batch_is_judged_on_its_own(self, leaning_client, body):
+        complete = body()
+        partial = body(DestCongestion=None)
+
+        results = leaning_client.post(
+            "/batch-predictions", json=[complete, partial]
+        ).json()["data"]["results"]
+
+        assert results[0]["approximated"] == []
+        assert results[1]["approximated"] == ["DestCongestion"]
 
 
 class TestPredictions:
@@ -193,6 +323,27 @@ class TestLookupPredictions:
             )
 
         return build
+
+    def test_the_answer_carries_its_reasons_when_asked(self, explainable, named_flight, resolved):
+        """This is the endpoint a person reaches through the interface, and the
+        interface asks for the reasons."""
+        resolved()
+
+        data = explainable.post(
+            "/predictions/lookup?explain=true", json=named_flight
+        ).json()["data"]
+
+        assert data["explanations"]
+        assert not any("_1" in item["column"] for item in data["explanations"])
+
+    def test_the_reasons_are_left_out_unless_asked_for(self, explainable, named_flight, resolved):
+        """A caller who only wants the probability should not pay for a second pass
+        through the transformer."""
+        resolved()
+
+        data = explainable.post("/predictions/lookup", json=named_flight).json()["data"]
+
+        assert "explanations" not in data
 
     def test_a_named_flight_is_scored(self, client, named_flight, resolved):
         resolved()

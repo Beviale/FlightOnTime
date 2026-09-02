@@ -11,6 +11,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from loguru import logger
+import pandas as pd
 
 from predicting_flight_arrival_delays.app.enrichment.aerodatabox import (
     FlightNotFoundError,
@@ -22,16 +23,35 @@ from predicting_flight_arrival_delays.app.enrichment.identity import (
     UnknownAirportError,
 )
 from predicting_flight_arrival_delays.app.enrichment.lookup import resolve
-from predicting_flight_arrival_delays.app.inference import ModelUnavailableError, score
+from predicting_flight_arrival_delays.app.inference import (
+    ModelUnavailableError,
+    prepared_matrix,
+    score,
+)
+from predicting_flight_arrival_delays.app.inputs import approximated_inputs, complete_frame
 from predicting_flight_arrival_delays.app.schema import FlightLookupRequest, FlightRequest
 from predicting_flight_arrival_delays.app.utils import (
     construct_response,
     get_bundles,
     get_required_inputs,
 )
-from predicting_flight_arrival_delays.config import MAX_BATCH_SIZE
+from predicting_flight_arrival_delays.config import (
+    EXPLANATION_COLUMN_COUNT,
+    IMPORTANT_COLUMN_SHARE,
+    MAX_BATCH_SIZE,
+)
+from predicting_flight_arrival_delays.modeling.explainability import (
+    request_column_contributions,
+)
 
 router = APIRouter(tags=["Prediction"])
+
+Explain = Query(
+    default=False,
+    description=(
+        "Also report which columns pushed the answer where it went. Off by default."
+    ),
+)
 
 Threshold = Query(
     default=None,
@@ -69,8 +89,39 @@ def check_inputs(flights: list[FlightRequest], required: set[str]) -> None:
             )
 
 
-def run_scoring(
+def _score(
     request: Request, flights: list[FlightRequest], threshold: float | None
+) -> tuple[pd.DataFrame, list[str], pd.DataFrame]:
+    """Validate, enrich and score.
+
+    Args:
+        request: The incoming request, carrying the loaded bundles.
+        flights: The flights to score.
+        threshold: Optional override of the released operating threshold.
+
+    Returns:
+        The feature frame.
+
+    Raises:
+        HTTPException: 422 if a flight leaves out a column a served model reads,
+            503 if the model a flight needs is not loaded.
+    """
+    check_inputs(flights, get_required_inputs(request))
+    frame, weather_status = build_feature_frame(flights)
+
+    try:
+        scored = score(frame, get_bundles(request), threshold)
+    except ModelUnavailableError as e:
+        raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE, detail=str(e)) from e
+
+    return frame, weather_status, scored
+
+
+def run_scoring(
+    request: Request,
+    flights: list[FlightRequest],
+    threshold: float | None,
+    explain: bool = False,
 ) -> list[dict[str, Any]]:
     """Enrich, score, and pair each result back with the flight that asked for it.
 
@@ -78,6 +129,9 @@ def run_scoring(
         request: The incoming request, carrying the loaded bundles.
         flights: The flights to score.
         threshold: Optional override of the released operating threshold.
+        explain: Whether each result should also say what pushed it. Each flight
+            explained costs a pass of its own through the transformer, so this is
+            asked for rather than assumed.
 
     Returns:
         One result per flight, in the order they were sent.
@@ -86,35 +140,43 @@ def run_scoring(
         HTTPException: 422 if a flight leaves out a column a served model reads,
             503 if the model a flight needs is not loaded.
     """
-    check_inputs(flights, get_required_inputs(request))
+    frame, weather_status, scored = _score(request, flights, threshold)
+    bundles = get_bundles(request)
 
-    frame, weather_status = build_feature_frame(flights)
-
-    try:
-        scored = score(frame, get_bundles(request), threshold)
-    except ModelUnavailableError as e:
-        raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE, detail=str(e)) from e
-
-    return [
-        {
+    results = []
+    for position, (flight, row, status) in enumerate(
+        zip(flights, scored.itertuples(), weather_status, strict=True)
+    ):
+        result = {
             "input": flight.model_dump(mode="json"),
             "delay_probability": float(row.delay_probability),
             "is_delayed": int(row.is_delayed),
             "variant": row.variant,
             "threshold": float(row.threshold),
             "weather": status,
+            "approximated": approximated_inputs(
+                flight, bundles[row.variant], IMPORTANT_COLUMN_SHARE
+            ),
         }
-        for flight, row, status in zip(
-            flights, scored.itertuples(), weather_status, strict=True
-        )
-    ]
+        if explain:
+            result["explanations"] = _explain(
+                frame.iloc[[position]], bundles[row.variant]
+            )
+        results.append(result)
+
+    return results
 
 
 @router.post("/predictions")
 @construct_response
-def predict(request: Request, payload: FlightRequest, threshold: float | None = Threshold):
+def predict(
+    request: Request,
+    payload: FlightRequest,
+    threshold: float | None = Threshold,
+    explain: bool = Explain,
+):
     """Score one scheduled flight."""
-    result = run_scoring(request, [payload], threshold)[0]
+    result = run_scoring(request, [payload], threshold, explain)[0]
 
     logger.success(
         f"{payload.ReportingAirline}{payload.FlightNumberReportingAirline} "
@@ -163,7 +225,10 @@ def predict_batch(
 @router.post("/predictions/lookup")
 @construct_response
 def predict_lookup(
-    request: Request, payload: FlightLookupRequest, threshold: float | None = Threshold
+    request: Request,
+    payload: FlightLookupRequest,
+    threshold: float | None = Threshold,
+    explain: bool = Explain,
 ):
     """Score a flight the caller only named.
 
@@ -178,7 +243,7 @@ def predict_lookup(
     except ScheduleUnavailableError as e:
         raise HTTPException(status_code=HTTPStatus.BAD_GATEWAY, detail=str(e)) from e
 
-    result = run_scoring(request, flights, threshold)[0]
+    result = run_scoring(request, flights, threshold, explain)[0]
     result["resolved"] = flights[0].model_dump(mode="json")
 
     logger.success(
@@ -190,4 +255,61 @@ def predict_lookup(
         "message": HTTPStatus.OK.phrase,
         "status-code": HTTPStatus.OK,
         "data": result,
+    }
+
+
+def _explain(frame: pd.DataFrame, bundle) -> list[dict[str, Any]]:
+    """What pushed one flight's answer where it went, in the caller's vocabulary.
+
+    Args:
+        frame: The feature frame for that one flight.
+        bundle: The model that answered.
+
+    Returns:
+        The leading contributions, or an empty list if the estimator cannot be read.
+    """
+    matrix = prepared_matrix(complete_frame(frame, bundle.transformer), bundle)
+    contributions = request_column_contributions(
+        bundle.model,
+        matrix,
+        bundle.transformer,
+        bundle.params.get("algorithm", ""),
+        EXPLANATION_COLUMN_COUNT,
+    )
+    if not contributions:
+        logger.warning(f"No explanation available for the {bundle.variant} model.")
+    return contributions
+
+
+@router.post("/explanations")
+@construct_response
+def explain(request: Request, payload: FlightRequest, threshold: float | None = Threshold):
+    """Score one flight and say what pushed the answer where it went.
+
+    A contribution is positive when it pushed towards a delay and negative when it
+    pushed towards an on-time arrival.
+    """
+    frame, weather_status, scored = _score(request, [payload], threshold)
+    row = next(scored.itertuples())
+    bundle = get_bundles(request)[row.variant]
+
+    logger.success(
+        f"Explained {payload.Origin}-{payload.Dest}: "
+        f"{row.delay_probability:.3f} ({row.variant})"
+    )
+    return {
+        "message": HTTPStatus.OK.phrase,
+        "status-code": HTTPStatus.OK,
+        "data": {
+            "input": payload.model_dump(mode="json"),
+            "delay_probability": float(row.delay_probability),
+            "is_delayed": int(row.is_delayed),
+            "variant": row.variant,
+            "threshold": float(row.threshold),
+            "weather": weather_status[0],
+            "approximated": approximated_inputs(
+                payload, bundle, IMPORTANT_COLUMN_SHARE
+            ),
+            "explanations": _explain(frame, bundle),
+        },
     }

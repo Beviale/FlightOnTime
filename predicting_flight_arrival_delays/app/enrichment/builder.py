@@ -29,7 +29,6 @@ from predicting_flight_arrival_delays.data.features import (
 )
 from predicting_flight_arrival_delays.data.preprocess import add_utc_columns
 
-
 FEATURE_FRAME_COLUMNS = [
     *FlightRequest.model_fields,
     "LeadDays",

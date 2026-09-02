@@ -6,6 +6,7 @@ import pytest
 from predicting_flight_arrival_delays.app.enrichment.builder import build_feature_frame
 from predicting_flight_arrival_delays.app.inference import score
 from predicting_flight_arrival_delays.app.inputs import (
+    approximated_inputs,
     FORECAST_INPUTS,
     complete_frame,
     contributes,
@@ -32,6 +33,87 @@ class Stub:
         return self.delay_rate_columns + [
             c for c in self.wide_columns_ if c not in self.delay_rate_columns
         ]
+
+
+class StubBundle:
+
+    def __init__(self, importance):  # noqa: D107
+        self.importance = importance
+
+
+class TestApproximatedInputs:
+    
+    RANKED = {
+        "OriginCarrier": 0.20,
+        "OriginCongestion": 0.12,
+        "DestCongestion": 0.06,
+        "Distance": 0.01,
+    }
+    FLOOR = 0.05
+
+    def test_a_complete_request_raises_nothing(self, body):
+        flight = FlightRequest(**body())
+
+        assert approximated_inputs(flight, StubBundle(self.RANKED), self.FLOOR) == []
+
+    def test_a_column_left_out_is_named(self, body):
+        payload = body()
+        payload.pop("OriginCongestion")
+
+        flight = FlightRequest(**payload)
+
+        assert approximated_inputs(flight, StubBundle(self.RANKED), self.FLOOR) == [
+            "OriginCongestion"
+        ]
+
+    def test_a_column_sent_as_null_counts_as_left_out(self):
+        flight = FlightRequest(
+            FlightDate="2026-03-01", OriginAirportID=12478, DestAirportID=12892,
+            DepTimeDecimal=8.0, CRSElapsedTime=360.0, OriginCongestion=None,
+        )
+
+        assert "OriginCongestion" in approximated_inputs(flight, StubBundle(self.RANKED), self.FLOOR)
+
+    def test_a_column_below_the_floor_is_not_worth_mentioning(self, body):
+        payload = body()
+        payload.pop("Distance")
+
+        flight = FlightRequest(**payload)
+
+        assert approximated_inputs(flight, StubBundle(self.RANKED), self.FLOOR) == []
+
+    def test_the_floor_is_a_share_and_not_a_position(self, body):
+        payload = body()
+        payload.pop("DestCongestion")
+        flight = FlightRequest(**payload)
+
+        concentrated = {"OriginCarrier": 0.5, "OriginCongestion": 0.3, "DestCongestion": 0.15}
+        flat = dict.fromkeys(("OriginCarrier", "OriginCongestion", "DestCongestion"), 0.02)
+
+        assert approximated_inputs(flight, StubBundle(concentrated), self.FLOOR) == [
+            "DestCongestion"
+        ]
+        assert approximated_inputs(flight, StubBundle(flat), self.FLOOR) == []
+
+    def test_the_order_is_the_model_s_own(self, body):
+        payload = body()
+        for column in ("DestCongestion", "OriginCarrier"):
+            payload.pop(column)
+
+        flight = FlightRequest(**payload)
+
+        assert approximated_inputs(flight, StubBundle(self.RANKED), self.FLOOR) == [
+            "OriginCarrier",
+            "DestCongestion",
+        ]
+
+    def test_a_bundle_with_no_ranking_stays_quiet(self, body):
+        payload = body()
+        payload.pop("OriginCongestion")
+
+        flight = FlightRequest(**payload)
+
+        assert approximated_inputs(flight, StubBundle({}), self.FLOOR) == []
 
 
 class TestContributes:

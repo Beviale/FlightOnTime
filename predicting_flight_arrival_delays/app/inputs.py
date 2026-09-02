@@ -89,6 +89,33 @@ def required_inputs(bundles: dict, candidates: list[str]) -> set[str]:
     return required
 
 
+def approximated_inputs(flight, bundle, floor: float) -> list[str]:
+    """Which of the columns this model leans on most the caller did not send.
+
+    Args:
+        flight: The request as it arrived.
+        bundle: The model that answered it.
+        floor: The share of the model's total weight a column has to carry before
+            its absence is worth mentioning.
+
+    Returns:
+        Those the request left out, in the model's own order of importance. Empty
+        when the request was complete, or when the version registered no ranking.
+    """
+    ranked = [
+        column for column, share in bundle.importance.items() if share >= floor
+    ]
+    if not ranked:
+        return []
+
+    sent = {
+        name
+        for name in flight.supplied()
+        if getattr(flight, name, None) is not None
+    }
+    return [column for column in ranked if column not in sent]
+
+
 def complete_frame(df: pd.DataFrame, transformer) -> pd.DataFrame:
     """Restore the columns the transformer expects but the request did not carry.
 

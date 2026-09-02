@@ -469,7 +469,7 @@ class TestAirportIdsAreReadAsLabels:
         """With no history to draw on, the shrinkage formula falls back to the base
         rate rather than to zero."""
         transformer, flights = fitted
-        unknown = transformer._ids_as_labels(
+        unknown = transformer._as_labels(
             flights.head(1).copy().assign(OriginAirportID=99999)
         )
 
@@ -631,8 +631,8 @@ class TestDelayRatesAreKeyedOnTheAirportId:
         t = Transformer(min_category_count=1, max_onehot_categories=0)
         t.fit(flights, y)
 
-        never_late = t._apply_delay_rates_internal(t._ids_as_labels(flights.head(1).copy()))
-        always_late = t._apply_delay_rates_internal(t._ids_as_labels(flights.tail(1).copy()))
+        never_late = t._apply_delay_rates_internal(t._as_labels(flights.head(1).copy()))
+        always_late = t._apply_delay_rates_internal(t._as_labels(flights.tail(1).copy()))
 
         assert never_late["OriginAirportIDDelayRate"].iloc[0] < 0.2
         assert always_late["OriginAirportIDDelayRate"].iloc[0] > 0.8

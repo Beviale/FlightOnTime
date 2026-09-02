@@ -19,6 +19,8 @@ from predicting_flight_arrival_delays.modeling import (  # noqa: E402
 from predicting_flight_arrival_delays.modeling.explainability import (  # noqa: E402
     _unwrap_calibration,
     explain_prediction,
+    request_column_contributions,
+    request_column_importance,
     save_shap_waterfall_plot,
 )
 
@@ -64,8 +66,29 @@ class TestExplainPrediction:
 
         explanation = explain_prediction(model, X, "logistic_regression", top_k=2)
 
-        assert [e["feature"] for e in explanation] == ["signal", "noise"]
-        assert explanation[0]["value"] == pytest.approx(model.coef_[0][0])
+        by_name = {e["feature"]: e["value"] for e in explanation}
+        assert by_name["signal"] == pytest.approx(
+            model.coef_[0][0] * X["signal"].iloc[0]
+        )
+
+    def test_a_logistic_explanation_differs_between_rows(self, xy):
+        X, y = xy
+        model = LogisticRegression(max_iter=200).fit(X, y)
+
+        first = explain_prediction(model, X.iloc[[0]], "logreg", top_k=2)
+        second = explain_prediction(model, X.iloc[[1]], "logreg", top_k=2)
+
+        assert [e["value"] for e in first] != [e["value"] for e in second]
+
+    def test_a_column_the_flight_does_not_have_contributes_nothing(self):
+        X = pd.DataFrame({"a_x": [1.0, 0.0, 1.0, 0.0], "a_y": [0.0, 1.0, 0.0, 1.0]})
+        y = pd.Series([1, 0, 1, 0])
+        model = LogisticRegression(max_iter=200).fit(X, y)
+
+        explanation = explain_prediction(model, X.iloc[[0]], "logreg", top_k=2)
+
+        assert dict(zip([e["feature"] for e in explanation],
+                        [e["value"] for e in explanation]))["a_y"] == 0.0
 
     def test_top_k_limits_the_result(self, xy):
         X, y = xy
@@ -284,3 +307,184 @@ class TestSaveShapWaterfallPlot:
         monkeypatch.setattr(explainability_module.plt, "savefig", boom)
 
         assert save_shap_waterfall_plot(model, X, "random_forest", tmp_path / "s.png") is None
+
+
+class StubTransformer:
+    def __init__(self, category_keep=None, delay_rate_columns=()):
+        self.category_keep = category_keep or {}
+        self.delay_rate_columns = list(delay_rate_columns)
+
+
+class TestRequestColumnImportance:
+    """What the model leans on, folded back onto the columns a caller sends."""
+
+    RAW = ["OriginAirportID", "OriginCarrier", "OriginCongestion", "Dest", "DestCarrier"]
+
+    def a_model(self, weights):
+        return SimpleNamespace(feature_importances_=np.array(weights, dtype=float))
+
+    def test_a_one_hot_block_counts_as_its_source_column(self):
+        columns = ["OriginAirportID_10397", "OriginAirportID_11298", "OriginCongestion"]
+        transformer = StubTransformer(category_keep={"OriginAirportID": {"10397", "11298"}})
+
+        importance = request_column_importance(
+            self.a_model([0.2, 0.2, 0.6]), columns, transformer, self.RAW
+        )
+
+        assert importance["OriginAirportID"] == pytest.approx(0.4)
+        assert importance["OriginCongestion"] == pytest.approx(0.6)
+
+    def test_a_delay_rate_counts_as_the_column_it_came_from(self):
+        columns = ["OriginCarrierDelayRate", "OriginCongestion"]
+        transformer = StubTransformer(delay_rate_columns=["OriginCarrier"])
+
+        importance = request_column_importance(
+            self.a_model([0.7, 0.3]), columns, transformer, self.RAW
+        )
+
+        assert importance["OriginCarrier"] == pytest.approx(0.7)
+
+    def test_the_ranking_is_ordered_by_weight(self):
+        columns = ["OriginCongestion", "OriginCarrierDelayRate"]
+        transformer = StubTransformer(delay_rate_columns=["OriginCarrier"])
+
+        importance = request_column_importance(
+            self.a_model([0.1, 0.9]), columns, transformer, self.RAW
+        )
+
+        assert list(importance) == ["OriginCarrier", "OriginCongestion"]
+
+
+    def test_what_the_service_supplies_itself_is_left_out(self):
+        columns = ["PrecipitationOrigin", "OriginCongestion"]
+        transformer = StubTransformer()
+
+        importance = request_column_importance(
+            self.a_model([0.75, 0.25]), columns, transformer, self.RAW
+        )
+
+        assert list(importance) == ["OriginCongestion"]
+        assert importance["OriginCongestion"] == pytest.approx(0.25)
+
+
+    def test_a_calibrated_model_is_unwrapped_first(self):
+        X = pd.DataFrame(
+            {"OriginCongestion": [float(i) for i in range(20)], "Dest": [0.0, 1.0] * 10}
+        )
+        y = pd.Series([0, 1] * 10)
+        forest = RandomForestClassifier(n_estimators=3, random_state=0).fit(X, y)
+        calibrated = CalibratedClassifierCV(
+            FrozenEstimator(forest), method="isotonic"
+        ).fit(X, y)
+
+        importance = request_column_importance(
+            calibrated, list(X.columns), StubTransformer(), self.RAW
+        )
+
+        assert set(importance) <= {"OriginCongestion", "Dest"}
+        assert importance
+
+    def test_an_estimator_reporting_nothing_yields_nothing(self):
+        importance = request_column_importance(
+            SimpleNamespace(), ["OriginCongestion"], StubTransformer(), self.RAW
+        )
+
+        assert importance == {}
+
+    def test_a_mismatched_count_is_refused(self):
+        importance = request_column_importance(
+            self.a_model([0.5, 0.5]), ["OriginCongestion"], StubTransformer(), self.RAW
+        )
+
+        assert importance == {}
+
+
+class TestRequestColumnContributions:
+
+    def a_frame(self, **columns):
+        return pd.DataFrame({name: [value] for name, value in columns.items()})
+
+    def test_a_one_hot_block_is_reported_as_its_source(self):
+        X = self.a_frame(OriginAirportID_10397=1.0, OriginAirportID_11298=0.0, Distance=2.0)
+        y = pd.Series([0, 1] * 4)
+        wide = pd.concat([X] * 8, ignore_index=True)
+        wide["OriginAirportID_10397"] = [1.0, 0.0] * 4
+        wide["Distance"] = [1.0, 3.0] * 4
+        model = LogisticRegression(max_iter=200).fit(wide, y)
+        transformer = StubTransformer(
+            category_keep={"OriginAirportID": {"10397", "11298"}}
+        )
+
+        reported = request_column_contributions(model, X, transformer, "logreg", top_k=5)
+
+        assert {item["column"] for item in reported} <= {"OriginAirportID", "Distance"}
+
+    def test_the_category_the_flight_does_not_have_adds_nothing(self):
+        X = self.a_frame(a_x=1.0, a_y=0.0)
+        y = pd.Series([1, 0] * 4)
+        wide = pd.DataFrame({"a_x": [1.0, 0.0] * 4, "a_y": [0.0, 1.0] * 4})
+        model = LogisticRegression(max_iter=200).fit(wide, y)
+        transformer = StubTransformer(category_keep={"a": {"x", "y"}})
+
+        reported = request_column_contributions(model, X, transformer, "logreg", top_k=5)
+
+        assert [item["column"] for item in reported] == ["a"]
+        assert reported[0]["contribution"] == pytest.approx(model.coef_[0][0])
+
+    def test_a_delay_rate_is_reported_as_the_column_it_came_from(self):
+        wide = pd.DataFrame({"OriginCarrierDelayRate": [0.1, 0.9] * 4})
+        y = pd.Series([0, 1] * 4)
+        model = LogisticRegression(max_iter=200).fit(wide, y)
+        transformer = StubTransformer(delay_rate_columns=["OriginCarrier"])
+
+        reported = request_column_contributions(
+            model, self.a_frame(OriginCarrierDelayRate=0.9), transformer, "logreg"
+        )
+
+        assert reported[0]["column"] == "OriginCarrier"
+
+    def test_a_column_that_never_was_encoded_keeps_its_name(self):
+        wide = pd.DataFrame({"PrecipitationOrigin": [0.0, 5.0] * 4})
+        y = pd.Series([0, 1] * 4)
+        model = LogisticRegression(max_iter=200).fit(wide, y)
+
+        reported = request_column_contributions(
+            model, self.a_frame(PrecipitationOrigin=5.0), StubTransformer(), "logreg"
+        )
+
+        assert reported[0]["column"] == "PrecipitationOrigin"
+
+    def test_the_sign_says_which_way_it_pushed(self):
+        wide = pd.DataFrame({"PrecipitationOrigin": [0.0, 5.0] * 4})
+        y = pd.Series([0, 1] * 4)
+        model = LogisticRegression(max_iter=200).fit(wide, y)
+
+        wet = request_column_contributions(
+            model, self.a_frame(PrecipitationOrigin=5.0), StubTransformer(), "logreg"
+        )
+        dry = request_column_contributions(
+            model, self.a_frame(PrecipitationOrigin=-5.0), StubTransformer(), "logreg"
+        )
+
+        assert wet[0]["contribution"] > 0
+        assert dry[0]["contribution"] < 0
+
+    def test_top_k_limits_what_is_reported(self):
+        wide = pd.DataFrame(
+            {"a": [0.0, 1.0] * 4, "b": [1.0, 0.0] * 4, "c": [0.5, 0.2] * 4}
+        )
+        y = pd.Series([0, 1] * 4)
+        model = LogisticRegression(max_iter=200).fit(wide, y)
+
+        reported = request_column_contributions(
+            model, self.a_frame(a=1.0, b=1.0, c=1.0), StubTransformer(), "logreg", top_k=2
+        )
+
+        assert len(reported) == 2
+
+    def test_an_unreadable_model_yields_nothing(self):
+        reported = request_column_contributions(
+            LogisticRegression(), self.a_frame(a=1.0), StubTransformer(), "naive_bayes"
+        )
+
+        assert reported == []
