@@ -18,11 +18,13 @@ from sklearn.preprocessing import StandardScaler
 from predicting_flight_arrival_delays.config import (
     CATEGORICAL_ASSOCIATION_THRESHOLD,
     CORRELATION_THRESHOLD,
+    CYCLICAL_COLUMNS,
     DATE_COLUMN,
     MAX_ONEHOT_CATEGORIES,
     MI_SAMPLE_SIZE,
     MIN_CATEGORY_COUNT,
     MIN_MUTUAL_INFO,
+    RATE_ONLY_COLUMNS,
     SEED,
     SERVICE_COLUMNS2,
 )
@@ -46,6 +48,10 @@ class Transformer:
         on a random sample of this size.
     seed: seed to use for random operations.
     label_columns: columns that are numbers on paper but labels in fact.   
+    rate_only_columns: categoricals the model sees only as their historical delay
+        rate, under every encoding. The identity behind the rate is dropped.
+    cyclical_columns: columns that wrap, mapped to the length of one turn. Each is
+        replaced by its sine and cosine, so distance follows the circle.
     max_onehot_categories: a categorical holding more values than this is not worth a
         column per category. It is given a historical delay rate like the columns
         below, and under onehot encoding the original is then dropped.
@@ -70,7 +76,6 @@ class Transformer:
             "DestAirportID",
             "Month",
             "DayOfWeek",
-            "DayofMonth",
             "IsHoliday",
         ]
     )
@@ -80,6 +85,12 @@ class Transformer:
     scaler: StandardScaler | None = field(default=None, init=False)
     dropped_features: list[str] = field(default_factory=list, init=False)
 
+    rate_only_columns: list[str] = field(
+        default_factory=lambda: list(RATE_ONLY_COLUMNS)
+    )
+    cyclical_columns: dict[str, float] = field(
+        default_factory=lambda: dict(CYCLICAL_COLUMNS)
+    )
     delay_rate_columns: list[str] = field(default_factory=list)
     delay_rate_shrinkage: float = 50.0
     delay_rate_stats_: dict[str, dict[str, pd.Series]] = field(default_factory=dict, init=False)
@@ -110,6 +121,25 @@ class Transformer:
                 X[col] = X[col].astype("Int64").astype("string").astype(object)
         return X
 
+    def _as_cycles(self, X: pd.DataFrame) -> pd.DataFrame:
+        """Replace each wrapping column with the point it names on a circle.
+
+        Args:
+            X: Features to modify in place.
+
+        Returns:
+            The same DataFrame, with each cyclical column swapped for its sine and
+            cosine.
+        """
+        for col, period in self.cyclical_columns.items():
+            if col not in X.columns:
+                continue
+            turns = 2 * np.pi * X[col].astype(float) / period
+            X[f"{col}Sin"] = np.sin(turns)
+            X[f"{col}Cos"] = np.cos(turns)
+            X = X.drop(columns=[col])
+        return X
+
     # ------------------------------------------------------------------
     # Historical delay rates
     # ------------------------------------------------------------------
@@ -120,9 +150,10 @@ class Transformer:
         Returns:
             The column names, named ones first.
         """
-        return list(self.delay_rate_columns) + [
-            c for c in self.wide_columns_ if c not in self.delay_rate_columns
+        named = list(self.delay_rate_columns) + [
+            c for c in self.rate_only_columns if c not in self.delay_rate_columns
         ]
+        return named + [c for c in self.wide_columns_ if c not in named]
 
     def _find_wide_columns(self, X: pd.DataFrame) -> list[str]:
         """Pick out the categoricals too wide to spend one column per category on.
@@ -139,6 +170,7 @@ class Transformer:
             for c in X.columns
             if pd.api.types.is_object_dtype(X[c])
             and c not in self.delay_rate_columns
+            and c not in self.rate_only_columns
             and X[c].nunique(dropna=False) > self.max_onehot_categories
         ]
         if wide:
@@ -151,20 +183,27 @@ class Transformer:
         return wide
 
     def _drop_wide_originals(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Remove the wide originals, but only where they would cost a column each.
+        """Remove the originals whose rate is meant to stand in for them.
 
-        Under native encoding a category costs nothing extra, so the column stays and
-        the model gets both readings of it.
+        Two reasons a column goes, and they are not the same. A rate_only column is
+        replaced by its history on purpose, whatever the encoding: what it says about
+        a flight is how punctual that combination has been, and the identity behind
+        it is not wanted. A wide column is replaced only to save space - under native
+        encoding a category costs nothing, so it stays and the model gets both
+        readings of it.
 
         Args:
             df: Features, rates already attached.
 
         Returns:
-            The same frame, minus the wide originals under onehot encoding.
+            The same frame, minus the originals that their rates replace.
         """
-        if self.encoding != "onehot":
-            return df
-        return df.drop(columns=[c for c in self.wide_columns_ if c in df.columns])
+        doomed = [c for c in self.rate_only_columns if c in df.columns]
+        if self.encoding == "onehot":
+            doomed += [
+                c for c in self.wide_columns_ if c in df.columns and c not in doomed
+            ]
+        return df.drop(columns=doomed)
 
     def _fit_delay_rates_internal(self, X: pd.DataFrame, y: pd.Series, dates: pd.Series) -> pd.DataFrame:
         """Learn per-category historical delay rates, with shrinkage for rare ones.
@@ -256,7 +295,7 @@ class Transformer:
         Returns:
             The fitted transformer, for chaining.
         """
-        df = self._as_labels(X.copy())
+        df = self._as_cycles(self._as_labels(X.copy()))
         self.category_keep = {}
         self.impute_values = {}
         self.wide_columns_ = self._find_wide_columns(df)
@@ -310,7 +349,7 @@ class Transformer:
         """
         if self.scaler is None:
             raise RuntimeError("Transformer must be fitted before transform()")
-        df = self._as_labels(X.copy())
+        df = self._as_cycles(self._as_labels(X.copy()))
 
         if self.rate_columns():
             rate_cols = self._apply_delay_rates_internal(df)

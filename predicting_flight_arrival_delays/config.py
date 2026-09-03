@@ -73,12 +73,11 @@ FULL_LEAD_COVERAGE_START = "2024-12-01"
 DATE_COLUMN = "FlightDate"
 # BTS columns to keep
 KEEP_COLUMNS = [
-    "OriginAirportID", "DestAirportID",
-    "Origin", "Dest",
+    "OriginAirportID", "DestAirportID", "Origin", "Dest",
     "Reporting_Airline", "Flight_Number_Reporting_Airline",
     "FlightDate", "CRSDepTime", "CRSArrTime", "CRSElapsedTime",
     "Distance", "DistanceGroup",
-    "DayofMonth", "DayOfWeek", "Month",
+    "DayOfWeek", "Month",
     "OriginState", "DestState", "OriginCityName", "DestCityName", "Tail_Number"
 ]
 TARGET = "IsDelayed"
@@ -103,6 +102,10 @@ SERVICE_COLUMNS2 = [
 #Transform
 MIN_CATEGORY_COUNT = 1000
 MAX_ONEHOT_CATEGORIES = 50
+
+RATE_ONLY_COLUMNS = ["OriginCarrier", "DestCarrier"]
+
+CYCLICAL_COLUMNS = {"DepTimeDecimal": 24.0, "ArrTimeDecimal": 24.0}
 CORRELATION_THRESHOLD = 0.98
 CATEGORICAL_ASSOCIATION_THRESHOLD = 0.98
 MIN_MUTUAL_INFO = 1e-5

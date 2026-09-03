@@ -9,10 +9,6 @@ That is the artefact production would serve, complete with the transformer and
 the column list that 'register_model_bundle' stored alongside it, so these tests
 exercise the same thing 'predict.py' loads.
 
-Flights come from the test split of the last walk-forward fold. That is the one
-split the registered model never saw: step 2 of register_winner fits it on that
-fold's train+validation, so its test rows are genuinely held out.
-
 Two things have to be in place, and each skips with its own message when it is
 not: credentials for the registry, and the processed folds pulled from DVC.
 """

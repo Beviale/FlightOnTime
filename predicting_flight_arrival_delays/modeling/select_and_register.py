@@ -36,15 +36,6 @@ from predicting_flight_arrival_delays.config import (
     PRODUCTION_VARIANTS,
     WINNER_MODEL_STAGE,
 )
-from predicting_flight_arrival_delays.data.features import build_xy
-from predicting_flight_arrival_delays.data.transform import (
-    Transformer,
-    align_columns,
-    encode_categoricals,
-    resample_training_data,
-    sparse_column_order,
-    to_sparse_matrix,
-)
 from predicting_flight_arrival_delays.modeling import evaluate
 from predicting_flight_arrival_delays.modeling.explainability import (
     request_column_importance,
@@ -154,9 +145,7 @@ def register_winner(
     encoding = ENCODING[algorithm]
     all_folds = all_fold_dirs(variant)
     fold_dir = all_folds[-1]  # the last fold: used for Step 2, the model registration
-    train_df = pd.read_parquet(fold_dir / "train.parquet")
-    validation_df = pd.read_parquet(fold_dir / "validation.parquet")
-    test_df = pd.read_parquet(fold_dir / "test.parquet")
+
 
     with mlflow.start_run(run_name=f"{variant}__final__{algorithm}"):
         # --- Step 1: evaluation, averaged across every fold
@@ -167,7 +156,10 @@ def register_winner(
             fold_validation_df = pd.read_parquet(fold / "validation.parquet")
             fold_test_df = pd.read_parquet(fold / "test.parquet")
 
-            X_fit_f, y_fit_f, X_val_f, y_val_f, X_test_f, y_test_f = prepare_fold(
+            (
+                X_fit_f, y_fit_f, X_val_f, y_val_f, X_test_f, y_test_f,
+                transformer, feature_columns,
+            ) = prepare_fold(
                 fold_train_df, encoding, test_df=fold_test_df,
                 validation_df=fold_validation_df, resample=resample,
             )
@@ -199,41 +191,12 @@ def register_winner(
             )
             return
 
-        # --- Step 2: the model that is registered.
-        full_train_df = pd.concat([train_df, validation_df], ignore_index=True)
-        X_full, y_full = build_xy(full_train_df)
 
-        transformer = Transformer(encoding=encoding).fit(X_full, y_full)
-        X_full = transformer.transform(X_full)
-        transformer.select_features(X_full, y_full)
-        X_full = transformer.apply_selection(X_full)
-        cat_cols = [c for c in transformer.categorical_columns if c in X_full.columns]
-        X_full = encode_categoricals(X_full, cat_cols, encoding)
-
-        X_test2, y_test2 = build_xy(test_df)
-        X_test2 = transformer.transform(X_test2)
-        X_test2 = transformer.apply_selection(X_test2)
-        X_test2 = encode_categoricals(X_test2, cat_cols, encoding)
-        X_full, X_test2 = align_columns(X_full, X_test2, encoding)
-        if encoding == "onehot":
-            X_test2 = to_sparse_matrix(X_test2)
-
-        X_full, y_full = resample_training_data(X_full, y_full, resample, encoding)
-
-        feature_columns = (
-            sparse_column_order(X_full) if encoding == "onehot" else list(X_full.columns)
-        )
-
-        if encoding == "onehot":
-            X_full = to_sparse_matrix(X_full)
-
-        model = train_model(
-            X_full, y_full, algorithm, config, calibrate, X_val=X_test2, y_val=y_test2
-        )
-        final_threshold = choose_threshold(y_test2, model.predict_proba(X_test2)[:, 1], 1.2)
+        model, final_threshold = fold_model, fold_threshold
+        X_full = X_fit_f
 
         dataset = from_pandas(
-            pd.concat([full_train_df, test_df], ignore_index=True),
+            pd.concat([fold_train_df, fold_validation_df], ignore_index=True),
             source=str(fold_dir),
             name=f"{variant}_final_train",
             digest=get_dvc_data_hash(PROCESSED_DATA_DIR / "selection"),
@@ -301,7 +264,7 @@ def register_winner(
 
 @app.command()
 def run(
-    experiment: str = typer.Option("flight-delay-v2", help="MLflow experiment name"),
+    experiment: str = typer.Option("flight-delay-v3", help="MLflow experiment name"),
     calibrate: bool = typer.Option(True, help="Wrap estimators in isotonic calibration"),
     alias: str | None = typer.Option(
         WINNER_MODEL_STAGE,

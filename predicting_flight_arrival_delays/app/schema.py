@@ -58,7 +58,6 @@ class FlightRequest(BaseModel):
 
     # --- Required only insofar as the served models read them; see app.inputs
     Month: int | None = Field(default=None, ge=1, le=12)
-    DayofMonth: int | None = Field(default=None, ge=1, le=31)
     DayOfWeek: int | None = Field(default=None, ge=1, le=7, description="Monday is 1")
     IsHoliday: Literal[0, 1] | None = None
     DaysToNearestHoliday: int | None = None

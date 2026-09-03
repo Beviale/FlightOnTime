@@ -425,6 +425,64 @@ def two_airports_sharing_a_code() -> tuple[pd.DataFrame, pd.Series]:
     ), pd.Series([0] * n + [1] * n)
 
 
+class TestCyclicalColumnsBecomeAPointOnACircle:
+
+    @pytest.fixture
+    def hours(self):
+        return pd.DataFrame(
+            {
+                "FlightDate": pd.to_datetime(["2025-01-01"] * 4),
+                "DepTimeDecimal": [23.5, 0.5, 12.0, 6.0],
+                "Distance": [1.0, 2.0, 3.0, 4.0],
+            }
+        )
+
+    def a_fitted(self, hours):
+        t = Transformer(min_category_count=1)
+        t.fit(hours, pd.Series([0, 1, 0, 1]))
+        return t
+
+    def test_the_column_is_replaced_by_a_pair(self, hours):
+        out = self.a_fitted(hours).transform(hours)
+
+        assert "DepTimeDecimal" not in out.columns
+        assert {"DepTimeDecimalSin", "DepTimeDecimalCos"} <= set(out.columns)
+
+    def test_the_pair_is_numeric(self, hours):
+        transformer = self.a_fitted(hours)
+
+        assert "DepTimeDecimalSin" in transformer.numeric_columns
+        assert "DepTimeDecimalCos" in transformer.numeric_columns
+
+    def test_midnight_stops_being_a_cliff(self, hours):
+        cycled = self.a_fitted(hours)._as_cycles(hours.copy())
+        point = lambda i: np.array(
+            [cycled["DepTimeDecimalSin"].iloc[i], cycled["DepTimeDecimalCos"].iloc[i]]
+        )
+
+        across_midnight = np.linalg.norm(point(0) - point(1))
+        half_a_day = np.linalg.norm(point(0) - point(2))
+
+        assert across_midnight < half_a_day
+
+    def test_the_two_halves_land_on_the_unit_circle(self, hours):
+        cycled = self.a_fitted(hours)._as_cycles(hours.copy())
+
+        radius = cycled["DepTimeDecimalSin"] ** 2 + cycled["DepTimeDecimalCos"] ** 2
+
+        assert np.allclose(radius, 1.0)
+
+    def test_a_column_that_is_absent_is_simply_skipped(self, hours):
+        out = self.a_fitted(hours).transform(hours)
+
+        assert not any(c.startswith("ArrTimeDecimal") for c in out.columns)
+
+    def test_the_caller_s_frame_is_left_alone(self, hours):
+        self.a_fitted(hours).transform(hours)
+
+        assert "DepTimeDecimal" in hours.columns
+
+
 class TestAirportIdsAreReadAsLabels:
     """An airport id is a number that names a place; it does not measure one. Read
     as an integer it is scaled and split on by range, which groups airports by the

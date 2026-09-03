@@ -173,7 +173,6 @@ def to_flight_request(lookup: FlightLookupRequest, calendar: pd.Series) -> Fligh
     return FlightRequest(
         FlightDate=lookup.FlightDate,
         Month=lookup.FlightDate.month,
-        DayofMonth=lookup.FlightDate.day,
         DayOfWeek=lookup.FlightDate.weekday() + BTS_WEEKDAY_OFFSET,
         IsHoliday=int(calendar["IsHoliday"]),
         DaysToNearestHoliday=int(calendar["DaysToNearestHoliday"]),

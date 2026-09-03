@@ -21,7 +21,7 @@ WEATHER_DEST = [c + "Dest" for c in WEATHER_COLUMNS]
 
 
 EXPECTED_COLUMNS = [
-    "Month", "DayofMonth", "DayOfWeek", DATE_COLUMN,
+    "Month", "DayOfWeek", DATE_COLUMN,
     "ReportingAirline", "TailNumber", "FlightNumberReportingAirline",
     "OriginAirportID", "Origin", "OriginCityName", "OriginState",
     "DestAirportID", "Dest", "DestCityName", "DestState",
@@ -107,9 +107,6 @@ def build_expectations() -> list:
             column="DistanceGroup", min_value=1, max_value=11
         ),
         gx.expectations.ExpectColumnValuesToBeBetween(column="Month", min_value=1, max_value=12),
-        gx.expectations.ExpectColumnValuesToBeBetween(
-            column="DayofMonth", min_value=1, max_value=31
-        ),
         gx.expectations.ExpectColumnValuesToBeBetween(
             column="DayOfWeek", min_value=1, max_value=7
         ),

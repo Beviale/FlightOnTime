@@ -187,7 +187,7 @@ class TestResolve:
 
         flight = resolve([a_lookup()])[0]
 
-        assert (flight.Month, flight.DayofMonth) == (8, 25)
+        assert flight.Month == 8
         assert flight.DayOfWeek == 2  # a Tuesday, and BTS counts Monday as 1
 
     def test_the_congestion_counts_reach_the_flight(self, schedule):
