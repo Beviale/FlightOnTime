@@ -158,7 +158,7 @@ def register_winner(
 
             (
                 X_fit_f, y_fit_f, X_val_f, y_val_f, X_test_f, y_test_f,
-                transformer, feature_columns,
+                transformer, feature_columns, feature_means,
             ) = prepare_fold(
                 fold_train_df, encoding, test_df=fold_test_df,
                 validation_df=fold_validation_df, resample=resample,
@@ -235,6 +235,7 @@ def register_winner(
             signature_sample=X_full[:100].toarray() if hasattr(X_full, "toarray") else X_full.head(100),
             alias=alias,
             importance=importance,
+            feature_means=feature_means,
         )
         logger.success(
             f"Registered flight-delay-{variant} ({n_features} features) "

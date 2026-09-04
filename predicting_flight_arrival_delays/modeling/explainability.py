@@ -41,6 +41,7 @@ def explain_prediction(
     X: pd.DataFrame,
     model_type: str,
     top_k: int = 5,
+    feature_means: dict[str, float] | None = None,
 ):
     """Build a feature-level explanation for a single sample's prediction.
 
@@ -59,6 +60,7 @@ def explain_prediction(
             TREE_MODEL_TYPES ("random_forest", "decision_tree", "lightgbm")
             for SHAP-based explanations. Case-insensitive.
         top_k: How many top features (by absolute contribution) to return.
+        feature_means: The average training flight on these columns.
 
     Returns:
         Up to top_k dicts, sorted by absolute contribution descending, each
@@ -103,6 +105,12 @@ def explain_prediction(
         n = min(len(feature_names), coef.shape[0])
        
         values = np.asarray(x.to_numpy(), dtype=float).reshape(-1)
+        if feature_means:
+            centre = np.array(
+                [float(feature_means.get(name, 0.0)) for name in feature_names],
+                dtype=float,
+            )
+            values = values - centre
         contributions = coef[:n] * values[:n]
         explanations = [
             {
@@ -377,6 +385,7 @@ def request_column_contributions(
     transformer: Any,
     model_type: str,
     top_k: int = 5,
+    feature_means: dict[str, float] | None = None,
 ) -> list[dict[str, Any]]:
     """Explain one prediction in terms of the columns a person recognises.
 
@@ -386,13 +395,17 @@ def request_column_contributions(
         transformer: The fitted transformer that built the columns.
         model_type: "logistic_regression" or one of the tree types.
         top_k: How many columns to report.
+        feature_means: The average training flight, passed through so a linear
+            model measures each column against it.
 
     Returns:
         Up to top_k dicts, largest absolute effect first, each with "column" and
         "contribution" - positive towards a delay, negative towards an on-time
         arrival. Empty if the explanation could not be built.
     """
-    detailed = explain_prediction(model, X, model_type, top_k=len(X.columns))
+    detailed = explain_prediction(
+        model, X, model_type, top_k=len(X.columns), feature_means=feature_means
+    )
     if not detailed:
         return []
 
@@ -420,7 +433,9 @@ def _logit(p: float) -> float:
     return float(np.log(p / (1 - p)))
 
 
-def _base_value(model: Any, model_type: str) -> float | None:
+def _base_value(
+    model: Any, model_type: str, feature_means: dict[str, float] | None = None
+) -> float | None:
     """What the model answers before it knows anything about this flight.
 
     The point a waterfall starts from: the average prediction for a tree model,
@@ -440,7 +455,18 @@ def _base_value(model: Any, model_type: str) -> float | None:
 
     if model_type in ("logreg", "logistic_regression"):
         intercept = getattr(base, "intercept_", None)
-        return None if intercept is None else float(np.ravel(intercept)[0])
+        if intercept is None:
+            return None
+        start = float(np.ravel(intercept)[0])
+        if feature_means:
+            coef = np.ravel(base.coef_)
+            centre = np.array(
+                [float(feature_means.get(c, 0.0)) for c in getattr(
+                    base, "feature_names_in_", list(feature_means))],
+                dtype=float,
+            )
+            start += float(np.dot(coef[: len(centre)], centre[: len(coef)]))
+        return start
 
     if model_type in TREE_MODEL_TYPES:
         try:
@@ -461,6 +487,7 @@ def waterfall_terms(
     model_type: str,
     served_probability: float,
     top_k: int = 5,
+    feature_means: dict[str, float] | None = None,
 ) -> dict[str, Any] | None:
     """Everything a waterfall needs to close on the probability that was served.
 
@@ -478,9 +505,10 @@ def waterfall_terms(
         calibration step - or None if no explanation could be built.
     """
     folded = request_column_contributions(
-        model, X, transformer, model_type, top_k=len(X.columns)
+        model, X, transformer, model_type, top_k=len(X.columns),
+        feature_means=feature_means,
     )
-    base = _base_value(model, model_type)
+    base = _base_value(model, model_type, feature_means)
     if not folded or base is None:
         return None
 

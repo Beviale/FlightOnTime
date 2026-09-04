@@ -279,6 +279,7 @@ def _waterfall(frame: pd.DataFrame, bundle, probability: float) -> dict[str, Any
         bundle.params.get("algorithm", ""),
         probability,
         EXPLANATION_COLUMN_COUNT,
+        feature_means=bundle.feature_means,
     )
 
 
@@ -299,6 +300,7 @@ def _explain(frame: pd.DataFrame, bundle) -> list[dict[str, Any]]:
         bundle.transformer,
         bundle.params.get("algorithm", ""),
         EXPLANATION_COLUMN_COUNT,
+        feature_means=bundle.feature_means,
     )
     if not contributions:
         logger.warning(f"No explanation available for the {bundle.variant} model.")

@@ -80,6 +80,7 @@ def register_model_bundle(
     artifact_path: str = "model",
     alias: str | None = None,
     importance: dict[str, float] | None = None,
+    feature_means: dict[str, float] | None = None,
 ) -> None:
     """Log a model together with its transformer and training columns as one bundle.
  
@@ -107,6 +108,8 @@ def register_model_bundle(
             produced by explainability.request_column_importance. Logged beside
             the columns so the serving path can say which missing inputs matter.
             Optional.
+        feature_means: What the average training flight looks like on this model's
+            own columns Optional.
     """
     with tempfile.TemporaryDirectory() as tmp:
         transformer_path = Path(tmp) / "transformer.joblib"
@@ -118,6 +121,10 @@ def register_model_bundle(
         importance_path = Path(tmp) / "importance.json"
         if importance:
             importance_path.write_text(json.dumps(importance, indent=2))
+
+        means_path = Path(tmp) / "feature_means.json"
+        if feature_means:
+            means_path.write_text(json.dumps(feature_means))
  
         signature, input_example = None, None
         if signature_sample is not None:
@@ -137,6 +144,8 @@ def register_model_bundle(
         mlflow.log_artifact(str(columns_path), artifact_path=artifact_path)
         if importance:
             mlflow.log_artifact(str(importance_path), artifact_path=artifact_path)
+        if feature_means:
+            mlflow.log_artifact(str(means_path), artifact_path=artifact_path)
  
         if alias is not None:
             client = mlflow.MlflowClient()
@@ -225,6 +234,29 @@ def load_bundle_importance(run_id: str, artifact_path: str = "model") -> dict[st
         )
     except Exception:
         logger.info(f"Run {run_id} logged no importance.json - no input warnings for it.")
+        return {}
+
+    return json.loads(Path(path).read_text())
+
+
+def load_bundle_feature_means(run_id: str, artifact_path: str = "model") -> dict[str, float]:
+    """Read back the average training flight, for a version that recorded it.
+
+    Args:
+        run_id: The run the version was logged from.
+        artifact_path: Must match the one used in register_model_bundle.
+
+    Returns:
+        Column to its training mean, or an empty dict for a version registered
+        before this was recorded, or one encoded natively. Absence is not an error:
+        an explanation without it anchors at zero instead.
+    """
+    try:
+        path = mlflow.artifacts.download_artifacts(
+            f"runs:/{run_id}/{artifact_path}/feature_means.json"
+        )
+    except Exception:
+        logger.info(f"Run {run_id} logged no feature_means.json - explanations anchor at zero.")
         return {}
 
     return json.loads(Path(path).read_text())

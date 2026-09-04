@@ -259,7 +259,7 @@ class TestTheContributionsChart:
 
         assert len(colours) == 2
 
-    def test_nothing_to_draw_yields_no_figure(self)
+    def test_nothing_to_draw_yields_no_figure(self):
         assert wrapper.render_contributions([]) is None
 
 

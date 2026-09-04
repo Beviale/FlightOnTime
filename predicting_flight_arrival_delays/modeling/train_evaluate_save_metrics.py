@@ -63,7 +63,7 @@ def prepare_fold(
 
     Returns:
         Tuple of (X_fit, y_fit, X_val, y_val, X_test, y_test, transformer,
-        feature_columns).
+        feature_columns, feature_means).
         X_fit/y_fit reflect the resampling; the other splits are untouched.
         X_val/y_val are (None, None) when validation_df is not given.
         X_test/y_test are (None, None) when test_df is not given.
@@ -107,12 +107,22 @@ def prepare_fold(
         sparse_column_order(X_fit) if encoding == "onehot" else list(X_fit.columns)
     )
 
+
+    feature_means = (
+        X_fit[feature_columns].mean().astype(float).to_dict()
+        if encoding == "onehot"
+        else {}
+    )
+
     if encoding == "onehot":
         X_fit = to_sparse_matrix(X_fit)
 
     X_fit, y_fit = resample_training_data(X_fit, y_fit, resample, encoding)
 
-    return X_fit, y_fit, X_val, y_val, X_test, y_test, transformer, feature_columns
+    return (
+        X_fit, y_fit, X_val, y_val, X_test, y_test,
+        transformer, feature_columns, feature_means,
+    )
 
 
 def train_and_evaluate(
@@ -148,7 +158,7 @@ def train_and_evaluate(
         train_df = pd.read_parquet(fold / "train.parquet")
         validation_df = pd.read_parquet(fold / "validation.parquet")
 
-        X_fit, y_fit, X_val, y_val, _, _, _, _ = prepare_fold(
+        X_fit, y_fit, X_val, y_val, _, _, _, _, _ = prepare_fold(
             train_df, encoding, validation_df=validation_df, resample=resample
         )
 
