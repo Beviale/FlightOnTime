@@ -1,4 +1,16 @@
-"""Per-prediction explanations for the flight-delay classifiers."""
+"""Per-prediction explanations for the flight-delay classifiers.
+
+Every explanation here is an additive decomposition: a base value plus one
+contribution per column, summing back to what the model said. That identity is what
+lets the serving path draw a waterfall that closes on the probability it reported,
+and it holds for both families - SHAP values for the trees, the closed form for the
+linear models, which are already a sum of contributions.
+
+The columns those contributions arrive on are the model's, though, where an airport
+is three hundred one-hot columns. Reading them out as they come would name none of
+what a caller recognises, so they are folded back onto the request columns before
+anyone sees them.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -45,20 +57,21 @@ def explain_prediction(
 ):
     """Build a feature-level explanation for a single sample's prediction.
 
-    Uses coefficients for logistic regression, or SHAP TreeExplainer for
-    tree-based models (random forest, decision tree, lightgbm). Calibration
-    wrappers (CalibratedClassifierCV/FrozenEstimator) are unwrapped first, so
-    the explanation reflects the underlying base estimator. Only the first
-    row of X is explained.
+    Two paths, both additive. SHAP TreeExplainer for the tree models (random
+    forest, decision tree, lightgbm), and the closed form for logistic regression,
+    where the model is already a sum of contributions and the Shapley values can be
+    read straight off it. Calibration wrappers (CalibratedClassifierCV/
+    FrozenEstimator) are unwrapped first, so the explanation reflects the underlying
+    base estimator. Only the first row of X is explained.
 
     Args:
         model: A fitted estimator, possibly wrapped in
             CalibratedClassifierCV(FrozenEstimator(base_estimator)).
         X: Features to explain; only the first row (X.iloc[[0]]) is used.
         model_type: Which explanation strategy to use. "logreg"/
-            "logistic_regression" for coefficient-based explanations; one of
-            TREE_MODEL_TYPES ("random_forest", "decision_tree", "lightgbm")
-            for SHAP-based explanations. Case-insensitive.
+            "logistic_regression" for the linear path; one of TREE_MODEL_TYPES
+            ("random_forest", "decision_tree", "lightgbm") for the SHAP path.
+            Case-insensitive.
         top_k: How many top features (by absolute contribution) to return.
         feature_means: The average training flight on these columns.
 
@@ -66,10 +79,10 @@ def explain_prediction(
         Up to top_k dicts, sorted by absolute contribution descending, each
         with:
             - "feature": Column name.
-            - "value": Signed contribution (coefficient or SHAP value).
+            - "value": Signed contribution.
             - "abs_value": Its absolute value, used for ranking.
         An empty list if X is empty, model_type is unsupported, the model
-        lacks coef_ (logistic regression path), or SHAP explanation fails -
+        lacks coef_ (linear path), or the SHAP explanation fails -
         never raises for these cases, only logs a warning/error.
     """
 
@@ -83,14 +96,14 @@ def explain_prediction(
     feature_names = x.columns.tolist()
 
     # ---------------------------------------------------------------------
-    # 1) Logistic Regression → use coefficients
+    # 1) Logistic Regression
     # ---------------------------------------------------------------------
     if model_type in ("logreg", "logistic_regression"):
-        logger.info("Using coefficient-based explanation for Logistic Regression.")
+        logger.info("Explaining a linear model in closed form.")
 
         if not hasattr(model, "coef_"):
             logger.error(
-                "Model has no coef_ attribute;cannot build coefficient-based explanation."
+                "Model has no coef_ attribute; cannot explain a linear model."
             )
             return []
 
@@ -123,7 +136,7 @@ def explain_prediction(
 
         explanations = sorted(explanations, key=lambda d: d["abs_value"], reverse=True)[:top_k]
         logger.info(
-            f"Built coefficient-based explanation. Returning top {len(explanations)} features."
+            f"Explained a linear model. Returning top {len(explanations)} features."
         )
         return explanations
 
@@ -438,13 +451,13 @@ def _base_value(
 ) -> float | None:
     """What the model answers before it knows anything about this flight.
 
-    The point a waterfall starts from: the average prediction for a tree model,
-    the intercept for a linear one. Without it the steps have no origin, and the
+    The point a waterfall starts from. Without it the steps have no origin, and a
     chart could only show them floating around zero.
 
     Args:
         model: A fitted estimator, possibly wrapped in calibration.
         model_type: "logistic_regression" or one of the tree types.
+        feature_means: The average training flight.
 
     Returns:
         The base value in the same units as the contributions, or None if it cannot
