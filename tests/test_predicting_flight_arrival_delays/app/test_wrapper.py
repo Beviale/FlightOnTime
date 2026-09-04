@@ -125,9 +125,10 @@ class TestPredictLookup:
     async def test_an_incomplete_form_is_not_sent(self, api):
         sent = api()
 
-        answer = await wrapper.predict_lookup("2026-08-26", "AA", "", 3500, "DFW", "LBB")
+        answer, chart = await wrapper.predict_lookup("2026-08-26", "AA", "", 3500, "DFW", "LBB")
 
         assert answer == "Fill in every field."
+        assert chart is None
         assert sent == []
 
     @pytest.mark.asyncio
@@ -158,7 +159,7 @@ class TestPredictLookup:
         api({"data": SCORED | {"resolved": {"Origin": "DFW", "Dest": "LBB",
                                             "DepTimeDecimal": 7.0, "Distance": 282.0}}})
 
-        answer = await wrapper.predict_lookup("2026-08-26", "AA", "MQ", 3500, "DFW", "LBB")
+        answer, _ = await wrapper.predict_lookup("2026-08-26", "AA", "MQ", 3500, "DFW", "LBB")
 
         assert "DFW → LBB" in answer
         assert "282 miles" in answer
@@ -167,9 +168,99 @@ class TestPredictLookup:
     async def test_a_refusal_is_shown_not_swallowed(self, api):
         api({"error": "404 - No flight AA9999 on 2026-08-26."})
 
-        answer = await wrapper.predict_lookup("2026-08-26", "AA", "AA", 9999, "DFW", "LBB")
+        answer, chart = await wrapper.predict_lookup("2026-08-26", "AA", "AA", 9999, "DFW", "LBB")
 
         assert "AA9999" in answer
+        assert chart is None
+
+
+class TestTheWaterfall:
+
+    TERMS = {
+        "base_value": -1.30,
+        "contributions": [
+            {"column": "OriginCarrier", "contribution": 0.43},
+            {"column": "OriginCongestion", "contribution": 0.21},
+        ],
+        "other_contribution": 0.06,
+        "calibration": -0.09,
+        "log_odds": True,
+    }
+
+    def test_it_walks_from_a_start_to_an_answer(self):
+        figure = wrapper.render_waterfall(self.TERMS, 0.314)
+        labels = [t.get_text() for t in figure.axes[0].get_yticklabels()]
+
+        assert labels[0] == "starts at"
+        assert labels[-1] == "the answer"
+
+    def test_what_did_not_make_the_list_is_still_shown(self):
+        labels = [
+            t.get_text()
+            for t in wrapper.render_waterfall(self.TERMS, 0.314).axes[0].get_yticklabels()
+        ]
+
+        assert "everything else" in labels
+
+    def test_calibration_is_a_step_of_its_own(self):
+        labels = [
+            t.get_text()
+            for t in wrapper.render_waterfall(self.TERMS, 0.314).axes[0].get_yticklabels()
+        ]
+
+        assert "calibration" in labels
+
+    def test_the_answer_bar_is_where_the_steps_add_up_to(self):
+        figure = wrapper.render_waterfall(self.TERMS, 0.314)
+        expected = (
+            self.TERMS["base_value"]
+            + sum(i["contribution"] for i in self.TERMS["contributions"])
+            + self.TERMS["other_contribution"]
+            + self.TERMS["calibration"]
+        )
+
+        assert figure.axes[0].patches[-1].get_width() == pytest.approx(expected)
+
+    def test_the_probability_is_named_in_the_title(self):
+        figure = wrapper.render_waterfall(self.TERMS, 0.314)
+
+        assert "31.4%" in figure.axes[0].get_title()
+
+    def test_nothing_to_draw_yields_no_figure(self):
+        assert wrapper.render_waterfall(None, 0.3) is None
+        assert wrapper.render_waterfall({"contributions": []}, 0.3) is None
+
+
+class TestTheContributionsChart:
+
+    def test_one_bar_per_reason(self):
+        figure = wrapper.render_contributions([
+            {"column": "OriginCarrier", "contribution": 0.043},
+            {"column": "PrecipitationOrigin", "contribution": -0.012},
+        ])
+
+        assert len(figure.axes[0].patches) == 2
+
+    def test_the_side_of_zero_says_which_way_it_pushed(self):
+        figure = wrapper.render_contributions([
+            {"column": "OriginCarrier", "contribution": 0.043},
+            {"column": "PrecipitationOrigin", "contribution": -0.012},
+        ])
+        widths = [p.get_width() for p in figure.axes[0].patches]
+
+        assert min(widths) < 0 < max(widths)
+
+    def test_the_two_directions_are_told_apart_by_colour(self):
+        figure = wrapper.render_contributions([
+            {"column": "a", "contribution": 0.5},
+            {"column": "b", "contribution": -0.5},
+        ])
+        colours = {p.get_facecolor() for p in figure.axes[0].patches}
+
+        assert len(colours) == 2
+
+    def test_nothing_to_draw_yields_no_figure(self)
+        assert wrapper.render_contributions([]) is None
 
 
 class TestPredictBatch:

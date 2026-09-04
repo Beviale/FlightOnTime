@@ -319,7 +319,6 @@ class TestTrainWithTransformer:
 
 
 class TestRunCommandGuards:
-    """Every guard fails the run rather than training something unintended."""
 
     @pytest.fixture
     def train_path(self, tmp_path, flights_df):

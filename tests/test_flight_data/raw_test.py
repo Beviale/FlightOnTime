@@ -41,8 +41,6 @@ def build_expectations() -> list:
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Diverted"),
         gx.expectations.ExpectColumnValuesToBeInSet(column="Cancelled", value_set=[0, 1]),
         gx.expectations.ExpectColumnValuesToBeInSet(column="Diverted", value_set=[0, 1]),
-        # ArrDel15 is null exactly for the flights that never arrived, which is
-        # why load_and_clean drops them rather than imputing.
         gx.expectations.ExpectColumnValuesToBeInSet(column="ArrDel15", value_set=[0, 1]),
         gx.expectations.ExpectColumnValuesToNotBeNull(column="ArrDel15", mostly=0.95),
     ]

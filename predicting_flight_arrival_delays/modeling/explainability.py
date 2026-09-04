@@ -412,3 +412,91 @@ def request_column_contributions(
         {"column": column, "contribution": contribution}
         for column, contribution in ranked[:top_k]
     ]
+
+
+def _logit(p: float) -> float:
+    """The log-odds of a probability, kept away from the infinities at the ends."""
+    p = float(np.clip(p, 1e-6, 1 - 1e-6))
+    return float(np.log(p / (1 - p)))
+
+
+def _base_value(model: Any, model_type: str) -> float | None:
+    """What the model answers before it knows anything about this flight.
+
+    The point a waterfall starts from: the average prediction for a tree model,
+    the intercept for a linear one. Without it the steps have no origin, and the
+    chart could only show them floating around zero.
+
+    Args:
+        model: A fitted estimator, possibly wrapped in calibration.
+        model_type: "logistic_regression" or one of the tree types.
+
+    Returns:
+        The base value in the same units as the contributions, or None if it cannot
+        be read.
+    """
+    base = _unwrap_calibration(model)
+    model_type = model_type.lower()
+
+    if model_type in ("logreg", "logistic_regression"):
+        intercept = getattr(base, "intercept_", None)
+        return None if intercept is None else float(np.ravel(intercept)[0])
+
+    if model_type in TREE_MODEL_TYPES:
+        try:
+            expected = shap.TreeExplainer(base).expected_value
+        except Exception as e:
+            logger.error(f"Could not read the SHAP base value: {e}")
+            return None
+        expected = np.ravel(expected)
+        return float(expected[1] if expected.size > 1 else expected[0])
+
+    return None
+
+
+def waterfall_terms(
+    model: Any,
+    X: pd.DataFrame,
+    transformer: Any,
+    model_type: str,
+    served_probability: float,
+    top_k: int = 5,
+) -> dict[str, Any] | None:
+    """Everything a waterfall needs to close on the probability that was served.
+
+    Args:
+        model: The fitted estimator that produced the prediction.
+        X: The prepared matrix; only its first row is explained.
+        transformer: The fitted transformer that built the columns.
+        model_type: "logistic_regression" or one of the tree types.
+        served_probability: The probability the caller was given, calibration
+            included.
+        top_k: How many columns to report on their own.
+
+    Returns:
+        The base value, the leading contributions, the summed rest and the
+        calibration step - or None if no explanation could be built.
+    """
+    folded = request_column_contributions(
+        model, X, transformer, model_type, top_k=len(X.columns)
+    )
+    base = _base_value(model, model_type)
+    if not folded or base is None:
+        return None
+
+    total = base + sum(item["contribution"] for item in folded)
+
+    raw = float(_unwrap_calibration(model).predict_proba(X.iloc[[0]])[0, 1])
+    in_log_odds = abs(total - _logit(raw)) <= abs(total - raw)
+    link = _logit if in_log_odds else float
+
+    leading = folded[:top_k]
+    return {
+        "base_value": base,
+        "contributions": leading,
+        "other_contribution": sum(
+            item["contribution"] for item in folded[top_k:]
+        ),
+        "calibration": link(served_probability) - total,
+        "log_odds": in_log_odds,
+    }

@@ -216,7 +216,6 @@ class TestPredictions:
         assert data["threshold"] == bundles["all"].threshold
 
     def test_the_threshold_can_be_overridden_per_request(self, client, a_flight):
-        """The canvas exposes it as configuration rather than fixing it in the model."""
         data = client.post("/predictions?threshold=0.99", json=a_flight()).json()["data"]
 
         assert data["threshold"] == 0.99

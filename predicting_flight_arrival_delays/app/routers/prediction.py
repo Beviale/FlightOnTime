@@ -42,6 +42,7 @@ from predicting_flight_arrival_delays.config import (
 )
 from predicting_flight_arrival_delays.modeling.explainability import (
     request_column_contributions,
+    waterfall_terms,
 )
 
 router = APIRouter(tags=["Prediction"])
@@ -129,9 +130,7 @@ def run_scoring(
         request: The incoming request, carrying the loaded bundles.
         flights: The flights to score.
         threshold: Optional override of the released operating threshold.
-        explain: Whether each result should also say what pushed it. Each flight
-            explained costs a pass of its own through the transformer, so this is
-            asked for rather than assumed.
+        explain: Whether each result should also say what pushed it.
 
     Returns:
         One result per flight, in the order they were sent.
@@ -159,8 +158,10 @@ def run_scoring(
             ),
         }
         if explain:
-            result["explanations"] = _explain(
-                frame.iloc[[position]], bundles[row.variant]
+            one = frame.iloc[[position]]
+            result["explanations"] = _explain(one, bundles[row.variant])
+            result["waterfall"] = _waterfall(
+                one, bundles[row.variant], float(row.delay_probability)
             )
         results.append(result)
 
@@ -258,6 +259,29 @@ def predict_lookup(
     }
 
 
+def _waterfall(frame: pd.DataFrame, bundle, probability: float) -> dict[str, Any] | None:
+    """The same explanation, with what it takes to close on the answer given.
+
+    Args:
+        frame: The feature frame for that one flight.
+        bundle: The model that answered.
+        probability: The probability the caller was given.
+
+    Returns:
+        Base value, leading contributions, the summed rest and the calibration step,
+        or None if the estimator cannot be read.
+    """
+    matrix = prepared_matrix(complete_frame(frame, bundle.transformer), bundle)
+    return waterfall_terms(
+        bundle.model,
+        matrix,
+        bundle.transformer,
+        bundle.params.get("algorithm", ""),
+        probability,
+        EXPLANATION_COLUMN_COUNT,
+    )
+
+
 def _explain(frame: pd.DataFrame, bundle) -> list[dict[str, Any]]:
     """What pushed one flight's answer where it went, in the caller's vocabulary.
 
@@ -311,5 +335,6 @@ def explain(request: Request, payload: FlightRequest, threshold: float | None = 
                 payload, bundle, IMPORTANT_COLUMN_SHARE
             ),
             "explanations": _explain(frame, bundle),
+            "waterfall": _waterfall(frame, bundle, float(row.delay_probability)),
         },
     }

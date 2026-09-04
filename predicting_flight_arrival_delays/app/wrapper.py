@@ -8,11 +8,20 @@ from typing import Any
 
 import httpx
 from loguru import logger
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 import pandas as pd
 
 from predicting_flight_arrival_delays.config import API_URL
 
 TIMEOUT_SECONDS = 60.0
+
+
+TOWARDS_DELAY = "#c0392b"
+TOWARDS_ON_TIME = "#27ae60"
+NEUTRAL = "#34495e"
 
 VARIANT_LABEL = {
     "all": "full model, weather included",
@@ -53,6 +62,78 @@ async def call(method: str, path: str, **kwargs) -> dict[str, Any]:
         detail = response.text
     logger.warning(f"{method} {path} answered {response.status_code}: {detail}")
     return {"error": f"{response.status_code} - {detail}"}
+
+
+def render_contributions(explanations: list[dict[str, Any]]):
+    """Draw what pushed one answer, as a bar either side of zero.
+
+    Args:
+        explanations: The "explanations" block of a prediction response.
+
+    Returns:
+        A matplotlib figure, or None when there is nothing to draw.
+    """
+    if not explanations:
+        return None
+
+    columns = [item["column"] for item in explanations][::-1]
+    weights = [item["contribution"] for item in explanations][::-1]
+
+    figure, axes = plt.subplots(figsize=(7, 0.5 * len(columns) + 1.2))
+    axes.barh(
+        columns,
+        weights,
+        color=[TOWARDS_DELAY if w > 0 else TOWARDS_ON_TIME for w in weights],
+    )
+    axes.axvline(0, color="#444444", linewidth=0.8)
+    axes.set_xlabel("towards on time            towards a delay")
+    axes.set_title("What pushed this answer")
+    axes.spines[["top", "right"]].set_visible(False)
+    figure.tight_layout()
+    return figure
+
+
+def render_waterfall(terms: dict[str, Any] | None, probability: float):
+    """Draw how the answer was reached, step by step, ending on the answer itself.
+
+    Args:
+        terms: The "waterfall" block of a prediction response.
+        probability: The probability the page is showing.
+
+    Returns:
+        A matplotlib figure, or None when there is nothing to draw.
+    """
+    if not terms or not terms.get("contributions"):
+        return None
+
+    steps = (
+        [("starts at", terms["base_value"])]
+        + [(item["column"], item["contribution"]) for item in terms["contributions"]]
+        + [("everything else", terms["other_contribution"]),
+           ("calibration", terms["calibration"])]
+    )
+
+    figure, axes = plt.subplots(figsize=(8, 0.5 * len(steps) + 1.6))
+    rows = list(range(len(steps) + 1))[::-1]
+
+    running = steps[0][1]
+    axes.barh(rows[0], running, color=NEUTRAL)
+    for row, (_, move) in zip(rows[1:-1], steps[1:], strict=True):
+        axes.barh(row, move, left=running, color=TOWARDS_DELAY if move > 0 else TOWARDS_ON_TIME)
+        running += move
+        axes.text(running, row, f"  {move:+.2f}", va="center", fontsize=8, color="#555")
+    axes.barh(rows[-1], running, color=NEUTRAL)
+
+    axes.set_yticks(rows)
+    axes.set_yticklabels([name for name, _ in steps] + ["the answer"])
+    axes.axvline(0, color="#444444", linewidth=0.8)
+    axes.set_xlabel(
+        "log-odds" if terms.get("log_odds", True) else "probability"
+    )
+    axes.set_title(f"How this answer was reached — {probability:.1%}")
+    axes.spines[["top", "right"]].set_visible(False)
+    figure.tight_layout()
+    return figure
 
 
 def render_prediction(data: dict[str, Any]) -> str:
@@ -120,10 +201,11 @@ async def predict_lookup(
         dest: Arrival airport, IATA.
 
     Returns:
-        Markdown with the answer, or with what went wrong.
+        The answer as markdown, and a chart of what pushed it - or None in place of
+        the chart when the served model reports nothing to draw.
     """
     if not all([flight_date, marketing_carrier, operating_carrier, number, origin, dest]):
-        return "Fill in every field."
+        return "Fill in every field.", None
 
     payload = {
         "FlightDate": str(flight_date)[:10],
@@ -136,15 +218,19 @@ async def predict_lookup(
 
     body = await call("POST", "/predictions/lookup?explain=true", json=payload)
     if "error" in body:
-        return f"### Could not answer\n\n{body['error']}"
+        return f"### Could not answer\n\n{body['error']}", None
 
     data = body["data"]
     resolved = data["resolved"]
-    return render_prediction(data) + (
+    answer = render_prediction(data) + (
         f"\n\n---\n**Flight found:** {resolved['Origin']} → {resolved['Dest']}, "
         f"scheduled departure at {resolved['DepTimeDecimal']:.2f} local, "
         f"{resolved['Distance']:.0f} miles."
     )
+    chart = render_waterfall(
+        data.get("waterfall"), data["delay_probability"]
+    ) or render_contributions(data.get("explanations") or [])
+    return answer, chart
 
 
 async def predict_batch(file) -> pd.DataFrame:

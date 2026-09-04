@@ -24,10 +24,8 @@ from predicting_flight_arrival_delays.config import (
     DOMESTIC_COUNTRY_CODES,
 )
 
-# 204 is how the service says "no such flight that day" - not an error.
 NO_CONTENT = 204
-# The plan limits requests per second, and one prediction makes three or four calls
-# back to back. A rejected call is retried rather than failing the whole request.
+
 TOO_MANY_REQUESTS = 429
 MAX_ATTEMPTS = 4
 BACKOFF_SECONDS = 1.5
