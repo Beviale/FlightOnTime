@@ -1,0 +1,173 @@
+name: Deploy on Hugging Face
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+
+      - name: Sync dependencies
+        run: uv sync
+
+    
+      - name: Run the unit tests
+        run: uv run pytest tests/test_predicting_flight_arrival_delays -q
+
+      - name: Configure DVC credentials
+        run: |
+          uv run dvc remote modify origin --local access_key_id ${{ secrets.DAGSHUB_TOKEN }}
+          uv run dvc remote modify origin --local secret_access_key ${{ secrets.DAGSHUB_TOKEN }}
+
+      
+      - name: Pull the processed flights
+        run: uv run dvc pull data/interim/flights_preprocessed.parquet
+
+      - name: Validate the data with Great Expectations
+        run: |
+          set -euo pipefail
+          uv run python tests/test_flight_data/raw_test.py
+          uv run python tests/test_flight_data/processed_test.py
+
+  sync:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Configure DVC credentials
+        run: |
+          uv run dvc remote modify origin --local access_key_id ${{ secrets.DAGSHUB_TOKEN }}
+          uv run dvc remote modify origin --local secret_access_key ${{ secrets.DAGSHUB_TOKEN }}
+
+    
+      - name: Pull the airport reference tables
+        run: uv run dvc pull data/external/airports.csv data/external/airport_identity.csv
+
+  
+      - name: Copy the serving files onto the deploy branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          BRANCH="deploy"
+
+          ITEMS=(
+            "predicting_flight_arrival_delays"
+            "pyproject.toml"
+            "uv.lock"
+            "LICENSE"
+            ".dockerignore"
+            "Dockerfile"
+            "README.md"
+            "data/external/airports.csv"
+            "data/external/airport_identity.csv"
+          )
+
+          mkdir -p /tmp/to-deploy
+          for item in "${ITEMS[@]}"; do
+            if [ -e "$item" ]; then
+              mkdir -p "/tmp/to-deploy/$(dirname "$item")"
+              cp -r "$item" "/tmp/to-deploy/$item"
+            fi
+          done
+
+  
+          if git fetch origin $BRANCH; then
+            git checkout $BRANCH
+          else
+            git checkout --orphan $BRANCH
+          fi
+
+          git rm -rq --cached . 2>/dev/null || true
+          find . -mindepth 1 -maxdepth 1 -not -name .git -exec rm -rf {} +
+
+          for item in "${ITEMS[@]}"; do
+            if [ -e "/tmp/to-deploy/$item" ]; then
+              mkdir -p "$(dirname "./$item")"
+              cp -r "/tmp/to-deploy/$item" "./$item"
+            fi
+          done
+
+          git add -A
+          if git diff --staged --quiet; then
+            echo "Nothing changed."
+          else
+            git commit -m "Sync from main@${GITHUB_SHA::7}"
+            git push origin $BRANCH
+          fi
+
+  deploy-to-hf:
+    needs: sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: deploy
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.email "action@github.com"
+          git config user.name "GitHub Action"
+
+      - name: Push to the Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git remote add hf https://user:$HF_TOKEN@huggingface.co/spaces/${{ vars.HF_SPACE }}
+          git push hf deploy:main --force
+
+      - name: Wait for the Space to come up
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+        run: |
+          pip install huggingface-hub
+          python - <<'PY'
+          import os, sys, time
+          from huggingface_hub import HfApi
+
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          space = os.environ["HF_SPACE"]
+          deadline = time.time() + 900
+
+          while time.time() < deadline:
+              runtime = api.space_info(space).runtime
+              stage = runtime.stage if runtime else "UNKNOWN"
+              print(f"stage: {stage}", flush=True)
+              if stage == "RUNNING":
+                  sys.exit(0)
+              if stage in ("BUILD_ERROR", "RUNTIME_ERROR", "CONFIG_ERROR"):
+                  sys.exit(f"The Space failed to start: {stage}")
+              time.sleep(30)
+
+          sys.exit("The Space did not come up within 15 minutes.")
+          PY
