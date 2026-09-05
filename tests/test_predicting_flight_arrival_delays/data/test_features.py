@@ -31,9 +31,7 @@ class TestGetFeatureColumns:
         assert not set(cols) & set(SERVICE_COLUMNS)
 
     def test_all_variant_keeps_everything_else(self, flights_df):
-        expected = [
-            c for c in flights_df.columns if c not in set(SERVICE_COLUMNS) | {TARGET}
-        ]
+        expected = [c for c in flights_df.columns if c not in set(SERVICE_COLUMNS) | {TARGET}]
         assert get_feature_columns(flights_df, "all") == expected
 
     def test_noweather_drops_weather_and_lead_days(self, flights_df):
@@ -45,7 +43,7 @@ class TestGetFeatureColumns:
     def test_nocarrier_drops_carrier_identity_only(self, flights_df):
         cols = get_feature_columns(flights_df, "nocarrier")
         expected = [c for c in get_feature_columns(flights_df, "all") if c not in CARRIER_COLUMNS]
-        
+
         assert cols == expected
 
     def test_original_column_order_is_preserved(self, flights_df):

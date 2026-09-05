@@ -1,5 +1,4 @@
-"""Scoring against the bundles held in application state.
-"""
+"""Scoring against the bundles held in application state."""
 
 import pandas as pd
 
@@ -22,9 +21,7 @@ def prepared_matrix(df: pd.DataFrame, bundle: Bundle) -> pd.DataFrame:
     Returns:
         The transformed, encoded, column-aligned matrix.
     """
-    return prepare_for_inference(
-        df, bundle.variant, bundle.transformer, tuple(bundle.columns)
-    )
+    return prepare_for_inference(df, bundle.variant, bundle.transformer, tuple(bundle.columns))
 
 
 def score_variant(df: pd.DataFrame, bundle: Bundle, threshold: float) -> pd.DataFrame:

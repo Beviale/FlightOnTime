@@ -1,14 +1,13 @@
 """Tests for the prediction endpoints."""
 
+from dataclasses import replace
 from datetime import date, timedelta
 
-from dataclasses import replace
-
+from fastapi.testclient import TestClient
 import numpy as np
 import pandas as pd
 import pytest
 from sklearn.linear_model import LogisticRegression
-from fastapi.testclient import TestClient
 
 from predicting_flight_arrival_delays.app.enrichment.aerodatabox import (
     FlightNotFoundError,
@@ -73,7 +72,6 @@ def explainable(bundles, stub_forecast):
 
 
 class TestExplanations:
-
     def test_it_scores_and_explains_in_one_answer(self, explainable, a_flight):
         data = explainable.post("/explanations", json=a_flight()).json()["data"]
 
@@ -91,9 +89,7 @@ class TestExplanations:
     def test_a_contribution_is_signed(self, explainable, a_flight):
         data = explainable.post("/explanations", json=a_flight()).json()["data"]
 
-        assert all(
-            isinstance(item["contribution"], float) for item in data["explanations"]
-        )
+        assert all(isinstance(item["contribution"], float) for item in data["explanations"])
 
     def test_they_are_ordered_by_how_much_they_moved_the_answer(self, explainable, a_flight):
         data = explainable.post("/explanations", json=a_flight()).json()["data"]
@@ -108,9 +104,7 @@ class TestExplanations:
         assert {"variant", "threshold", "weather", "approximated"} <= set(data)
 
     def test_a_prediction_can_ask_for_them_too(self, explainable, a_flight):
-        data = explainable.post(
-            "/predictions?explain=true", json=a_flight()
-        ).json()["data"]
+        data = explainable.post("/predictions?explain=true", json=a_flight()).json()["data"]
 
         assert data["explanations"]
 
@@ -132,7 +126,6 @@ class TestExplanations:
 
 
 class TestApproximatedInputsAreReported:
-
     @pytest.fixture
     def leaning_client(self, bundles, stub_forecast):
         stub_forecast()
@@ -145,23 +138,17 @@ class TestApproximatedInputsAreReported:
         assert data["approximated"] == []
 
     def test_a_column_sent_as_null_is_named(self, leaning_client, body):
-        data = leaning_client.post(
-            "/predictions", json=body(OriginCongestion=None)
-        ).json()["data"]
+        data = leaning_client.post("/predictions", json=body(OriginCongestion=None)).json()["data"]
 
         assert data["approximated"] == ["OriginCongestion"]
 
     def test_the_flight_is_still_scored(self, leaning_client, body):
-        data = leaning_client.post(
-            "/predictions", json=body(OriginCongestion=None)
-        ).json()["data"]
+        data = leaning_client.post("/predictions", json=body(OriginCongestion=None)).json()["data"]
 
         assert 0.0 <= data["delay_probability"] <= 1.0
 
     def test_a_model_with_no_ranking_reports_nothing(self, client, body):
-        data = client.post(
-            "/predictions", json=body(OriginCongestion=None)
-        ).json()["data"]
+        data = client.post("/predictions", json=body(OriginCongestion=None)).json()["data"]
 
         assert data["approximated"] == []
 
@@ -169,9 +156,9 @@ class TestApproximatedInputsAreReported:
         complete = body()
         partial = body(DestCongestion=None)
 
-        results = leaning_client.post(
-            "/batch-predictions", json=[complete, partial]
-        ).json()["data"]["results"]
+        results = leaning_client.post("/batch-predictions", json=[complete, partial]).json()[
+            "data"
+        ]["results"]
 
         assert results[0]["approximated"] == []
         assert results[1]["approximated"] == ["DestCongestion"]
@@ -228,7 +215,7 @@ class TestPredictions:
 
     def test_a_column_the_models_read_cannot_be_left_out(self, client, a_flight, bundles):
         payload = a_flight()
-        read_by_a_model = sorted(required_inputs(bundles, CANDIDATE_INPUTS) - {"FlightDate"})[0]
+        read_by_a_model = min(required_inputs(bundles, CANDIDATE_INPUTS) - {"FlightDate"})
         del payload[read_by_a_model]
 
         response = client.post("/predictions", json=payload)
@@ -328,9 +315,9 @@ class TestLookupPredictions:
         interface asks for the reasons."""
         resolved()
 
-        data = explainable.post(
-            "/predictions/lookup?explain=true", json=named_flight
-        ).json()["data"]
+        data = explainable.post("/predictions/lookup?explain=true", json=named_flight).json()[
+            "data"
+        ]
 
         assert data["explanations"]
         assert not any("_1" in item["column"] for item in data["explanations"])

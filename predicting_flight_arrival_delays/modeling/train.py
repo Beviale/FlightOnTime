@@ -1,5 +1,4 @@
-"""Model training.
-"""
+"""Model training."""
 
 import json
 from pathlib import Path
@@ -73,7 +72,9 @@ def _load_hyperparams(path: Path) -> dict[str, dict[str, dict[str, Any]]]:
 HYPERPARAMS = _load_hyperparams(HYPERPARAMS_PATH)
 
 
-def _build_model(algorithm: str, config: str, json_config: dict | None = None) -> tuple[BaseEstimator, int | None]:
+def _build_model(
+    algorithm: str, config: str, json_config: dict | None = None
+) -> tuple[BaseEstimator, int | None]:
     """Instantiate an unfitted, uncalibrated estimator for the given algorithm/config.
 
     Args:
@@ -92,13 +93,14 @@ def _build_model(algorithm: str, config: str, json_config: dict | None = None) -
         params = dict(HYPERPARAMS[algorithm][config])
     else:
         params = json_config
-   
+
     early_stopping_rounds = params.pop(EARLY_STOPPING_KEY, None)
     if algorithm != "lightgbm":
         early_stopping_rounds = None
 
     model = BUILDERS[algorithm](**params)
     return model, early_stopping_rounds
+
 
 def train(
     X_fit: pd.DataFrame,
@@ -130,7 +132,12 @@ def train(
     estimator, early_stopping_rounds = _build_model(model, config, json_config)
 
     fit_kwargs: dict[str, Any] = {}
-    if model == "lightgbm" and early_stopping_rounds is not None and X_val is not None and y_val is not None:
+    if (
+        model == "lightgbm"
+        and early_stopping_rounds is not None
+        and X_val is not None
+        and y_val is not None
+    ):
         fit_kwargs["eval_X"] = X_val
         fit_kwargs["eval_y"] = y_val
         fit_kwargs["callbacks"] = [
@@ -209,7 +216,6 @@ def train_with_transformer(
         sparse_column_order(X_fit) if encoding_type == "onehot" else list(X_fit.columns)
     )
 
-
     if encoding_type == "onehot":
         X_fit = to_sparse_matrix(X_fit)
         if X_val is not None:
@@ -231,7 +237,8 @@ def run(
     ),
     calibrate: bool = typer.Option(True, help="Wrap estimators in isotonic calibration"),
     models_path: Path | None = typer.Option(
-        MODELS_DIR, help="Directory to save trained model and transformer locally. None disables local saving."
+        MODELS_DIR,
+        help="Directory to save trained model and transformer locally. None disables local saving.",
     ),
     experiment: str | None = typer.Option(
         None,
@@ -292,15 +299,17 @@ def run(
         if train_df.empty:
             raise ValueError(f"Loaded dataframe at {safe_relative_path(train_path)} is empty")
 
-
         validation_df = None
         if validation_path is not None:
             if not validation_path.exists():
-                raise FileNotFoundError(f"No dataframe file found at {safe_relative_path(validation_path)}")
+                raise FileNotFoundError(
+                    f"No dataframe file found at {safe_relative_path(validation_path)}"
+                )
             validation_df = pd.read_parquet(validation_path)
             if validation_df.empty:
-                raise ValueError(f"Loaded dataframe at {safe_relative_path(validation_path)} is empty")
-
+                raise ValueError(
+                    f"Loaded dataframe at {safe_relative_path(validation_path)} is empty"
+                )
 
         logger.info(f"Training {model} ({config}) for variant '{variant}'...")
         transformer, estimator, X_fit, columns = train_with_transformer(
@@ -324,15 +333,19 @@ def run(
             logger.info(f"Training columns saved to {safe_relative_path(columns_file)}")
 
         if experiment is not None and registered_model_name is not None:
-
             dagshub.init(repo_owner=repo_owner, repo_name=repo_name, mlflow=True)
             mlflow.set_experiment(experiment)
 
             with mlflow.start_run(run_name=f"{variant}__{model}__{config}"):
-                mlflow.log_params({
-                    "variant": variant, "algorithm": model, "config": config,
-                    "encoding": ENCODING[model], "calibrated": calibrate,
-                })
+                mlflow.log_params(
+                    {
+                        "variant": variant,
+                        "algorithm": model,
+                        "config": config,
+                        "encoding": ENCODING[model],
+                        "calibrated": calibrate,
+                    }
+                )
                 register_model_bundle(
                     model=estimator,
                     transformer=transformer,
@@ -349,6 +362,7 @@ def run(
     except Exception as e:
         logger.exception(f"An error occurred while training the model: {e}")
         raise typer.Exit(code=1) from None
+
 
 if __name__ == "__main__":
     app()

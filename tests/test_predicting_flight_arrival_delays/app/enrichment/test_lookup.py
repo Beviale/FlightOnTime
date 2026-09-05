@@ -14,7 +14,6 @@ from predicting_flight_arrival_delays.app.enrichment.lookup import (
 )
 from predicting_flight_arrival_delays.app.schema import FlightLookupRequest
 
-
 FLIGHT_DATE = date(2026, 8, 25)
 
 
@@ -58,12 +57,17 @@ def schedule(monkeypatch):
 
     def build(leg=None, congestion=(62, 1), rotation=()):
         counts = list(congestion)
-        monkeypatch.setattr(lookup_module, "find_flight",
-                            lambda *args, **kwargs: leg if leg is not None else a_leg())
-        monkeypatch.setattr(lookup_module, "count_movements",
-                            lambda *args, **kwargs: counts.pop(0))
-        monkeypatch.setattr(lookup_module, "aircraft_rotation",
-                            lambda *args, **kwargs: list(rotation))
+        monkeypatch.setattr(
+            lookup_module,
+            "find_flight",
+            lambda *args, **kwargs: leg if leg is not None else a_leg(),
+        )
+        monkeypatch.setattr(
+            lookup_module, "count_movements", lambda *args, **kwargs: counts.pop(0)
+        )
+        monkeypatch.setattr(
+            lookup_module, "aircraft_rotation", lambda *args, **kwargs: list(rotation)
+        )
 
     return build
 
@@ -79,8 +83,12 @@ class TestDistanceGroup:
 class TestDecimalHour:
     @pytest.mark.parametrize(
         ("local", "expected"),
-        [("2026-08-25 07:00-05:00", 7.0), ("2026-08-25 08:17-05:00", 8 + 17 / 60),
-         ("2026-08-25 00:00-05:00", 0.0), ("2026-08-25 23:30-05:00", 23.5)],
+        [
+            ("2026-08-25 07:00-05:00", 7.0),
+            ("2026-08-25 08:17-05:00", 8 + 17 / 60),
+            ("2026-08-25 00:00-05:00", 0.0),
+            ("2026-08-25 23:30-05:00", 23.5),
+        ],
     )
     def test_reads_the_local_clock_not_the_offset(self, local, expected):
         assert decimal_hour(local) == pytest.approx(expected)
@@ -102,11 +110,13 @@ class TestRotationFeatures:
         assert set(features.values()) == {None}
 
     def test_the_position_and_the_count_come_from_the_day_s_legs(self, schedule):
-        schedule(rotation=[
-            self.rotation_leg("2026-08-25 09:00Z", "2026-08-25 11:00Z"),
-            self.rotation_leg("2026-08-25 12:00Z", "2026-08-25 13:17Z"),
-            self.rotation_leg("2026-08-25 15:00Z", "2026-08-25 17:00Z"),
-        ])
+        schedule(
+            rotation=[
+                self.rotation_leg("2026-08-25 09:00Z", "2026-08-25 11:00Z"),
+                self.rotation_leg("2026-08-25 12:00Z", "2026-08-25 13:17Z"),
+                self.rotation_leg("2026-08-25 15:00Z", "2026-08-25 17:00Z"),
+            ]
+        )
 
         features = rotation_features(a_leg(registration="N123AA"), FLIGHT_DATE)
 
@@ -114,10 +124,12 @@ class TestRotationFeatures:
         assert features["LegPosition"] == 2
 
     def test_the_turnaround_is_measured_from_the_previous_arrival(self, schedule):
-        schedule(rotation=[
-            self.rotation_leg("2026-08-25 09:00Z", "2026-08-25 11:00Z"),
-            self.rotation_leg("2026-08-25 12:00Z", "2026-08-25 13:17Z"),
-        ])
+        schedule(
+            rotation=[
+                self.rotation_leg("2026-08-25 09:00Z", "2026-08-25 11:00Z"),
+                self.rotation_leg("2026-08-25 12:00Z", "2026-08-25 13:17Z"),
+            ]
+        )
 
         features = rotation_features(a_leg(registration="N123AA"), FLIGHT_DATE)
 
@@ -126,10 +138,12 @@ class TestRotationFeatures:
     def test_the_turnaround_is_floored_the_way_training_floors_it(self, schedule):
         """Training rounds both ends down to the hour, so it only ever saw whole
         hours; a truer figure would be a value the model has never seen."""
-        schedule(rotation=[
-            self.rotation_leg("2026-08-25 09:00Z", "2026-08-25 11:40Z"),
-            self.rotation_leg("2026-08-25 12:20Z", "2026-08-25 13:17Z"),
-        ])
+        schedule(
+            rotation=[
+                self.rotation_leg("2026-08-25 09:00Z", "2026-08-25 11:40Z"),
+                self.rotation_leg("2026-08-25 12:20Z", "2026-08-25 13:17Z"),
+            ]
+        )
         leg = a_leg(registration="N123AA")
         leg["departure"]["scheduledTime"]["utc"] = "2026-08-25 12:20Z"
 

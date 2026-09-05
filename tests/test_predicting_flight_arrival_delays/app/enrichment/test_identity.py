@@ -1,5 +1,7 @@
 """Tests for predicting_flight_arrival_delays.app.enrichment.identity."""
 
+from typing import ClassVar
+
 import pandas as pd
 import pytest
 
@@ -11,7 +13,6 @@ from predicting_flight_arrival_delays.app.enrichment.identity import (
     UnknownAirportError,
     get_identity,
 )
-
 
 MUELLER = (10423, "AUS", 30.298056, -97.701389)
 BERGSTROM = (16440, "AUS", 30.194444, -97.670000)
@@ -47,11 +48,7 @@ def tables(tmp_path, monkeypatch):
 
         identity_csv = tmp_path / "airport_identity.csv"
         pd.DataFrame(
-            [
-                (code, i, f"City {i}", "TX")
-                for i, code, _, _ in reference
-                if i in flown
-            ],
+            [(code, i, f"City {i}", "TX") for i, code, _, _ in reference if i in flown],
             columns=["Iata", "AirportId", "CityName", "State"],
         ).to_csv(identity_csv, index=False)
 
@@ -152,8 +149,7 @@ class TestACodeListingTwoAirports:
 
 
 class TestHowFarTheMatchIsAllowedToBe:
-
-    FAR_FROM_BOTH = {"lat": 30.25, "lon": -97.55}
+    FAR_FROM_BOTH: ClassVar[dict] = {"lat": 30.25, "lon": -97.55}
 
     def test_a_location_beyond_the_limit_is_refused_with_two_candidates(self, tables):
         tables([MUELLER, BERGSTROM])

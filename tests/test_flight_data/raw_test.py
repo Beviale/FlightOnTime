@@ -1,12 +1,11 @@
-"""Great Expectations suite for the raw BTS On-Time Performance extracts.
-"""
+"""Great Expectations suite for the raw BTS On-Time Performance extracts."""
 
 import great_expectations as gx
 import pandas as pd
 import pytest
 from util import failures, show_results, validate
 
-from predicting_flight_arrival_delays.config import KEEP_COLUMNS, RAW_DATA_DIR, DATE_COLUMN
+from predicting_flight_arrival_delays.config import DATE_COLUMN, KEEP_COLUMNS, RAW_DATA_DIR
 
 SAMPLE_ROWS = 200_000
 
@@ -75,9 +74,6 @@ def build_expectations() -> list:
             column="Distance", min_value=1, max_value=6000
         ),
         gx.expectations.ExpectColumnValuesToBeBetween(column="Month", min_value=1, max_value=12),
-        gx.expectations.ExpectColumnValuesToBeBetween(
-            column="DayofMonth", min_value=1, max_value=31
-        ),
         gx.expectations.ExpectColumnValuesToBeBetween(
             column="DayOfWeek", min_value=1, max_value=7
         ),

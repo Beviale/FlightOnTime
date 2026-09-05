@@ -44,6 +44,7 @@ app = typer.Typer()
 # Fetching
 # ---------------------------------------------------------------------------
 
+
 def fetch_series(
     latitude: float, longitude: float, start: str, end: str, lead_days: int
 ) -> pd.DataFrame:
@@ -167,6 +168,7 @@ def download_weather(
 # Joining
 # ---------------------------------------------------------------------------
 
+
 def load_weather(weather_dir: Path) -> pd.DataFrame:
     """Load every downloaded weather file into a single table.
 
@@ -183,7 +185,9 @@ def load_weather(weather_dir: Path) -> pd.DataFrame:
     """
     files = sorted(weather_dir.glob("*.parquet"))
     if not files:
-        raise FileNotFoundError(f"No weather files in {weather_dir} -- run download_weather first.")
+        raise FileNotFoundError(
+            f"No weather files in {weather_dir} -- run download_weather first."
+        )
     logger.info(f"Loading {len(files)} weather files from {weather_dir}")
 
     frames = []
@@ -208,6 +212,7 @@ def load_weather(weather_dir: Path) -> pd.DataFrame:
 # Build request
 # ---------------------------------------------------------------------------
 
+
 def build_weather_requests(df: pd.DataFrame) -> dict[int, set[int]]:
     """Map each airport_id to the set of lead times actually needed for it.
 
@@ -215,7 +220,7 @@ def build_weather_requests(df: pd.DataFrame) -> dict[int, set[int]]:
         df: Flights. with the lead days column.
 
     Returns:
-        dictionary mapping each airport id to the set of lead times needed for it.    
+        dictionary mapping each airport id to the set of lead times needed for it.
     """
     requests_map: dict[int, set[int]] = defaultdict(set)
 
@@ -225,13 +230,16 @@ def build_weather_requests(df: pd.DataFrame) -> dict[int, set[int]]:
             requests_map[int(airport_id)].add(int(lead))
 
     n_combos = sum(len(v) for v in requests_map.values())
-    logger.info(f"{len(requests_map)} airports, {n_combos} (airport, lead_days) combinations needed")
+    logger.info(
+        f"{len(requests_map)} airports, {n_combos} (airport, lead_days) combinations needed"
+    )
     return dict(requests_map)
 
 
 # ---------------------------------------------------------------------------
 # Command
 # ---------------------------------------------------------------------------
+
 
 @app.command()
 def run(
@@ -249,7 +257,6 @@ def run(
         sleep (float): Delay in seconds between individual API requests to avoid rate limits.
     """
     try:
-
         df = pd.read_parquet(flights_path)
         airports = pd.read_csv(airports_path)
 
@@ -265,6 +272,7 @@ def run(
     except Exception as e:
         logger.exception(f"An error occurred while setting up the download weather process: {e}")
         raise typer.Exit(code=1) from None
+
 
 if __name__ == "__main__":
     app()

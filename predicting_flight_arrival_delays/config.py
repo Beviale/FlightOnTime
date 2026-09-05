@@ -6,7 +6,7 @@ from loguru import logger
 
 # Load environment variables from .env file if it exists
 load_dotenv()
-SEED = 42   
+SEED = 42
 
 # ------START Paths--------
 # --Data--
@@ -31,10 +31,9 @@ BTS_BASE_URL = (
     "https://transtats.bts.gov/PREZIP/"
     "On_Time_Reporting_Carrier_On_Time_Performance_1987_present_{year}_{month}.zip"
 )
-YEARS_DATA = (2025, 2026) # Years data to download
+YEARS_DATA = (2025, 2026)  # Years data to download
 MASTER_CORD_PAGE = (
-    "https://transtats.bts.gov/DL_SelectFields.aspx"
-    "?gnoyr_VQ=FLL&QO_fu146_anzr=N8vn6v10"
+    "https://transtats.bts.gov/DL_SelectFields.aspx?gnoyr_VQ=FLL&QO_fu146_anzr=N8vn6v10"
 )
 T_MASTER_CORD_FILE_NAME = "T_MASTER_CORD"
 REQUIRED_AIRPORTS_COLUMNS = [
@@ -67,27 +66,42 @@ WEATHER_VARS = [
     "wind_gusts_10m",
     "weather_code",
 ]
-MAX_LEAD_DAYS = 5 # Upper bound on how far ahead a forecast can be requested from the weather source
+MAX_LEAD_DAYS = (
+    5  # Upper bound on how far ahead a forecast can be requested from the weather source
+)
 FULL_LEAD_COVERAGE_START = "2024-12-01"
 
 DATE_COLUMN = "FlightDate"
 # BTS columns to keep
 KEEP_COLUMNS = [
-    "OriginAirportID", "DestAirportID", "Origin", "Dest",
-    "Reporting_Airline", "Flight_Number_Reporting_Airline",
-    "FlightDate", "CRSDepTime", "CRSArrTime", "CRSElapsedTime",
-    "Distance", "DistanceGroup",
-    "DayOfWeek", "Month",
-    "OriginState", "DestState", "OriginCityName", "DestCityName", "Tail_Number"
+    "OriginAirportID",
+    "DestAirportID",
+    "Origin",
+    "Dest",
+    "Reporting_Airline",
+    "Flight_Number_Reporting_Airline",
+    "FlightDate",
+    "CRSDepTime",
+    "CRSArrTime",
+    "CRSElapsedTime",
+    "Distance",
+    "DistanceGroup",
+    "DayOfWeek",
+    "Month",
+    "OriginState",
+    "DestState",
+    "OriginCityName",
+    "DestCityName",
+    "Tail_Number",
 ]
 TARGET = "IsDelayed"
 # Columns needed by the pipeline but never given to the model.
 SERVICE_COLUMNS = [
-    "CRSDepTime",      
-    "CRSArrTime",       
-    "DepUtcHour",     
+    "CRSDepTime",
+    "CRSArrTime",
+    "DepUtcHour",
     "ArrUtcHour",
-    "DepHour",    
+    "DepHour",
     "ArrHour",
     "TailNumber",
     "Origin",
@@ -99,7 +113,7 @@ SERVICE_COLUMNS2 = [
     "FlightDate",
 ]
 
-#Transform
+# Transform
 MIN_CATEGORY_COUNT = 1000
 MAX_ONEHOT_CATEGORIES = 50
 
@@ -132,9 +146,9 @@ DAGSHUB_REPO_NAME = "FlightOnTime"
 
 # ------START Serving--------
 API_URL = os.environ.get("API_URL", "http://localhost:7860")
-WINNER_MODEL_STAGE = "Champion" 
+WINNER_MODEL_STAGE = "Champion"
 SERVED_VARIANTS = PRODUCTION_VARIANTS
-DEFAULT_THRESHOLD = 0.5 
+DEFAULT_THRESHOLD = 0.5
 MAX_BATCH_SIZE = 200  # flights per batch request
 
 IMPORTANT_COLUMN_SHARE = 0.05
@@ -150,7 +164,6 @@ AERODATABOX_HOST = "aerodatabox.p.rapidapi.com"
 AERODATABOX_TIMEOUT_SECONDS = 12
 DOMESTIC_COUNTRY_CODES = frozenset({"us", "pr", "vi", "gu", "mp", "as"})
 # ------END Serving--------
-
 
 
 # If tqdm is installed, configure loguru with tqdm.write

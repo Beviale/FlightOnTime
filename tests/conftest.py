@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from predicting_flight_arrival_delays.config import TARGET, WEATHER_COLUMNS, SEED, DATE_COLUMN
+from predicting_flight_arrival_delays.config import DATE_COLUMN, SEED, TARGET, WEATHER_COLUMNS
 
 ORIGINS = ["ATL", "DFW", "ORD", "LAX"]
 DESTS = ["JFK", "SEA", "MIA"]
@@ -24,8 +24,13 @@ AIRLINES = ["AA", "DL", "UA"]
 # BTS gives every airport a numeric id alongside its code, and keys the historical
 # delay rates on it: a code can be reassigned to another airport, an id cannot.
 AIRPORT_IDS = {
-    "ATL": 10397, "DFW": 11298, "ORD": 13930, "LAX": 12892,
-    "JFK": 12478, "SEA": 14747, "MIA": 13303,
+    "ATL": 10397,
+    "DFW": 11298,
+    "ORD": 13930,
+    "LAX": 12892,
+    "JFK": 12478,
+    "SEA": 14747,
+    "MIA": 13303,
 }
 
 # The coefficients that make the target learnable for the unit tests that fit.

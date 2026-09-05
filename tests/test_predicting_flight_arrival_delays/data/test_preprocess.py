@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from typer.testing import CliRunner
 
-from predicting_flight_arrival_delays.config import MAX_LEAD_DAYS, DATE_COLUMN
+from predicting_flight_arrival_delays.config import DATE_COLUMN, MAX_LEAD_DAYS
 from predicting_flight_arrival_delays.data import preprocess as preprocess_module
 from predicting_flight_arrival_delays.data.preprocess import (
     FULL_LEAD_COVERAGE_START,
@@ -151,11 +151,7 @@ class TestAddHolidayFeatures:
     @pytest.fixture
     def around_july_fourth(self):
         return pd.DataFrame(
-            {
-                DATE_COLUMN: pd.to_datetime(
-                    ["2025-07-01", "2025-07-04", "2025-07-06", "2025-12-25"]
-                )
-            }
+            {DATE_COLUMN: pd.to_datetime(["2025-07-01", "2025-07-04", "2025-07-06", "2025-12-25"])}
         )
 
     def test_holidays_are_flagged(self, around_july_fourth):
@@ -179,9 +175,7 @@ class TestAddHolidayFeatures:
 
     def test_same_date_gets_the_same_value(self):
         """The distance is computed per unique date, then mapped back to every row."""
-        df = pd.DataFrame(
-            {DATE_COLUMN: pd.to_datetime(["2025-07-01"] * 3 + ["2025-07-06"])}
-        )
+        df = pd.DataFrame({DATE_COLUMN: pd.to_datetime(["2025-07-01"] * 3 + ["2025-07-06"])})
         out = add_holiday_features(df)
 
         assert out["DaysToNearestHoliday"].iloc[:3].nunique() == 1
@@ -362,12 +356,8 @@ class TestAddTurnaroundFeatures:
         df = pd.DataFrame(
             {
                 "TailNumber": ["N1", "N2"],
-                "DepUtcHour": pd.to_datetime(
-                    ["2025-03-01 08:00", "2025-03-01 09:00"], utc=True
-                ),
-                "ArrUtcHour": pd.to_datetime(
-                    ["2025-03-01 11:00", "2025-03-01 12:00"], utc=True
-                ),
+                "DepUtcHour": pd.to_datetime(["2025-03-01 08:00", "2025-03-01 09:00"], utc=True),
+                "ArrUtcHour": pd.to_datetime(["2025-03-01 11:00", "2025-03-01 12:00"], utc=True),
             }
         )
         out = add_turnaround_features(df)
@@ -378,12 +368,8 @@ class TestAddTurnaroundFeatures:
         df = pd.DataFrame(
             {
                 "TailNumber": ["N1", "N2"],
-                "DepUtcHour": pd.to_datetime(
-                    ["2025-03-01 08:00", "2025-03-01 12:00"], utc=True
-                ),
-                "ArrUtcHour": pd.to_datetime(
-                    ["2025-03-01 11:00", "2025-03-01 14:00"], utc=True
-                ),
+                "DepUtcHour": pd.to_datetime(["2025-03-01 08:00", "2025-03-01 12:00"], utc=True),
+                "ArrUtcHour": pd.to_datetime(["2025-03-01 11:00", "2025-03-01 14:00"], utc=True),
             }
         )
         out = add_turnaround_features(df)
@@ -486,9 +472,12 @@ class TestPrepareFlightsCommand:
         result = runner.invoke(
             preprocess_module.app,
             [
-                "prepare-flights", str(bts_csv),
-                "--airports-path", str(airports_csv),
-                "--output-path", str(output_path),
+                "prepare-flights",
+                str(bts_csv),
+                "--airports-path",
+                str(airports_csv),
+                "--output-path",
+                str(output_path),
             ],
         )
         assert result.exit_code == 0, result.output
@@ -508,15 +497,21 @@ class TestPrepareFlightsCommand:
 
     def test_every_feature_stage_contributed(self, prepared):
         expected = {
-            "OriginCongestion", "DestCongestion",       
-            "IsDelayed",                                
-            "DepHour", "DepTimeDecimal",                
-            "IsHoliday", "DaysToNearestHoliday",        
-            "AircraftDailyLegs", "LegPosition",         
-            "LeadDays",                                 
-            "DepUtcHour", "ArrUtcHour",                 
-            "ScheduledTurnaround",                      
-            "OriginCarrier", "DestCarrier",            
+            "OriginCongestion",
+            "DestCongestion",
+            "IsDelayed",
+            "DepHour",
+            "DepTimeDecimal",
+            "IsHoliday",
+            "DaysToNearestHoliday",
+            "AircraftDailyLegs",
+            "LegPosition",
+            "LeadDays",
+            "DepUtcHour",
+            "ArrUtcHour",
+            "ScheduledTurnaround",
+            "OriginCarrier",
+            "DestCarrier",
         }
         assert expected <= set(prepared.columns)
 
@@ -527,9 +522,12 @@ class TestPrepareFlightsCommand:
         result = runner.invoke(
             preprocess_module.app,
             [
-                "prepare-flights", str(bts_csv / "2025_03" / "flights.csv"),
-                "--airports-path", str(airports_csv),
-                "--output-path", str(output_path),
+                "prepare-flights",
+                str(bts_csv / "2025_03" / "flights.csv"),
+                "--airports-path",
+                str(airports_csv),
+                "--output-path",
+                str(output_path),
             ],
         )
 
@@ -543,9 +541,12 @@ class TestPrepareFlightsCommand:
         result = runner.invoke(
             preprocess_module.app,
             [
-                "prepare-flights", str(empty),
-                "--airports-path", str(airports_csv),
-                "--output-path", str(tmp_path / "out.parquet"),
+                "prepare-flights",
+                str(empty),
+                "--airports-path",
+                str(airports_csv),
+                "--output-path",
+                str(tmp_path / "out.parquet"),
             ],
         )
 
@@ -555,9 +556,12 @@ class TestPrepareFlightsCommand:
         result = runner.invoke(
             preprocess_module.app,
             [
-                "prepare-flights", str(bts_csv),
-                "--airports-path", str(tmp_path / "absent.csv"),
-                "--output-path", str(tmp_path / "out.parquet"),
+                "prepare-flights",
+                str(bts_csv),
+                "--airports-path",
+                str(tmp_path / "absent.csv"),
+                "--output-path",
+                str(tmp_path / "out.parquet"),
             ],
         )
 
@@ -587,9 +591,7 @@ class TestJoinWeatherCommand:
             pd.DataFrame(
                 {
                     "AirportId": airport_id,
-                    "Time": pd.to_datetime(
-                        ["2025-03-01 13:00", "2025-03-01 15:00"], utc=True
-                    ),
+                    "Time": pd.to_datetime(["2025-03-01 13:00", "2025-03-01 15:00"], utc=True),
                     "LeadDays": 2,
                     "Temperature2m": [5.0, 7.0],
                     "Precipitation": [0.0, 1.5],
@@ -608,9 +610,12 @@ class TestJoinWeatherCommand:
             preprocess_module.app,
             [
                 "join-weather",
-                "--flights-path", str(flights_parquet),
-                "--weather-dir", str(weather_dir),
-                "--output-path", str(output_path),
+                "--flights-path",
+                str(flights_parquet),
+                "--weather-dir",
+                str(weather_dir),
+                "--output-path",
+                str(output_path),
             ],
         )
 
@@ -619,16 +624,17 @@ class TestJoinWeatherCommand:
         assert joined["Temperature2mOrigin"].iloc[0] == pytest.approx(5.0)
         assert joined["Temperature2mDest"].iloc[0] == pytest.approx(7.0)
 
-    def test_a_missing_weather_directory_exits_with_an_error_code(
-        self, tmp_path, flights_parquet
-    ):
+    def test_a_missing_weather_directory_exits_with_an_error_code(self, tmp_path, flights_parquet):
         result = runner.invoke(
             preprocess_module.app,
             [
                 "join-weather",
-                "--flights-path", str(flights_parquet),
-                "--weather-dir", str(tmp_path / "absent"),
-                "--output-path", str(tmp_path / "out.parquet"),
+                "--flights-path",
+                str(flights_parquet),
+                "--weather-dir",
+                str(tmp_path / "absent"),
+                "--output-path",
+                str(tmp_path / "out.parquet"),
             ],
         )
 
@@ -642,9 +648,7 @@ class TestJoinWeatherToFlights:
         directory = tmp_path / "weather"
         directory.mkdir()
         for airport_id in (10397, 12892):
-            times = pd.to_datetime(
-                ["2025-03-01 13:00", "2025-03-01 15:00"], utc=True
-            )
+            times = pd.to_datetime(["2025-03-01 13:00", "2025-03-01 15:00"], utc=True)
             pd.DataFrame(
                 {
                     "AirportId": airport_id,

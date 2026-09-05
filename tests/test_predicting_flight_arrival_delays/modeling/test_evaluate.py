@@ -41,8 +41,14 @@ class TestEvaluate:
         metrics = evaluate(X, y, estimator, threshold=0.5)
 
         assert set(metrics) == {
-            "roc_auc", "pr_auc", "brier", "recall", "precision",
-            "f1.0", "alert_rate", "threshold",
+            "roc_auc",
+            "pr_auc",
+            "brier",
+            "recall",
+            "precision",
+            "f1.0",
+            "alert_rate",
+            "threshold",
         }
 
     def test_perfect_ranking_scores_one(self, separable):
@@ -100,7 +106,6 @@ class TestEvaluate:
 
 
 class TestEvaluateOnDataframe:
-
     @pytest.fixture
     def small_transformer(self, monkeypatch):
         def build(**kwargs):
@@ -127,7 +132,7 @@ class TestEvaluateOnDataframe:
         """Same rows, same model: preparing them for scoring must reproduce the
         matrix the training path built for them."""
         df, transformer, estimator, X_fit, columns = bundle
-        
+
         rows = (df["OriginAirportID"] == 10397).to_numpy()
 
         expected = evaluate(X_fit[rows], df.loc[rows, TARGET], estimator, 0.5)
@@ -191,9 +196,12 @@ class TestEvaluateFromLocalPathHappyPath:
             evaluate_module.app,
             [
                 "evaluate-from-local-path",
-                "--model-path", str(save_dir),
-                "--evaluate-df-path", str(data_path),
-                "--output-path", str(metrics_dir),
+                "--model-path",
+                str(save_dir),
+                "--evaluate-df-path",
+                str(data_path),
+                "--output-path",
+                str(metrics_dir),
             ],
         )
 
@@ -209,10 +217,14 @@ class TestEvaluateFromLocalPathHappyPath:
             evaluate_module.app,
             [
                 "evaluate-from-local-path",
-                "--model-path", str(save_dir),
-                "--evaluate-df-path", str(data_path),
-                "--output-path", str(metrics_dir),
-                "--threshold", "0.3",
+                "--model-path",
+                str(save_dir),
+                "--evaluate-df-path",
+                str(data_path),
+                "--output-path",
+                str(metrics_dir),
+                "--threshold",
+                "0.3",
             ],
         )
         payload = json.loads(
@@ -231,9 +243,12 @@ class TestEvaluateFromLocalPathHappyPath:
             evaluate_module.app,
             [
                 "evaluate-from-local-path",
-                "--model-path", str(save_dir),
-                "--evaluate-df-path", str(data_path),
-                "--output-path", str(tmp_path / "metrics"),
+                "--model-path",
+                str(save_dir),
+                "--evaluate-df-path",
+                str(data_path),
+                "--output-path",
+                str(tmp_path / "metrics"),
             ],
         )
 
@@ -244,7 +259,7 @@ class TestEvaluateFromMlflow:
     @pytest.fixture
     def registry(self, monkeypatch, saved_bundle):
         save_dir, _, estimator, transformer = saved_bundle
-      
+
         columns = json.loads((save_dir / "columns.json").read_text())
         requested = {}
 
@@ -269,9 +284,12 @@ class TestEvaluateFromMlflow:
             evaluate_module.app,
             [
                 "evaluate-from-mlflow",
-                "--registered-model-name", "flight-delay-noweather",
-                "--evaluate-df-path", str(data_path),
-                "--output-path", str(metrics_dir),
+                "--registered-model-name",
+                "flight-delay-noweather",
+                "--evaluate-df-path",
+                str(data_path),
+                "--output-path",
+                str(metrics_dir),
             ],
         )
 
@@ -285,10 +303,14 @@ class TestEvaluateFromMlflow:
             evaluate_module.app,
             [
                 "evaluate-from-mlflow",
-                "--registered-model-name", "flight-delay-noweather",
-                "--evaluate-df-path", str(data_path),
-                "--stage", "champion",
-                "--output-path", str(tmp_path / "metrics"),
+                "--registered-model-name",
+                "flight-delay-noweather",
+                "--evaluate-df-path",
+                str(data_path),
+                "--stage",
+                "champion",
+                "--output-path",
+                str(tmp_path / "metrics"),
             ],
         )
 
@@ -300,8 +322,10 @@ class TestEvaluateFromMlflow:
             evaluate_module.app,
             [
                 "evaluate-from-mlflow",
-                "--registered-model-name", "flight-delay-noweather",
-                "--evaluate-df-path", str(tmp_path / "absent.parquet"),
+                "--registered-model-name",
+                "flight-delay-noweather",
+                "--evaluate-df-path",
+                str(tmp_path / "absent.parquet"),
             ],
         )
 
@@ -318,8 +342,10 @@ class TestEvaluateFromMlflow:
             evaluate_module.app,
             [
                 "evaluate-from-mlflow",
-                "--registered-model-name", "flight-delay-noweather",
-                "--evaluate-df-path", str(empty),
+                "--registered-model-name",
+                "flight-delay-noweather",
+                "--evaluate-df-path",
+                str(empty),
             ],
         )
 
@@ -332,8 +358,10 @@ class TestEvaluateFromLocalPath:
             evaluate_module.app,
             [
                 "evaluate-from-local-path",
-                "--model-path", str(tmp_path / "all" / "lightgbm__default"),
-                "--evaluate-df-path", str(tmp_path / "absent.parquet"),
+                "--model-path",
+                str(tmp_path / "all" / "lightgbm__default"),
+                "--evaluate-df-path",
+                str(tmp_path / "absent.parquet"),
             ],
         )
 
@@ -347,8 +375,10 @@ class TestEvaluateFromLocalPath:
             evaluate_module.app,
             [
                 "evaluate-from-local-path",
-                "--model-path", str(tmp_path / "all" / "lightgbm__default"),
-                "--evaluate-df-path", str(empty),
+                "--model-path",
+                str(tmp_path / "all" / "lightgbm__default"),
+                "--evaluate-df-path",
+                str(empty),
             ],
         )
 
@@ -364,16 +394,16 @@ class TestEvaluateFromLocalPath:
             evaluate_module.app,
             [
                 "evaluate-from-local-path",
-                "--model-path", str(model_dir),
-                "--evaluate-df-path", str(data),
+                "--model-path",
+                str(model_dir),
+                "--evaluate-df-path",
+                str(data),
             ],
         )
 
         assert result.exit_code == 1
 
-    def test_a_model_without_its_transformer_exits_with_an_error_code(
-        self, tmp_path, flights_df
-    ):
+    def test_a_model_without_its_transformer_exits_with_an_error_code(self, tmp_path, flights_df):
         """Half a bundle is unusable: the model alone cannot prepare its input."""
         data = tmp_path / "test.parquet"
         flights_df.to_parquet(data, index=False)
@@ -385,16 +415,16 @@ class TestEvaluateFromLocalPath:
             evaluate_module.app,
             [
                 "evaluate-from-local-path",
-                "--model-path", str(model_dir),
-                "--evaluate-df-path", str(data),
+                "--model-path",
+                str(model_dir),
+                "--evaluate-df-path",
+                str(data),
             ],
         )
 
         assert result.exit_code == 1
 
-    def test_a_folder_not_named_model__config_exits_with_an_error_code(
-        self, tmp_path, flights_df
-    ):
+    def test_a_folder_not_named_model__config_exits_with_an_error_code(self, tmp_path, flights_df):
         """The variant and config are read back out of the directory layout."""
         data = tmp_path / "test.parquet"
         flights_df.to_parquet(data, index=False)
@@ -407,8 +437,10 @@ class TestEvaluateFromLocalPath:
             evaluate_module.app,
             [
                 "evaluate-from-local-path",
-                "--model-path", str(model_dir),
-                "--evaluate-df-path", str(data),
+                "--model-path",
+                str(model_dir),
+                "--evaluate-df-path",
+                str(data),
             ],
         )
 

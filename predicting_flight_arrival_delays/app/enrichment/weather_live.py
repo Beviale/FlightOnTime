@@ -1,6 +1,6 @@
 """Weather forecast lookup at inference time.
 
-A forecast that cannot be retrieved - the service is down, the flight is beyond the forecast horizon, 
+A forecast that cannot be retrieved - the service is down, the flight is beyond the forecast horizon,
 the hour is missing from the series - comes back as None, which leaves the weather columns empty
 and sends the flight to the 'noweather' model.
 """

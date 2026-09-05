@@ -1,5 +1,7 @@
 """Tests for predicting_flight_arrival_delays.data.split_data."""
 
+from itertools import pairwise
+
 import pandas as pd
 import pytest
 from typer.testing import CliRunner
@@ -54,7 +56,7 @@ class TestMakeFolds:
     def test_test_windows_are_contiguous(self, dated_df):
         folds = make_folds(dated_df, "2025-02-01,2025-03-01")
 
-        for previous, following in zip(folds, folds[1:]):
+        for previous, following in pairwise(folds):
             assert previous.test_end == following.test_start
 
     def test_last_window_ends_one_day_past_the_data(self, dated_df):
@@ -98,10 +100,14 @@ class TestSplitFoldsCommand:
         result = runner.invoke(
             app,
             [
-                "--input-path", str(preprocessed),
-                "--output-dir", str(out),
-                "--variants", "all",
-                "--cut-points", "2025-02-01,2025-02-20,2025-03-10",
+                "--input-path",
+                str(preprocessed),
+                "--output-dir",
+                str(out),
+                "--variants",
+                "all",
+                "--cut-points",
+                "2025-02-01,2025-02-20,2025-03-10",
             ],
         )
         assert result.exit_code == 0, result.output
@@ -160,11 +166,16 @@ class TestSplitFoldsCommand:
         result = runner.invoke(
             app,
             [
-                "--input-path", str(preprocessed),
-                "--output-dir", str(out),
-                "--variants", "noweather",
-                "--cut-points", "2025-03-01",
-                "--val-frac", "0",
+                "--input-path",
+                str(preprocessed),
+                "--output-dir",
+                str(out),
+                "--variants",
+                "noweather",
+                "--cut-points",
+                "2025-03-01",
+                "--val-frac",
+                "0",
             ],
         )
 
@@ -178,11 +189,16 @@ class TestSplitFoldsCommand:
         result = runner.invoke(
             app,
             [
-                "--input-path", str(preprocessed),
-                "--output-dir", str(out),
-                "--variants", "all",
-                "--variants", "noweather",
-                "--cut-points", "2025-03-01",
+                "--input-path",
+                str(preprocessed),
+                "--output-dir",
+                str(out),
+                "--variants",
+                "all",
+                "--variants",
+                "noweather",
+                "--cut-points",
+                "2025-03-01",
             ],
         )
 
@@ -194,9 +210,12 @@ class TestSplitFoldsCommand:
         result = runner.invoke(
             app,
             [
-                "--input-path", str(tmp_path / "absent.parquet"),
-                "--output-dir", str(tmp_path / "out"),
-                "--cut-points", "2025-03-01",
+                "--input-path",
+                str(tmp_path / "absent.parquet"),
+                "--output-dir",
+                str(tmp_path / "out"),
+                "--cut-points",
+                "2025-03-01",
             ],
         )
 
@@ -206,10 +225,14 @@ class TestSplitFoldsCommand:
         result = runner.invoke(
             app,
             [
-                "--input-path", str(preprocessed),
-                "--output-dir", str(tmp_path / "out"),
-                "--variants", "all",
-                "--cut-points", "2030-01-01",
+                "--input-path",
+                str(preprocessed),
+                "--output-dir",
+                str(tmp_path / "out"),
+                "--variants",
+                "all",
+                "--cut-points",
+                "2030-01-01",
             ],
         )
 

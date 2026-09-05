@@ -151,8 +151,7 @@ def predict(
 
     with_weather = has_weather(df)
     logger.info(
-        f"{int(with_weather.sum())} flights with weather, "
-        f"{int((~with_weather).sum())} without"
+        f"{int(with_weather.sum())} flights with weather, {int((~with_weather).sum())} without"
     )
 
     parts = []
@@ -167,6 +166,7 @@ def predict(
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
+
 
 @app.command()
 def run(
@@ -198,9 +198,7 @@ def run(
         raise FileNotFoundError(f"No dataframe file found at {input_path}")
 
     df = (
-        pd.read_parquet(input_path)
-        if input_path.suffix == ".parquet"
-        else pd.read_csv(input_path)
+        pd.read_parquet(input_path) if input_path.suffix == ".parquet" else pd.read_csv(input_path)
     )
     logger.info(f"Scoring {len(df)} flights from {input_path}")
 

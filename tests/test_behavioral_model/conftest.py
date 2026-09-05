@@ -60,8 +60,7 @@ def _find_last_fold(variant: str):
 
 
 def _read_sample(path, n_rows: int) -> pd.DataFrame:
-    """Read up to n_rows spread across the file's row groups.
-    """
+    """Read up to n_rows spread across the file's row groups."""
     parquet = pq.ParquetFile(path)
     stride = max(1, parquet.metadata.num_row_groups // 8)
 
@@ -85,9 +84,7 @@ def registry():
         )
 
     try:
-        dagshub.init(
-            repo_owner=DAGSHUB_REPO_OWNER, repo_name=DAGSHUB_REPO_NAME, mlflow=True
-        )
+        dagshub.init(repo_owner=DAGSHUB_REPO_OWNER, repo_name=DAGSHUB_REPO_NAME, mlflow=True)
     except Exception as error:
         pytest.skip(f"could not reach the MLflow registry: {error}")
 
@@ -100,9 +97,7 @@ def _load_bundle(variant: str, registry):
 
     registered_name = f"flight-delay-{variant}"
     try:
-        estimator, transformer, columns, run_id = load_model_bundle(
-            registered_name, stage=ALIAS
-        )
+        estimator, transformer, columns, run_id = load_model_bundle(registered_name, stage=ALIAS)
     except Exception as error:
         pytest.skip(f"no '{ALIAS}' version of {registered_name}: {error}")
 

@@ -12,7 +12,6 @@ from predicting_flight_arrival_delays.data.transform import Transformer, encode_
 
 JFK_LAX = {
     "Month": 3,
-    "DayofMonth": 12,
     "DayOfWeek": 4,
     "FlightDate": "2026-03-12",
     "IsHoliday": 0,
@@ -77,7 +76,6 @@ def make_bundle(make_flights):
             columns=list(X_fit.columns),
             run_id=f"run-{variant}",
             threshold=threshold,
-
             params={
                 "variant": variant,
                 "algorithm": "lightgbm",
@@ -121,7 +119,6 @@ def body(today):
         dated = {
             "FlightDate": flight_date.isoformat(),
             "Month": flight_date.month,
-            "DayofMonth": flight_date.day,
             "DayOfWeek": flight_date.weekday() + 1,
         }
         return JFK_LAX | dated | overrides

@@ -21,8 +21,10 @@ def leg(origin: str, dest: str | None, hour: int = 7) -> dict:
         "number": "AA 3500",
         "departure": {
             "airport": {"iata": origin, "countryCode": "us"},
-            "scheduledTime": {"utc": f"2026-08-25 {hour + 5:02d}:00Z",
-                              "local": f"2026-08-25 {hour:02d}:00-05:00"},
+            "scheduledTime": {
+                "utc": f"2026-08-25 {hour + 5:02d}:00Z",
+                "local": f"2026-08-25 {hour:02d}:00-05:00",
+            },
         },
         "arrival": {
             "airport": {"iata": dest, "countryCode": "us"} if dest else {},
@@ -128,12 +130,15 @@ class TestRateLimiting:
 
 class TestCountMovements:
     def departures(self, *country_codes) -> FakeResponse:
-        return FakeResponse(200, {
-            "departures": [
-                {"movement": {"airport": {"iata": "XXX", "countryCode": cc}}}
-                for cc in country_codes
-            ]
-        })
+        return FakeResponse(
+            200,
+            {
+                "departures": [
+                    {"movement": {"airport": {"iata": "XXX", "countryCode": cc}}}
+                    for cc in country_codes
+                ]
+            },
+        )
 
     def test_only_flights_with_both_ends_on_us_soil_are_counted(self, responses):
         responses(self.departures("us", "us", "gb", "fr", "mx"))
@@ -167,10 +172,15 @@ class TestCountMovements:
         assert calls[0][1]["withCodeshared"] == "false"
 
     def test_arrivals_are_read_from_their_own_key(self, responses):
-        responses(FakeResponse(200, {
-            "arrivals": [{"movement": {"airport": {"iata": "ATL", "countryCode": "us"}}}],
-            "departures": [],
-        }))
+        responses(
+            FakeResponse(
+                200,
+                {
+                    "arrivals": [{"movement": {"airport": {"iata": "ATL", "countryCode": "us"}}}],
+                    "departures": [],
+                },
+            )
+        )
 
         assert count_movements("LBB", "2026-08-25 08:00", arriving=True) == 1
 

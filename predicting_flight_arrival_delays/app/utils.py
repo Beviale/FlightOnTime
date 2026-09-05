@@ -30,8 +30,7 @@ THRESHOLD_METRIC = "operating_threshold"
 
 @dataclass(frozen=True)
 class Bundle:
-    """One served model, with everything needed to score a flight with it.
-    """
+    """One served model, with everything needed to score a flight with it."""
 
     variant: str
     model: Any
@@ -174,8 +173,7 @@ def get_required_inputs(request: Request) -> set[str]:
 
 
 def construct_response(f):
-    """Wrap an endpoint's result in the API's common envelope.
-    """
+    """Wrap an endpoint's result in the API's common envelope."""
 
     @wraps(f)
     def wrap(request: Request, *args, **kwargs):

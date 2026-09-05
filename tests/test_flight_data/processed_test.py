@@ -1,5 +1,4 @@
-"""Great Expectations suite for data/interim/flights_preprocessed.parquet
-"""
+"""Great Expectations suite for data/interim/flights_preprocessed.parquet"""
 
 from datetime import datetime
 
@@ -8,10 +7,10 @@ import pytest
 from util import SAMPLE_ROWS, failures, load_parquet_sample, show_results, validate
 
 from predicting_flight_arrival_delays.config import (
+    DATE_COLUMN,
     INTERIM_DATA_DIR,
     MAX_LEAD_DAYS,
     WEATHER_COLUMNS,
-    DATE_COLUMN,
 )
 
 DATA_PATH = INTERIM_DATA_DIR / "flights_preprocessed.parquet"
@@ -21,26 +20,64 @@ WEATHER_DEST = [c + "Dest" for c in WEATHER_COLUMNS]
 
 
 EXPECTED_COLUMNS = [
-    "Month", "DayOfWeek", DATE_COLUMN,
-    "ReportingAirline", "TailNumber", "FlightNumberReportingAirline",
-    "OriginAirportID", "Origin", "OriginCityName", "OriginState",
-    "DestAirportID", "Dest", "DestCityName", "DestState",
-    "CRSDepTime", "CRSArrTime", "CRSElapsedTime", "Distance", "DistanceGroup",
-    "OriginCongestion", "DestCongestion", "IsDelayed",
-    "DepHour", "DepTimeDecimal", "ArrHour", "ArrTimeDecimal",
-    "IsHoliday", "DaysToNearestHoliday",
-    "AircraftDailyLegs", "LegPosition", "LeadDays",
-    "DepUtcHour", "ArrUtcHour", "ScheduledTurnaround",
-    "OriginCarrier", "DestCarrier",
+    "Month",
+    "DayOfWeek",
+    DATE_COLUMN,
+    "ReportingAirline",
+    "TailNumber",
+    "FlightNumberReportingAirline",
+    "OriginAirportID",
+    "Origin",
+    "OriginCityName",
+    "OriginState",
+    "DestAirportID",
+    "Dest",
+    "DestCityName",
+    "DestState",
+    "CRSDepTime",
+    "CRSArrTime",
+    "CRSElapsedTime",
+    "Distance",
+    "DistanceGroup",
+    "OriginCongestion",
+    "DestCongestion",
+    "IsDelayed",
+    "DepHour",
+    "DepTimeDecimal",
+    "ArrHour",
+    "ArrTimeDecimal",
+    "IsHoliday",
+    "DaysToNearestHoliday",
+    "AircraftDailyLegs",
+    "LegPosition",
+    "LeadDays",
+    "DepUtcHour",
+    "ArrUtcHour",
+    "ScheduledTurnaround",
+    "OriginCarrier",
+    "DestCarrier",
     *WEATHER_ORIGIN,
     *WEATHER_DEST,
 ]
 
 NEVER_NULL = [
-    DATE_COLUMN, "Origin", "Dest", "ReportingAirline", "TailNumber",
-    "OriginAirportID", "DestAirportID", "CRSDepTime", "CRSArrTime",
-    "Distance", "IsDelayed", "LeadDays", "DaysToNearestHoliday",
-    "OriginCongestion", "DestCongestion", "AircraftDailyLegs", "LegPosition",
+    DATE_COLUMN,
+    "Origin",
+    "Dest",
+    "ReportingAirline",
+    "TailNumber",
+    "OriginAirportID",
+    "DestAirportID",
+    "CRSDepTime",
+    "CRSArrTime",
+    "Distance",
+    "IsDelayed",
+    "LeadDays",
+    "DaysToNearestHoliday",
+    "OriginCongestion",
+    "DestCongestion",
+    "AircraftDailyLegs",
+    "LegPosition",
 ]
 
 
@@ -54,8 +91,7 @@ def build_expectations() -> list:
     ]
 
     expectations += [
-        gx.expectations.ExpectColumnValuesToNotBeNull(column=column)
-        for column in NEVER_NULL
+        gx.expectations.ExpectColumnValuesToNotBeNull(column=column) for column in NEVER_NULL
     ]
 
     # --- Target
@@ -83,9 +119,7 @@ def build_expectations() -> list:
 
     # --- Airport-carrier pairs
     expectations += [
-        gx.expectations.ExpectColumnValuesToMatchRegex(
-            column=column, regex=r"^\d{5}[A-Z0-9]{2}$"
-        )
+        gx.expectations.ExpectColumnValuesToMatchRegex(column=column, regex=r"^\d{5}[A-Z0-9]{2}$")
         for column in ("OriginCarrier", "DestCarrier")
     ]
 
@@ -166,9 +200,7 @@ def build_expectations() -> list:
             gx.expectations.ExpectColumnValuesToBeBetween(
                 column=snowfall, min_value=0, max_value=500
             ),
-            gx.expectations.ExpectColumnValuesToBeBetween(
-                column=wind, min_value=0, max_value=200
-            ),
+            gx.expectations.ExpectColumnValuesToBeBetween(column=wind, min_value=0, max_value=200),
             gx.expectations.ExpectColumnValuesToBeBetween(
                 column=gusts, min_value=0, max_value=300
             ),

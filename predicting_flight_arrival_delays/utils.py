@@ -31,7 +31,6 @@ def to_pascal_case(name: str) -> str:
     return "".join(part[:1].upper() + part[1:] if part else "" for part in parts)
 
 
-
 def safe_relative_path(path: Path) -> str:
     """Safely format a file path relative to current working directory if possible.
 
@@ -45,12 +44,11 @@ def safe_relative_path(path: Path) -> str:
         return str(path.relative_to(Path.cwd()))
     except ValueError:
         return str(path)
-    
 
 
 def fetch(url: str, params: dict, timeout=180) -> dict:
     """Send a GET request to an endpoint and return the decoded JSON.
-    
+
     Args:
         url: Endpoint to call.
         params: Query parameters, passed through to requests.
@@ -70,7 +68,8 @@ def fetch(url: str, params: dict, timeout=180) -> dict:
 # MLflow model bundles: model + transformer + training columns, registered and
 # recovered as one self-contained unit.
 # ---------------------------------------------------------------------------
- 
+
+
 def register_model_bundle(
     model: Any,
     transformer: Any,
@@ -83,13 +82,13 @@ def register_model_bundle(
     feature_means: dict[str, float] | None = None,
 ) -> None:
     """Log a model together with its transformer and training columns as one bundle.
- 
+
     Must be called inside an active MLflow run (i.e. within an
     `mlflow.start_run()` block). transformer and columns are logged into the SAME
     artifact_path as the model itself - not loosely on the run - so a registered
     model version is self-contained: everything needed to prepare data for it is
     recoverable from the registry alone.
- 
+
     Args:
         model: Fitted, scikit-learn-compatible estimator to register. Must expose
             predict_proba if signature_sample is given.
@@ -114,7 +113,7 @@ def register_model_bundle(
     with tempfile.TemporaryDirectory() as tmp:
         transformer_path = Path(tmp) / "transformer.joblib"
         columns_path = Path(tmp) / "columns.json"
- 
+
         transformer.save(transformer_path)
         columns_path.write_text(json.dumps(list(columns)))
 
@@ -125,14 +124,14 @@ def register_model_bundle(
         means_path = Path(tmp) / "feature_means.json"
         if feature_means:
             means_path.write_text(json.dumps(feature_means))
- 
+
         signature, input_example = None, None
         if signature_sample is not None:
             signature = infer_signature(
                 signature_sample, model.predict_proba(signature_sample)[:, 1]
             )
             input_example = signature_sample.head(5)
- 
+
         model_info = mlflow.sklearn.log_model(
             model,
             artifact_path=artifact_path,
@@ -146,39 +145,37 @@ def register_model_bundle(
             mlflow.log_artifact(str(importance_path), artifact_path=artifact_path)
         if feature_means:
             mlflow.log_artifact(str(means_path), artifact_path=artifact_path)
- 
+
         if alias is not None:
             client = mlflow.MlflowClient()
             client.set_registered_model_alias(
                 registered_model_name, alias, model_info.registered_model_version
             )
- 
- 
+
+
 def _resolve_run_id(registered_model_name: str, stage: str) -> str:
     """Resolve the run that produced a registered model version.
- 
+
     Args:
         registered_model_name: Name the model version was registered under.
         stage: Registry stage or version alias. "None" or "" resolves to the
             latest version instead.
- 
+
     Returns:
         The run id that logged that model version.
- 
+
     Raises:
         FileNotFoundError: If no registered version exists.
     """
     client = mlflow.MlflowClient()
- 
+
     if stage not in ("None", ""):
         return client.get_model_version_by_alias(registered_model_name, stage).run_id
- 
+
     versions = client.search_model_versions(f"name='{registered_model_name}'")
     if not versions:
         raise FileNotFoundError(f"No registered versions found for {registered_model_name}")
     return max(versions, key=lambda v: int(v.version)).run_id
- 
-
 
 
 def load_model_bundle(
@@ -187,36 +184,37 @@ def load_model_bundle(
     artifact_path: str = "model",
 ) -> tuple[Any, Any, list[str], str]:
     """Load a model, its transformer and training columns, all from the registry.
- 
+
     Args:
         registered_model_name: Name the model version was registered under.
         stage: Registry stage or version alias to resolve. "None" (MLflow's
             default for unstaged models) resolves to the latest version.
         artifact_path: Must match the artifact_path used in register_model_bundle.
- 
+
     Returns:
         (estimator, transformer, columns, run_id), columns in training order.
         run_id is returned so callers can read back other params/tags logged on
         that run (e.g. "variant").
- 
+
     Raises:
         FileNotFoundError: If no registered version exists.
     """
     run_id = _resolve_run_id(registered_model_name, stage)
- 
+
     model = mlflow.sklearn.load_model(f"runs:/{run_id}/{artifact_path}")
- 
+
     transformer_path = mlflow.artifacts.download_artifacts(
         f"runs:/{run_id}/{artifact_path}/transformer.joblib"
     )
     transformer = joblib.load(transformer_path)
- 
+
     columns_path = mlflow.artifacts.download_artifacts(
         f"runs:/{run_id}/{artifact_path}/columns.json"
     )
     columns = json.loads(Path(columns_path).read_text())
- 
+
     return model, transformer, columns, run_id
+
 
 def load_bundle_importance(run_id: str, artifact_path: str = "model") -> dict[str, float]:
     """Return the importance saved in the bundle.
@@ -286,10 +284,10 @@ def get_run_metrics(run_id: str) -> dict[str, float]:
     return mlflow.MlflowClient().get_run(run_id).data.metrics
 
 
-
 # ---------------------------------------------------------------------------
 # DVC
 # ---------------------------------------------------------------------------
+
 
 def get_dvc_data_hash(
     output_path: str | Path, dvc_lock_path: Path = PROJ_ROOT / "dvc.lock"
@@ -330,6 +328,7 @@ def get_dvc_data_hash(
     except Exception as e:
         logger.exception(f"Could not resolve DVC hash: {e}")
     return "not_found"
+
 
 # ---------------------------------------------------------------------------
 # GIT

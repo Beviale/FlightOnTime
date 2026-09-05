@@ -47,7 +47,7 @@ class Transformer:
     mi_sample_size: mutual information is expensive on millions of rows; it is estimated
         on a random sample of this size.
     seed: seed to use for random operations.
-    label_columns: columns that are numbers on paper but labels in fact.   
+    label_columns: columns that are numbers on paper but labels in fact.
     rate_only_columns: categoricals the model sees only as their historical delay
         rate, under every encoding. The identity behind the rate is dropped.
     cyclical_columns: columns that wrap, mapped to the length of one turn. Each is
@@ -55,7 +55,7 @@ class Transformer:
     max_onehot_categories: a categorical holding more values than this is not worth a
         column per category. It is given a historical delay rate like the columns
         below, and under onehot encoding the original is then dropped.
-    delay_rate_columns: Columns used to derive historical delay-rate features. 
+    delay_rate_columns: Columns used to derive historical delay-rate features.
         Original columns are retained regardless of their width or encoding assigned to the model. Optional.
     delay_rate_shrinkage: shrinkage strength (the "k" in
         (sum + k*global_rate) / (count + k)) pulling rare categories' rates toward
@@ -85,12 +85,8 @@ class Transformer:
     scaler: StandardScaler | None = field(default=None, init=False)
     dropped_features: list[str] = field(default_factory=list, init=False)
 
-    rate_only_columns: list[str] = field(
-        default_factory=lambda: list(RATE_ONLY_COLUMNS)
-    )
-    cyclical_columns: dict[str, float] = field(
-        default_factory=lambda: dict(CYCLICAL_COLUMNS)
-    )
+    rate_only_columns: list[str] = field(default_factory=lambda: list(RATE_ONLY_COLUMNS))
+    cyclical_columns: dict[str, float] = field(default_factory=lambda: dict(CYCLICAL_COLUMNS))
     delay_rate_columns: list[str] = field(default_factory=list)
     delay_rate_shrinkage: float = 50.0
     delay_rate_stats_: dict[str, dict[str, pd.Series]] = field(default_factory=dict, init=False)
@@ -177,8 +173,11 @@ class Transformer:
             logger.info(
                 f"Too wide to one-hot (over {self.max_onehot_categories} values): {wide}. "
                 f"They are kept as a delay rate"
-                + (", and as themselves under native encoding." if self.encoding == "native"
-                   else " only, the original being dropped.")
+                + (
+                    ", and as themselves under native encoding."
+                    if self.encoding == "native"
+                    else " only, the original being dropped."
+                )
             )
         return wide
 
@@ -200,12 +199,12 @@ class Transformer:
         """
         doomed = [c for c in self.rate_only_columns if c in df.columns]
         if self.encoding == "onehot":
-            doomed += [
-                c for c in self.wide_columns_ if c in df.columns and c not in doomed
-            ]
+            doomed += [c for c in self.wide_columns_ if c in df.columns and c not in doomed]
         return df.drop(columns=doomed)
 
-    def _fit_delay_rates_internal(self, X: pd.DataFrame, y: pd.Series, dates: pd.Series) -> pd.DataFrame:
+    def _fit_delay_rates_internal(
+        self, X: pd.DataFrame, y: pd.Series, dates: pd.Series
+    ) -> pd.DataFrame:
         """Learn per-category historical delay rates, with shrinkage for rare ones.
 
         Args:
@@ -311,9 +310,7 @@ class Transformer:
         if not self._categorical_columns_given:
             self.categorical_columns = [c for c in df.columns if df[c].dtype == object]
         if not self._numeric_columns_given:
-            self.numeric_columns = list(
-                df.select_dtypes(include=["number", "bool"]).columns
-            )
+            self.numeric_columns = list(df.select_dtypes(include=["number", "bool"]).columns)
 
         for col in self.categorical_columns:
             counts = df[col].value_counts()
@@ -432,15 +429,11 @@ class Transformer:
             logger.info(f"Constant, dropped: {constant}")
         dropped.extend(constant)
 
-        numeric_cols = [
-            c for c in self.numeric_columns if c in X.columns and c not in constant
-        ]
+        numeric_cols = [c for c in self.numeric_columns if c in X.columns and c not in constant]
         categorical_cols = [
             c for c in self.categorical_columns if c in X.columns and c not in constant
         ]
-        categorical_cols = sorted(
-            categorical_cols, key=lambda c: X[c].nunique(), reverse=True
-        )
+        categorical_cols = sorted(categorical_cols, key=lambda c: X[c].nunique(), reverse=True)
 
         correlated: list[str] = []
         if len(numeric_cols) > 1:
@@ -476,18 +469,14 @@ class Transformer:
 
         remaining_numeric = [c for c in numeric_cols if c not in dropped]
         if remaining_numeric:
-            mi = mutual_info_classif(
-                X_samp[remaining_numeric], y_samp, random_state=self.seed
-            )
+            mi = mutual_info_classif(X_samp[remaining_numeric], y_samp, random_state=self.seed)
             uninformative.extend(
                 c for c, score in zip(remaining_numeric, mi) if score < self.min_mutual_info
             )
 
         remaining_categorical = [c for c in categorical_cols if c not in dropped]
         if remaining_categorical:
-            codes = X_samp[remaining_categorical].apply(
-                lambda s: s.astype("category").cat.codes
-            )
+            codes = X_samp[remaining_categorical].apply(lambda s: s.astype("category").cat.codes)
             mi = mutual_info_classif(codes, y_samp, discrete_features=True, random_state=self.seed)
             uninformative.extend(
                 c for c, score in zip(remaining_categorical, mi) if score < self.min_mutual_info
@@ -687,9 +676,7 @@ def align_columns(
         test = test.copy()
         for c in train.columns:
             if isinstance(train[c].dtype, pd.CategoricalDtype):
-                test[c] = test[c].astype(
-                    pd.CategoricalDtype(categories=train[c].cat.categories)
-                )
+                test[c] = test[c].astype(pd.CategoricalDtype(categories=train[c].cat.categories))
         return train, test[train.columns]
 
     missing = [c for c in train.columns if c not in test.columns]

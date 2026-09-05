@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import subprocess
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,7 @@ import pytest
 import yaml
 
 from predicting_flight_arrival_delays import utils
+from predicting_flight_arrival_delays.config import DATE_COLUMN
 from predicting_flight_arrival_delays.utils import (
     fetch,
     get_dvc_data_hash,
@@ -17,7 +19,6 @@ from predicting_flight_arrival_delays.utils import (
     safe_relative_path,
     to_pascal_case,
 )
-from predicting_flight_arrival_delays.config import DATE_COLUMN
 
 
 class TestToPascalCase:
@@ -197,7 +198,7 @@ class _FakeModelInfo:
 
 
 class _FakeClient:
-    aliases: list[tuple] = []
+    aliases: ClassVar[list[tuple]] = []
 
     def set_registered_model_alias(self, name, alias, version):
         _FakeClient.aliases.append((name, alias, version))
@@ -254,9 +255,7 @@ class TestRegisterModelBundle:
 
         return RecordingTransformer()
 
-    def test_logs_transformer_and_columns_beside_the_model(
-        self, fake_mlflow, transformer
-    ):
+    def test_logs_transformer_and_columns_beside_the_model(self, fake_mlflow, transformer):
         """Everything needed to prepare data lands under the model's artifact path."""
         utils.register_model_bundle(
             model=object(),
@@ -335,9 +334,7 @@ class TestRegisterModelBundleSignature:
                 pass
 
         monkeypatch.setattr(utils, "mlflow", FakeMlflow)
-        monkeypatch.setattr(
-            utils, "infer_signature", lambda X, y: {"inputs": list(X.columns)}
-        )
+        monkeypatch.setattr(utils, "infer_signature", lambda X, y: {"inputs": list(X.columns)})
         return record
 
     @pytest.fixture

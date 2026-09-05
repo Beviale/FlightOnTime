@@ -75,7 +75,6 @@ def build_lookup_tab() -> None:
     predict = gr.Button("Estimate the risk of delay", variant="primary")
     answer = gr.Markdown()
 
-
     contributions = gr.Plot(show_label=False)
 
     predict.click(
@@ -108,8 +107,7 @@ def build() -> gr.Blocks:
     """
     with gr.Blocks(title="FlightOnTime") as interface:
         gr.Markdown(
-            "# ✈️ FlightOnTime\n"
-            "Arrival delay risk for scheduled U.S. flights, before departure."
+            "# ✈️ FlightOnTime\nArrival delay risk for scheduled U.S. flights, before departure."
         )
 
         with gr.Tabs():
@@ -120,9 +118,7 @@ def build() -> gr.Blocks:
                 build_batch_tab()
 
             with gr.TabItem("Metrics"):
-                gr.Markdown(
-                    "How the served models scored when they were released."
-                )
+                gr.Markdown("How the served models scored when they were released.")
                 metrics = gr.Markdown()
                 interface.load(fn=wrapper.get_metrics, outputs=metrics)
 

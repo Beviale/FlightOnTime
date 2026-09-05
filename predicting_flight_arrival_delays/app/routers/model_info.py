@@ -1,5 +1,4 @@
-"""What the served models are, what a request has to tell them, and swapping them.
-"""
+"""What the served models are, what a request has to tell them, and swapping them."""
 
 from http import HTTPStatus
 import os
@@ -89,8 +88,7 @@ def served(request: Request, variant: str | None) -> dict[str, Bundle]:
 @router.get("/model/hyperparameters")
 @construct_response
 def hyperparameters(request: Request, variant: str | None = Variant):
-    """Report how each served model was configured and trained.
-    """
+    """Report how each served model was configured and trained."""
     data: dict[str, Any] = {}
     for name, bundle in served(request, variant).items():
         tuned = {
@@ -114,8 +112,7 @@ def hyperparameters(request: Request, variant: str | None = Variant):
 @router.get("/model/metrics")
 @construct_response
 def metrics(request: Request, variant: str | None = Variant):
-    """Report how each served model scored when it was released.
-    """
+    """Report how each served model scored when it was released."""
     data: dict[str, Any] = {
         name: {
             "run_id": bundle.run_id,

@@ -1,5 +1,4 @@
-"""Model evaluation.
-"""
+"""Model evaluation."""
 
 import json
 from pathlib import Path
@@ -45,7 +44,7 @@ def evaluate(
     estimator: BaseEstimator,
     threshold: float | None = None,
     fbeta: float = 1.0,
-    ) -> dict[str, float]:
+) -> dict[str, float]:
     """Evaluate a trained model on an evaluation dataset.
 
     Args:
@@ -53,9 +52,9 @@ def evaluate(
             estimator was trained on.
         y_test: Evaluation target, aligned with X_test.
         estimator: Trained scikit-learn or LightGBM model instance.
-        threshold: Decision threshold for binary classification. 
+        threshold: Decision threshold for binary classification.
             Default to None. If None the threshold-based metrics are not computed.
-        fbeta: The beta in the F-beta score. Default to 1.0.    
+        fbeta: The beta in the F-beta score. Default to 1.0.
     Returns:
         Dictionary containing evaluated classification metrics.
     """
@@ -73,7 +72,7 @@ def evaluate(
             "threshold": float(threshold),
         }
     else:
-         return {
+        return {
             "roc_auc": float(roc_auc_score(y_test, y_prob)),
             "pr_auc": float(average_precision_score(y_test, y_prob)),
             "brier": float(brier_score_loss(y_test, y_prob)),
@@ -125,15 +124,9 @@ def evaluate_from_local_path(
     model_path: Path = typer.Option(
         ..., help="Path to saved model directory (models_path/variant/model__config)"
     ),
-    evaluate_df_path: Path = typer.Option(
-        ..., help="Path to evaluation Parquet dataset"
-    ),
-    output_path: Path = typer.Option(
-        METRICS_DIR, help="Base output directory for JSON metrics"
-    ),
-    threshold: float = typer.Option(
-        0.5, help="Decision threshold for classification metrics"
-    ),
+    evaluate_df_path: Path = typer.Option(..., help="Path to evaluation Parquet dataset"),
+    output_path: Path = typer.Option(METRICS_DIR, help="Base output directory for JSON metrics"),
+    threshold: float = typer.Option(0.5, help="Decision threshold for classification metrics"),
 ) -> dict[str, float]:
     """Load a locally saved model artifact, evaluate it, and write metrics JSON.
 
@@ -152,11 +145,15 @@ def evaluate_from_local_path(
     """
     try:
         if not evaluate_df_path.exists():
-            raise FileNotFoundError(f"Evaluation file not found at {safe_relative_path(evaluate_df_path)}")
+            raise FileNotFoundError(
+                f"Evaluation file not found at {safe_relative_path(evaluate_df_path)}"
+            )
 
         evaluate_df = pd.read_parquet(evaluate_df_path)
         if evaluate_df.empty:
-            raise ValueError(f"Evaluation dataframe at {safe_relative_path(evaluate_df_path)} is empty")
+            raise ValueError(
+                f"Evaluation dataframe at {safe_relative_path(evaluate_df_path)} is empty"
+            )
 
         model_file = model_path / "model.joblib"
         transformer_file = model_path / "transformer.joblib"
@@ -164,7 +161,9 @@ def evaluate_from_local_path(
         if not model_file.exists():
             raise FileNotFoundError(f"Model file not found at {safe_relative_path(model_file)}")
         if not transformer_file.exists():
-            raise FileNotFoundError(f"Transformer file not found at {safe_relative_path(transformer_file)}")
+            raise FileNotFoundError(
+                f"Transformer file not found at {safe_relative_path(transformer_file)}"
+            )
 
         try:
             model, config = model_path.name.split("__")
@@ -205,19 +204,14 @@ def evaluate_from_mlflow(
     registered_model_name: str = typer.Option(
         ..., help="MLflow registered model name (e.g. 'flight-delay-all')"
     ),
-    evaluate_df_path: Path = typer.Option(
-        ..., help="Path to evaluation Parquet dataset"
-    ),
+    evaluate_df_path: Path = typer.Option(..., help="Path to evaluation Parquet dataset"),
     stage: str = typer.Option(
-        "None", help="Registry stage or alias to resolve (e.g. 'champion'). "
-        "'None' resolves to the latest registered version."
+        "None",
+        help="Registry stage or alias to resolve (e.g. 'champion'). "
+        "'None' resolves to the latest registered version.",
     ),
-    output_path: Path = typer.Option(
-        METRICS_DIR, help="Base output directory for JSON metrics"
-    ),
-    threshold: float = typer.Option(
-        0.5, help="Decision threshold for classification metrics"
-    ),
+    output_path: Path = typer.Option(METRICS_DIR, help="Base output directory for JSON metrics"),
+    threshold: float = typer.Option(0.5, help="Decision threshold for classification metrics"),
     repo_owner: str = typer.Option(DAGSHUB_REPO_OWNER, help="DagsHub repository owner"),
     repo_name: str = typer.Option(DAGSHUB_REPO_NAME, help="DagsHub repository name"),
 ) -> dict[str, float]:
@@ -231,25 +225,25 @@ def evaluate_from_mlflow(
         threshold: Threshold used for converting probabilities to binary predictions.
         repo_owner: DagsHub repository owner, used to route MLflow tracking.
         repo_name: DagsHub repository name, used to route MLflow tracking.
- 
+
     Returns:
         Dictionary containing computed evaluation metrics.
     """
     try:
         if not evaluate_df_path.exists():
             raise FileNotFoundError(f"Evaluation file not found at {evaluate_df_path}")
-    
+
         evaluate_df = pd.read_parquet(evaluate_df_path)
         if evaluate_df.empty:
             raise ValueError(f"Evaluation dataframe at {evaluate_df_path} is empty")
-    
+
         dagshub.init(repo_owner=repo_owner, repo_name=repo_name, mlflow=True)
-    
+
         logger.info(f"Loading '{registered_model_name}' (stage='{stage}') from MLflow registry...")
         estimator, transformer, training_columns, run_id = load_model_bundle(
             registered_model_name, stage=stage
         )
-    
+
         variant = get_run_params(run_id)["variant"]
 
         logger.info(
@@ -258,16 +252,16 @@ def evaluate_from_mlflow(
         metrics = _evaluate_on_dataframe(
             evaluate_df, variant, estimator, transformer, training_columns, threshold
         )
-    
+
         out_path = output_path / variant / f"{registered_model_name}__{stage}.json"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-    
+
         logger.success(
             f"{registered_model_name} (stage='{stage}'): ROC-AUC {metrics['roc_auc']:.3f}, "
             f"PR-AUC {metrics['pr_auc']:.3f}, Brier {metrics['brier']:.3f} -> {out_path}"
         )
-    
+
         return metrics
     except Exception as e:
         logger.exception(f"An error occurred while evaluating the model: {e}")

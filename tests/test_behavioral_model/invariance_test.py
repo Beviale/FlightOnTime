@@ -1,5 +1,4 @@
-"""Invariance tests: changes that must not move a prediction.
-"""
+"""Invariance tests: changes that must not move a prediction."""
 
 import numpy as np
 import pytest
@@ -51,9 +50,7 @@ class TestBatchIndependence:
     def test_splitting_a_batch_in_half_changes_nothing(self, model, sample):
         half = len(sample) // 2
         whole = model.score(sample)
-        halves = np.concatenate(
-            [model.score(sample.iloc[:half]), model.score(sample.iloc[half:])]
-        )
+        halves = np.concatenate([model.score(sample.iloc[:half]), model.score(sample.iloc[half:])])
 
         np.testing.assert_allclose(whole, halves, atol=1e-9, err_msg=model.name)
 
@@ -61,9 +58,7 @@ class TestBatchIndependence:
         reindexed = sample.copy()
         reindexed.index = np.arange(500_000, 500_000 + len(reindexed))
 
-        np.testing.assert_allclose(
-            model.score(sample), model.score(reindexed), err_msg=model.name
-        )
+        np.testing.assert_allclose(model.score(sample), model.score(reindexed), err_msg=model.name)
 
 
 class TestIrrelevantFeatures:

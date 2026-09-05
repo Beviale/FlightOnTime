@@ -146,7 +146,6 @@ def register_winner(
     all_folds = all_fold_dirs(variant)
     fold_dir = all_folds[-1]  # the last fold: used for Step 2, the model registration
 
-
     with mlflow.start_run(run_name=f"{variant}__final__{algorithm}"):
         # --- Step 1: evaluation, averaged across every fold
         per_fold_metrics = []
@@ -157,24 +156,35 @@ def register_winner(
             fold_test_df = pd.read_parquet(fold / "test.parquet")
 
             (
-                X_fit_f, y_fit_f, X_val_f, y_val_f, X_test_f, y_test_f,
-                transformer, feature_columns, feature_means,
+                X_fit_f,
+                y_fit_f,
+                X_val_f,
+                y_val_f,
+                X_test_f,
+                y_test_f,
+                transformer,
+                feature_columns,
+                feature_means,
             ) = prepare_fold(
-                fold_train_df, encoding, test_df=fold_test_df,
-                validation_df=fold_validation_df, resample=resample,
+                fold_train_df,
+                encoding,
+                test_df=fold_test_df,
+                validation_df=fold_validation_df,
+                resample=resample,
             )
             fold_model = train_model(
                 X_fit_f, y_fit_f, algorithm, config, calibrate, X_val=X_val_f, y_val=y_val_f
             )
-            fold_threshold = choose_threshold(y_val_f, fold_model.predict_proba(X_val_f)[:, 1], 1.2)
+            fold_threshold = choose_threshold(
+                y_val_f, fold_model.predict_proba(X_val_f)[:, 1], 1.2
+            )
             per_fold_metrics.append(
                 evaluate.evaluate(X_test_f, y_test_f, fold_model, fold_threshold, 1.2)
             )
             per_fold_baseline.append(float(y_test_f.mean()))
 
         metrics = {
-            k: float(np.mean([m[k] for m in per_fold_metrics]))
-            for k in per_fold_metrics[0]
+            k: float(np.mean([m[k] for m in per_fold_metrics])) for k in per_fold_metrics[0]
         }
         metrics["roc_auc_std"] = float(np.std([m["roc_auc"] for m in per_fold_metrics]))
 
@@ -191,7 +201,6 @@ def register_winner(
             )
             return
 
-
         model, final_threshold = fold_model, fold_threshold
         X_full = X_fit_f
 
@@ -206,17 +215,19 @@ def register_winner(
 
         n_features = X_full.shape[1]
 
-        mlflow.log_params({
-            "variant": variant,
-            "algorithm": algorithm,
-            "config": config,
-            "encoding": encoding,
-            "calibrated": calibrate,
-            "resample": resample,
-            "final": True,
-            "n_features": n_features,
-            **{f"hp_{k}": v for k, v in HYPERPARAMS[algorithm][config].items()},
-        })
+        mlflow.log_params(
+            {
+                "variant": variant,
+                "algorithm": algorithm,
+                "config": config,
+                "encoding": encoding,
+                "calibrated": calibrate,
+                "resample": resample,
+                "final": True,
+                "n_features": n_features,
+                **{f"hp_{k}": v for k, v in HYPERPARAMS[algorithm][config].items()},
+            }
+        )
         mlflow.log_metrics(metrics)
         mlflow.log_metric("operating_threshold", final_threshold)
 
@@ -232,15 +243,16 @@ def register_winner(
             transformer=transformer,
             columns=feature_columns,
             registered_model_name=f"flight-delay-{variant}",
-            signature_sample=X_full[:100].toarray() if hasattr(X_full, "toarray") else X_full.head(100),
+            signature_sample=X_full[:100].toarray()
+            if hasattr(X_full, "toarray")
+            else X_full.head(100),
             alias=alias,
             importance=importance,
             feature_means=feature_means,
         )
         logger.success(
             f"Registered flight-delay-{variant} ({n_features} features) "
-            f"test PR-AUC {metrics['pr_auc']:.3f}"
-            + (f", promoted as '{alias}'" if alias else "")
+            f"test PR-AUC {metrics['pr_auc']:.3f}" + (f", promoted as '{alias}'" if alias else "")
         )
 
         if models_path is not None:
@@ -259,8 +271,12 @@ def register_winner(
                 importance_file.write_text(json.dumps(importance, indent=2))
 
             logger.info(f"Model also saved locally to {safe_relative_path(model_file)}")
-            logger.info(f"Transformer also saved locally to {safe_relative_path(transformer_file)}")
-            logger.info(f"Training columns also saved locally to {safe_relative_path(columns_file)}")
+            logger.info(
+                f"Transformer also saved locally to {safe_relative_path(transformer_file)}"
+            )
+            logger.info(
+                f"Training columns also saved locally to {safe_relative_path(columns_file)}"
+            )
 
 
 @app.command()
@@ -306,8 +322,13 @@ def run(
                 f"(validation PR-AUC {winner['pr_auc_val']:.3f}, resample={resample})"
             )
             register_winner(
-                variant, algorithm, config, resample,
-                calibrate, alias=alias, models_path=models_path,
+                variant,
+                algorithm,
+                config,
+                resample,
+                calibrate,
+                alias=alias,
+                models_path=models_path,
             )
     except Exception as e:
         logger.exception(f"An error occurred while selecting the winner model: {e}")

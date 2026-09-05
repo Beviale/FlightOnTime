@@ -4,6 +4,7 @@ Gradio binds a Python function to every button and panel, and those functions li
 here. Each one takes what the widgets hold, sends a request to the service's own
 API, and turns the answer into the markdown or the table the page displays.
 """
+
 from typing import Any
 
 import httpx
@@ -109,8 +110,7 @@ def render_waterfall(terms: dict[str, Any] | None, probability: float):
     steps = (
         [("starts at", terms["base_value"])]
         + [(item["column"], item["contribution"]) for item in terms["contributions"]]
-        + [("everything else", terms["other_contribution"]),
-           ("calibration", terms["calibration"])]
+        + [("everything else", terms["other_contribution"]), ("calibration", terms["calibration"])]
     )
 
     figure, axes = plt.subplots(figsize=(8, 0.5 * len(steps) + 1.6))
@@ -127,9 +127,7 @@ def render_waterfall(terms: dict[str, Any] | None, probability: float):
     axes.set_yticks(rows)
     axes.set_yticklabels([name for name, _ in steps] + ["the answer"])
     axes.axvline(0, color="#444444", linewidth=0.8)
-    axes.set_xlabel(
-        "log-odds" if terms.get("log_odds", True) else "probability"
-    )
+    axes.set_xlabel("log-odds" if terms.get("log_odds", True) else "probability")
     axes.set_title(f"How this answer was reached — {probability:.1%}")
     axes.spines[["top", "right"]].set_visible(False)
     figure.tight_layout()
@@ -320,9 +318,7 @@ async def get_inputs() -> str:
 
     data = body["data"]
     if not data.get("derived_from_served_models", True):
-        return (
-            "## No model is in service"
-        )
+        return "## No model is in service"
 
     return (
         "## Columns a manual request must carry\n\n"

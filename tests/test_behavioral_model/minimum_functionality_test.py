@@ -1,5 +1,4 @@
-"""Minimum functionality tests: the cases the model must not get wrong.
-"""
+"""Minimum functionality tests: the cases the model must not get wrong."""
 
 import numpy as np
 from scenarios import calm, storm
@@ -14,7 +13,6 @@ def _pin(sample, **values):
 
 
 class TestObviousCases:
-
     def test_the_worst_conditions_beat_the_mildest(self, model, sample):
         mildest = model.score(calm(sample)).mean()
         worst = model.score(storm(sample)).mean()
@@ -26,8 +24,7 @@ class TestObviousCases:
         worst = model.score(storm(sample)).mean()
 
         assert worst / mildest > MIN_SEPARATION_RATIO, (
-            f"{model.name}: worst {worst:.3f} is only "
-            f"{worst / mildest:.2f}x mildest {mildest:.3f}"
+            f"{model.name}: worst {worst:.3f} is only {worst / mildest:.2f}x mildest {mildest:.3f}"
         )
 
     def test_the_worst_conditions_raise_most_individual_flights(self, model, sample):

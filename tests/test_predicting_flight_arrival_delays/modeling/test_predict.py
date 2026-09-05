@@ -20,7 +20,6 @@ from predicting_flight_arrival_delays.modeling.predict import (
     prepare_for_inference,
 )
 
-
 runner = CliRunner()
 
 WEATHER_FEATURES = WEATHER_COLUMNS_ORIGIN + WEATHER_COLUMNS_DESTINATION

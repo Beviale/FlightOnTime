@@ -5,7 +5,7 @@ airport by AirportID and locates it with CityName and State. No
 flight-schedule service returns these three fields. AeroDataBox, for example, gives
 a municipality and an ISO country code, not a US state and a BTS id.
 
-The table is built from the prepared flights. Every known airport appears there, 
+The table is built from the prepared flights. Every known airport appears there,
 as an origin on some flights and as a destination on
 others, carrying the same identity either way. Each row holds one IATA code, one AirportID, and
 the city and state recorded under that id.
@@ -64,8 +64,7 @@ def _latest_place(flights: pd.DataFrame, airport_ids: list[int]) -> pd.DataFrame
 
 
 def _last_flight(flights: pd.DataFrame) -> pd.DataFrame:
-    """Keep each airport's most recent row, whole.
-    """
+    """Keep each airport's most recent row, whole."""
     return flights.sort_values(DATE_COLUMN).drop_duplicates("AirportId", keep="last")
 
 
@@ -73,7 +72,7 @@ def _keep_latest_place(
     flights: pd.DataFrame, identity: pd.DataFrame, renamed: list[int]
 ) -> pd.DataFrame:
     """Settle each disagreeing id on the city and state of its most recent flight.
-    
+
     Args:
         flights: Prepared flights, for the dates.
         identity: The folded table, still carrying every city and state.
@@ -89,7 +88,9 @@ def _keep_latest_place(
         kept = latest.loc[airport_id]
         logger.warning(
             f"Airport {airport_id} appears in more than one place: "
-            + ", ".join(f"{row.CityName!r} ({row.State})" for row in seen.drop_duplicates().itertuples())
+            + ", ".join(
+                f"{row.CityName!r} ({row.State})" for row in seen.drop_duplicates().itertuples()
+            )
             + f". Keeping {kept.CityName!r} ({kept.State}), from its most recent "
             f"flight on {kept.FlightDate:%Y-%m-%d}."
         )
@@ -97,9 +98,7 @@ def _keep_latest_place(
     identity = identity.copy()
     renaming = identity["AirportId"].isin(renamed)
     for column in ("CityName", "State"):
-        identity.loc[renaming, column] = identity.loc[renaming, "AirportId"].map(
-            latest[column]
-        )
+        identity.loc[renaming, column] = identity.loc[renaming, "AirportId"].map(latest[column])
 
     return identity.drop_duplicates()
 

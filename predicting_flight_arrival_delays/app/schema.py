@@ -89,8 +89,7 @@ class FlightRequest(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def normalise_codes(cls, data: object) -> object:
-        """Uppercase the codes, which the training vocabulary stores uppercase.
-        """
+        """Uppercase the codes, which the training vocabulary stores uppercase."""
         if not isinstance(data, dict):
             return data
 
@@ -114,7 +113,7 @@ class FlightLookupRequest(BaseModel):
 
     Six fields, and every one of them earns its place:
 
-        the two airports  
+        the two airports
         MarketingCarrier   the code the flight is sold under.
         ReportingAirline   the code of the airline actually operating, which is what
                            BTS records and what the model was trained on.
@@ -122,10 +121,16 @@ class FlightLookupRequest(BaseModel):
 
     FlightDate: date
     MarketingCarrier: str = Field(
-        min_length=1, max_length=3, examples=["AA"], description="The code the flight is sold under"
+        min_length=1,
+        max_length=3,
+        examples=["AA"],
+        description="The code the flight is sold under",
     )
     ReportingAirline: str = Field(
-        min_length=1, max_length=3, examples=["MQ"], description="The code of the airline operating it"
+        min_length=1,
+        max_length=3,
+        examples=["MQ"],
+        description="The code of the airline operating it",
     )
     FlightNumber: int = Field(gt=0, examples=[3500])
     Origin: str = Field(min_length=3, max_length=3, examples=["DFW"])

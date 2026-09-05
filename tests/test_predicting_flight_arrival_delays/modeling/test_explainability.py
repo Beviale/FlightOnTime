@@ -1,7 +1,7 @@
-"""Tests for predicting_flight_arrival_delays.modeling.explainability.
-"""
+"""Tests for predicting_flight_arrival_delays.modeling.explainability."""
 
 from types import SimpleNamespace
+from typing import ClassVar
 
 import numpy as np
 import pandas as pd
@@ -13,10 +13,10 @@ from sklearn.linear_model import LogisticRegression
 
 pytest.importorskip("shap", reason="shap is not installed")
 
-from predicting_flight_arrival_delays.modeling import (  # noqa: E402
+from predicting_flight_arrival_delays.modeling import (
     explainability as explainability_module,
 )
-from predicting_flight_arrival_delays.modeling.explainability import (  # noqa: E402
+from predicting_flight_arrival_delays.modeling.explainability import (
     _unwrap_calibration,
     explain_prediction,
     request_column_contributions,
@@ -67,9 +67,7 @@ class TestExplainPrediction:
         explanation = explain_prediction(model, X, "logistic_regression", top_k=2)
 
         by_name = {e["feature"]: e["value"] for e in explanation}
-        assert by_name["signal"] == pytest.approx(
-            model.coef_[0][0] * X["signal"].iloc[0]
-        )
+        assert by_name["signal"] == pytest.approx(model.coef_[0][0] * X["signal"].iloc[0])
 
     def test_a_logistic_explanation_differs_between_rows(self, xy):
         X, y = xy
@@ -87,8 +85,12 @@ class TestExplainPrediction:
 
         explanation = explain_prediction(model, X.iloc[[0]], "logreg", top_k=2)
 
-        assert dict(zip([e["feature"] for e in explanation],
-                        [e["value"] for e in explanation]))["a_y"] == 0.0
+        assert (
+            dict(zip([e["feature"] for e in explanation], [e["value"] for e in explanation]))[
+                "a_y"
+            ]
+            == 0.0
+        )
 
     def test_top_k_limits_the_result(self, xy):
         X, y = xy
@@ -186,9 +188,7 @@ class TestShapValueShapes:
                 def __call__(self, x):
                     return SimpleNamespace(values=np.asarray(values))
 
-            monkeypatch.setattr(
-                explainability_module.shap, "TreeExplainer", FakeExplainer
-            )
+            monkeypatch.setattr(explainability_module.shap, "TreeExplainer", FakeExplainer)
 
         return install
 
@@ -275,8 +275,7 @@ class TestSaveShapWaterfallPlot:
         model = RandomForestClassifier(n_estimators=10, random_state=0).fit(X, y)
 
         assert (
-            save_shap_waterfall_plot(model, X.head(0), "random_forest", tmp_path / "s.png")
-            is None
+            save_shap_waterfall_plot(model, X.head(0), "random_forest", tmp_path / "s.png") is None
         )
 
     def test_an_explainer_that_cannot_be_built_is_skipped(self, tmp_path, xy):
@@ -318,7 +317,13 @@ class StubTransformer:
 class TestRequestColumnImportance:
     """What the model leans on, folded back onto the columns a caller sends."""
 
-    RAW = ["OriginAirportID", "OriginCarrier", "OriginCongestion", "Dest", "DestCarrier"]
+    RAW: ClassVar[list] = [
+        "OriginAirportID",
+        "OriginCarrier",
+        "OriginCongestion",
+        "Dest",
+        "DestCarrier",
+    ]
 
     def a_model(self, weights):
         return SimpleNamespace(feature_importances_=np.array(weights, dtype=float))
@@ -354,7 +359,6 @@ class TestRequestColumnImportance:
 
         assert list(importance) == ["OriginCarrier", "OriginCongestion"]
 
-
     def test_what_the_service_supplies_itself_is_left_out(self):
         columns = ["PrecipitationOrigin", "OriginCongestion"]
         transformer = StubTransformer()
@@ -366,16 +370,13 @@ class TestRequestColumnImportance:
         assert list(importance) == ["OriginCongestion"]
         assert importance["OriginCongestion"] == pytest.approx(0.25)
 
-
     def test_a_calibrated_model_is_unwrapped_first(self):
         X = pd.DataFrame(
             {"OriginCongestion": [float(i) for i in range(20)], "Dest": [0.0, 1.0] * 10}
         )
         y = pd.Series([0, 1] * 10)
         forest = RandomForestClassifier(n_estimators=3, random_state=0).fit(X, y)
-        calibrated = CalibratedClassifierCV(
-            FrozenEstimator(forest), method="isotonic"
-        ).fit(X, y)
+        calibrated = CalibratedClassifierCV(FrozenEstimator(forest), method="isotonic").fit(X, y)
 
         importance = request_column_importance(
             calibrated, list(X.columns), StubTransformer(), self.RAW
@@ -400,7 +401,6 @@ class TestRequestColumnImportance:
 
 
 class TestRequestColumnContributions:
-
     def a_frame(self, **columns):
         return pd.DataFrame({name: [value] for name, value in columns.items()})
 
@@ -411,9 +411,7 @@ class TestRequestColumnContributions:
         wide["OriginAirportID_10397"] = [1.0, 0.0] * 4
         wide["Distance"] = [1.0, 3.0] * 4
         model = LogisticRegression(max_iter=200).fit(wide, y)
-        transformer = StubTransformer(
-            category_keep={"OriginAirportID": {"10397", "11298"}}
-        )
+        transformer = StubTransformer(category_keep={"OriginAirportID": {"10397", "11298"}})
 
         reported = request_column_contributions(model, X, transformer, "logreg", top_k=5)
 
@@ -470,9 +468,7 @@ class TestRequestColumnContributions:
         assert dry[0]["contribution"] < 0
 
     def test_top_k_limits_what_is_reported(self):
-        wide = pd.DataFrame(
-            {"a": [0.0, 1.0] * 4, "b": [1.0, 0.0] * 4, "c": [0.5, 0.2] * 4}
-        )
+        wide = pd.DataFrame({"a": [0.0, 1.0] * 4, "b": [1.0, 0.0] * 4, "c": [0.5, 0.2] * 4})
         y = pd.Series([0, 1] * 4)
         model = LogisticRegression(max_iter=200).fit(wide, y)
 

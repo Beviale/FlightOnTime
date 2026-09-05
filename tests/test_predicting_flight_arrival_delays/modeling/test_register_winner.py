@@ -1,5 +1,4 @@
-"""Tests for select_and_register.register_winner - selection phase 2.
-"""
+"""Tests for select_and_register.register_winner - selection phase 2."""
 
 import json
 from types import SimpleNamespace
@@ -57,9 +56,7 @@ def registry(monkeypatch, tmp_path):
 
     monkeypatch.setattr(sar_module, "mlflow", fake_mlflow)
     monkeypatch.setattr(sar_module, "from_pandas", lambda *a, **k: {"name": k.get("name")})
-    monkeypatch.setattr(
-        sar_module, "register_model_bundle", lambda **kw: registrations.append(kw)
-    )
+    monkeypatch.setattr(sar_module, "register_model_bundle", lambda **kw: registrations.append(kw))
     monkeypatch.setattr(sar_module, "get_dvc_data_hash", lambda *a, **k: "test-hash")
     monkeypatch.setattr(sar_module, "get_git_dirty", lambda: False)
 
@@ -82,7 +79,6 @@ def registry(monkeypatch, tmp_path):
     def small_transformer(**kwargs):
         return Transformer(min_category_count=5, **kwargs)
 
-    
     monkeypatch.setattr(tesm_module, "Transformer", small_transformer)
     monkeypatch.setattr(sar_module, "METRICS_DIR", tmp_path / "metrics")
 
@@ -112,9 +108,7 @@ def scores(monkeypatch):
                 "threshold": float(threshold),
             }
 
-        monkeypatch.setattr(
-            sar_module, "evaluate", SimpleNamespace(evaluate=fake_evaluate)
-        )
+        monkeypatch.setattr(sar_module, "evaluate", SimpleNamespace(evaluate=fake_evaluate))
 
     return set_pr_auc
 
@@ -231,18 +225,14 @@ class TestBaselineGuard:
 
 
 class TestRegisteredModel:
-    def test_it_is_fitted_on_the_last_fold_s_training_split_alone(
-        self, folds, registry, scores
-    ):
+    def test_it_is_fitted_on_the_last_fold_s_training_split_alone(self, folds, registry, scores):
         scores(0.9)
         _register()
         last_train, _ = folds.sizes[-1]
 
         assert registry.train_calls[-1] == last_train
 
-    def test_the_final_fit_is_smaller_than_the_data_the_fold_holds(
-        self, folds, registry, scores
-    ):
+    def test_the_final_fit_is_smaller_than_the_data_the_fold_holds(self, folds, registry, scores):
         scores(0.9)
         _register()
         last_train, last_validation = folds.sizes[-1]
@@ -357,9 +347,7 @@ class TestTheRegisteredBundleIsUsable:
         logged = registry.registrations[0]
         return logged["model"], logged["transformer"], tuple(logged["columns"])
 
-    def test_the_registered_model_scores_fresh_flights(
-        self, folds, registry, scores, flights_df
-    ):
+    def test_the_registered_model_scores_fresh_flights(self, folds, registry, scores, flights_df):
         scores(0.9)
         _register()
         model, transformer, columns = self._bundle(registry)
