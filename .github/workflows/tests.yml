@@ -1,0 +1,68 @@
+name: Tests
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Run the unit tests
+        run: uv run pytest tests/test_predicting_flight_arrival_delays -q
+
+  data:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Configure DVC credentials
+        run: |
+          uv run dvc remote modify origin --local access_key_id ${{ secrets.DAGSHUB_TOKEN }}
+          uv run dvc remote modify origin --local secret_access_key ${{ secrets.DAGSHUB_TOKEN }}
+
+ 
+      - name: Pull the data the suites read
+        run: |
+          uv run dvc pull data/raw
+          uv run dvc pull data/interim/flights_preprocessed.parquet
+          uv run dvc pull data/processed/selection
+
+
+      - name: Run the data and behavioural tests
+        env:
+          DAGSHUB_USER_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+        run: uv run pytest tests/test_flight_data tests/test_behavioral_model -q
+
+
+      - name: Validate the data with Great Expectations
+        run: |
+          set -euo pipefail
+          uv run python tests/test_flight_data/raw_test.py
+          uv run python tests/test_flight_data/processed_test.py
