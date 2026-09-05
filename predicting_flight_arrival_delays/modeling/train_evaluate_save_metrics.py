@@ -24,6 +24,7 @@ from predicting_flight_arrival_delays.data.transform import (
     align_columns,
     encode_categoricals,
     resample_training_data,
+    sparse_column_order,
     to_sparse_matrix,
 )
 from predicting_flight_arrival_delays.modeling import evaluate, train
@@ -61,7 +62,8 @@ def prepare_fold(
             "none" (no rebalancing).
 
     Returns:
-        Tuple of (X_fit, y_fit, X_val, y_val, X_test, y_test).
+        Tuple of (X_fit, y_fit, X_val, y_val, X_test, y_test, transformer,
+        feature_columns, feature_means).
         X_fit/y_fit reflect the resampling; the other splits are untouched.
         X_val/y_val are (None, None) when validation_df is not given.
         X_test/y_test are (None, None) when test_df is not given.
@@ -70,7 +72,7 @@ def prepare_fold(
     """
     X_fit, y_fit = build_xy(train_df)
 
-    transformer = Transformer().fit(X_fit, y_fit)
+    transformer = Transformer(encoding=encoding).fit(X_fit, y_fit)
     X_fit = transformer.transform(X_fit)
 
     transformer.select_features(X_fit, y_fit)
@@ -100,12 +102,27 @@ def prepare_fold(
             X_test = to_sparse_matrix(X_test)
 
 
+
+    feature_columns = (
+        sparse_column_order(X_fit) if encoding == "onehot" else list(X_fit.columns)
+    )
+
+
+    feature_means = (
+        X_fit[feature_columns].mean().astype(float).to_dict()
+        if encoding == "onehot"
+        else {}
+    )
+
     if encoding == "onehot":
         X_fit = to_sparse_matrix(X_fit)
 
     X_fit, y_fit = resample_training_data(X_fit, y_fit, resample, encoding)
 
-    return X_fit, y_fit, X_val, y_val, X_test, y_test
+    return (
+        X_fit, y_fit, X_val, y_val, X_test, y_test,
+        transformer, feature_columns, feature_means,
+    )
 
 
 def train_and_evaluate(
@@ -141,7 +158,7 @@ def train_and_evaluate(
         train_df = pd.read_parquet(fold / "train.parquet")
         validation_df = pd.read_parquet(fold / "validation.parquet")
 
-        X_fit, y_fit, X_val, y_val, _, _ = prepare_fold(
+        X_fit, y_fit, X_val, y_val, _, _, _, _, _ = prepare_fold(
             train_df, encoding, validation_df=validation_df, resample=resample
         )
 
@@ -175,7 +192,7 @@ def run(
     model: str = typer.Option(..., help="Which algorithm to train"),
     config: str = typer.Option("default", help="Which hyperparameter set to use"),
     data_path: Path = typer.Option(PROCESSED_DATA_DIR / "selection"),
-    experiment: str = typer.Option("flight-delay-v2", help="MLflow experiment name"),
+    experiment: str = typer.Option("flight-delay-v3", help="MLflow experiment name"),
     resample: str = typer.Option(
         "none",
         help="Training rebalancing strategy: 'none', 'undersample', 'oversample', "

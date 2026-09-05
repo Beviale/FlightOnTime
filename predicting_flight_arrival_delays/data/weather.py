@@ -27,6 +27,7 @@ from tqdm import tqdm
 import typer
 
 from predicting_flight_arrival_delays.config import (
+    DATE_COLUMN,
     EXTERNAL_DATA_DIR,
     HISTORICAL_FORECAST_URL,
     INTERIM_DATA_DIR,
@@ -256,8 +257,8 @@ def run(
         download_weather(
             requests_map=requests_map,
             airports=airports,
-            start_date=str(df["FlightDate"].min().date()),
-            end_date=str(df["FlightDate"].max().date()),
+            start_date=str(df[DATE_COLUMN].min().date()),
+            end_date=str(df[DATE_COLUMN].max().date()),
             output_dir=output_dir,
             sleep=sleep,
         )

@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from predicting_flight_arrival_delays.config import DATE_COLUMN
 from predicting_flight_arrival_delays.data.features import select_features_variant
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import select_and_register as sar_module
@@ -81,7 +82,7 @@ def registry(monkeypatch, tmp_path):
     def small_transformer(**kwargs):
         return Transformer(min_category_count=5, **kwargs)
 
-    monkeypatch.setattr(sar_module, "Transformer", small_transformer)
+    
     monkeypatch.setattr(tesm_module, "Transformer", small_transformer)
     monkeypatch.setattr(sar_module, "METRICS_DIR", tmp_path / "metrics")
 
@@ -121,7 +122,7 @@ def scores(monkeypatch):
 @pytest.fixture
 def folds(tmp_path, flights_df, monkeypatch):
     """Two walk-forward folds on disk, with an expanding training window."""
-    df = select_features_variant(flights_df, "noweather").sort_values("FlightDate")
+    df = select_features_variant(flights_df, "noweather").sort_values(DATE_COLUMN)
     layout = [
         (slice(0, 100), slice(100, 130), slice(130, 160)),
         (slice(0, 160), slice(160, 200), slice(200, 300)),
@@ -230,20 +231,29 @@ class TestBaselineGuard:
 
 
 class TestRegisteredModel:
-    def test_it_is_fitted_on_train_and_validation_together(self, folds, registry, scores):
-        """The last fold has the most data; step 2 uses all of it."""
+    def test_it_is_fitted_on_the_last_fold_s_training_split_alone(
+        self, folds, registry, scores
+    ):
+        scores(0.9)
+        _register()
+        last_train, _ = folds.sizes[-1]
+
+        assert registry.train_calls[-1] == last_train
+
+    def test_the_final_fit_is_smaller_than_the_data_the_fold_holds(
+        self, folds, registry, scores
+    ):
         scores(0.9)
         _register()
         last_train, last_validation = folds.sizes[-1]
 
-        assert registry.train_calls[-1] == last_train + last_validation
+        assert registry.train_calls[-1] < last_train + last_validation
 
-    def test_one_more_fit_happens_than_there_are_folds(self, folds, registry, scores):
-        """The registered model is a separate object from the scored ones."""
+    def test_no_fit_happens_beyond_the_folds(self, folds, registry, scores):
         scores(0.9)
         _register()
 
-        assert len(registry.train_calls) == folds.count + 1
+        assert len(registry.train_calls) == folds.count
 
     def test_it_is_registered_under_the_variant_name(self, folds, registry, scores):
         scores(0.9)
@@ -271,7 +281,7 @@ class TestRegisteredModel:
         columns = registry.registrations[0]["columns"]
 
         assert len(columns) == registry.mlflow.params["n_features"]
-        assert any(c.startswith("Origin_") for c in columns)
+        assert any(c.startswith("ReportingAirline_") for c in columns)
         assert "Origin" not in columns
 
     def test_a_fresh_operating_threshold_is_logged(self, folds, registry, scores):
@@ -372,7 +382,7 @@ class TestTheRegisteredBundleIsUsable:
         fresh = select_features_variant(flights_df, "noweather").head(5)
         X = prepare_for_inference(fresh, "noweather", transformer, columns)
 
-        dummies = [c for c in X.columns if c.startswith("Origin_")]
+        dummies = [c for c in X.columns if c.startswith("ReportingAirline_")]
         assert dummies
         assert (X[dummies].sum(axis=1) == 1).all()
 

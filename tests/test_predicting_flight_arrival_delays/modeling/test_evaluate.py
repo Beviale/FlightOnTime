@@ -128,7 +128,7 @@ class TestEvaluateOnDataframe:
         matrix the training path built for them."""
         df, transformer, estimator, X_fit, columns = bundle
         
-        rows = (df["Origin"] == "ATL").to_numpy()
+        rows = (df["OriginAirportID"] == 10397).to_numpy()
 
         expected = evaluate(X_fit[rows], df.loc[rows, TARGET], estimator, 0.5)
         actual = _evaluate_on_dataframe(

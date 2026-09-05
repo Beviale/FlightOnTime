@@ -11,6 +11,7 @@ from predicting_flight_arrival_delays.config import (
     INTERIM_DATA_DIR,
     MAX_LEAD_DAYS,
     WEATHER_COLUMNS,
+    DATE_COLUMN,
 )
 
 DATA_PATH = INTERIM_DATA_DIR / "flights_preprocessed.parquet"
@@ -20,7 +21,7 @@ WEATHER_DEST = [c + "Dest" for c in WEATHER_COLUMNS]
 
 
 EXPECTED_COLUMNS = [
-    "Month", "DayofMonth", "DayOfWeek", "FlightDate",
+    "Month", "DayOfWeek", DATE_COLUMN,
     "ReportingAirline", "TailNumber", "FlightNumberReportingAirline",
     "OriginAirportID", "Origin", "OriginCityName", "OriginState",
     "DestAirportID", "Dest", "DestCityName", "DestState",
@@ -36,7 +37,7 @@ EXPECTED_COLUMNS = [
 ]
 
 NEVER_NULL = [
-    "FlightDate", "Origin", "Dest", "ReportingAirline", "TailNumber",
+    DATE_COLUMN, "Origin", "Dest", "ReportingAirline", "TailNumber",
     "OriginAirportID", "DestAirportID", "CRSDepTime", "CRSArrTime",
     "Distance", "IsDelayed", "LeadDays", "DaysToNearestHoliday",
     "OriginCongestion", "DestCongestion", "AircraftDailyLegs", "LegPosition",
@@ -80,6 +81,14 @@ def build_expectations() -> list:
         ),
     ]
 
+    # --- Airport-carrier pairs
+    expectations += [
+        gx.expectations.ExpectColumnValuesToMatchRegex(
+            column=column, regex=r"^\d{5}[A-Z0-9]{2}$"
+        )
+        for column in ("OriginCarrier", "DestCarrier")
+    ]
+
     # --- Schedule
     expectations += [
         gx.expectations.ExpectColumnValuesToBeBetween(
@@ -99,9 +108,6 @@ def build_expectations() -> list:
         ),
         gx.expectations.ExpectColumnValuesToBeBetween(column="Month", min_value=1, max_value=12),
         gx.expectations.ExpectColumnValuesToBeBetween(
-            column="DayofMonth", min_value=1, max_value=31
-        ),
-        gx.expectations.ExpectColumnValuesToBeBetween(
             column="DayOfWeek", min_value=1, max_value=7
         ),
         gx.expectations.ExpectColumnValuesToBeBetween(column="DepHour", min_value=0, max_value=23),
@@ -113,7 +119,7 @@ def build_expectations() -> list:
             column="ArrTimeDecimal", min_value=0, max_value=24
         ),
         gx.expectations.ExpectColumnValuesToBeBetween(
-            column="FlightDate",
+            column=DATE_COLUMN,
             min_value=datetime(2024, 1, 1),
             max_value=datetime(2027, 1, 1),
         ),

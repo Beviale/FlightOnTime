@@ -17,13 +17,14 @@ from predicting_flight_arrival_delays.utils import (
     safe_relative_path,
     to_pascal_case,
 )
+from predicting_flight_arrival_delays.config import DATE_COLUMN
 
 
 class TestToPascalCase:
     @pytest.mark.parametrize(
         "name,expected",
         [
-            ("flight_date", "FlightDate"),
+            ("flight_date", DATE_COLUMN),
             ("temperature_2m", "Temperature2m"),
             ("wind_speed_10m", "WindSpeed10m"),
             ("Origin", "Origin"),

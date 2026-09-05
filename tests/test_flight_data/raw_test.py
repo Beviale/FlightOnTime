@@ -6,7 +6,7 @@ import pandas as pd
 import pytest
 from util import failures, show_results, validate
 
-from predicting_flight_arrival_delays.config import KEEP_COLUMNS, RAW_DATA_DIR
+from predicting_flight_arrival_delays.config import KEEP_COLUMNS, RAW_DATA_DIR, DATE_COLUMN
 
 SAMPLE_ROWS = 200_000
 
@@ -41,15 +41,13 @@ def build_expectations() -> list:
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Diverted"),
         gx.expectations.ExpectColumnValuesToBeInSet(column="Cancelled", value_set=[0, 1]),
         gx.expectations.ExpectColumnValuesToBeInSet(column="Diverted", value_set=[0, 1]),
-        # ArrDel15 is null exactly for the flights that never arrived, which is
-        # why load_and_clean drops them rather than imputing.
         gx.expectations.ExpectColumnValuesToBeInSet(column="ArrDel15", value_set=[0, 1]),
         gx.expectations.ExpectColumnValuesToNotBeNull(column="ArrDel15", mostly=0.95),
     ]
 
     # --- Identity
     expectations += [
-        gx.expectations.ExpectColumnValuesToNotBeNull(column="FlightDate"),
+        gx.expectations.ExpectColumnValuesToNotBeNull(column=DATE_COLUMN),
         gx.expectations.ExpectColumnValuesToMatchRegex(column="Origin", regex=r"^[A-Z]{3}$"),
         gx.expectations.ExpectColumnValuesToMatchRegex(column="Dest", regex=r"^[A-Z]{3}$"),
         gx.expectations.ExpectColumnValuesToNotBeNull(column="Tail_Number", mostly=0.95),

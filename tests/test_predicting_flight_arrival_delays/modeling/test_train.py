@@ -13,6 +13,7 @@ from sklearn.frozen import FrozenEstimator
 from sklearn.linear_model import LogisticRegression
 import yaml
 
+from predicting_flight_arrival_delays.config import DATE_COLUMN
 from predicting_flight_arrival_delays.config import SEED
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import train as train_module
@@ -284,7 +285,7 @@ class TestTrainWithTransformer:
             flights_df, "noweather", "logistic_regression", "default", calibrate=False
         )
 
-        assert "FlightDate" not in columns
+        assert DATE_COLUMN not in columns
 
     def test_the_columns_describe_the_matrix_the_model_was_fitted_on(
         self, flights_df, small_transformer
@@ -296,7 +297,7 @@ class TestTrainWithTransformer:
         )
 
         assert len(columns) == X_fit.shape[1]
-        assert any(c.startswith("Origin_") for c in columns)
+        assert any(c.startswith("ReportingAirline_") for c in columns)
         assert "Origin" not in columns
 
     def test_validation_frame_is_aligned_to_training(self, flights_df, small_transformer):
@@ -318,7 +319,6 @@ class TestTrainWithTransformer:
 
 
 class TestRunCommandGuards:
-    """Every guard fails the run rather than training something unintended."""
 
     @pytest.fixture
     def train_path(self, tmp_path, flights_df):
@@ -446,14 +446,14 @@ class TestRunCommandRegistration:
         assert tracking["bundles"] == []
 
     def test_nothing_is_tracked_without_a_model_name(self, invoke, tracking):
-        result = invoke("--experiment", "flight-delay-v2")
+        result = invoke("--experiment", "flight-delay-v3")
 
         assert result.exit_code == 0, result.output
         assert tracking["bundles"] == []
 
     def test_the_bundle_is_registered_when_both_are_given(self, invoke, tracking):
         result = invoke(
-            "--experiment", "flight-delay-v2",
+            "--experiment", "flight-delay-v3",
             "--registered-model-name", "flight-delay-noweather",
         )
 
@@ -463,7 +463,7 @@ class TestRunCommandRegistration:
 
     def test_the_run_records_what_produced_the_model(self, invoke, tracking):
         invoke(
-            "--experiment", "flight-delay-v2",
+            "--experiment", "flight-delay-v3",
             "--registered-model-name", "flight-delay-noweather",
         )
 
@@ -474,7 +474,7 @@ class TestRunCommandRegistration:
 
     def test_the_run_is_named_after_the_combination(self, invoke, tracking):
         invoke(
-            "--experiment", "flight-delay-v2",
+            "--experiment", "flight-delay-v3",
             "--registered-model-name", "flight-delay-noweather",
         )
 
@@ -482,7 +482,7 @@ class TestRunCommandRegistration:
 
     def test_the_alias_is_forwarded(self, invoke, tracking):
         invoke(
-            "--experiment", "flight-delay-v2",
+            "--experiment", "flight-delay-v3",
             "--registered-model-name", "flight-delay-noweather",
             "--alias", "champion",
         )
@@ -491,12 +491,12 @@ class TestRunCommandRegistration:
 
     def test_the_registered_columns_come_from_the_fitted_estimator(self, invoke, tracking):
         invoke(
-            "--experiment", "flight-delay-v2",
+            "--experiment", "flight-delay-v3",
             "--registered-model-name", "flight-delay-noweather",
         )
         columns = tracking["bundles"][0]["columns"]
 
-        assert any(c.startswith("Origin_") for c in columns)
+        assert any(c.startswith("ReportingAirline_") for c in columns)
         assert "Origin" not in columns
 
 

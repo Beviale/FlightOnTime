@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sp
 
-from predicting_flight_arrival_delays.config import SERVICE_COLUMNS2, TARGET
+from predicting_flight_arrival_delays.config import SERVICE_COLUMNS2, TARGET, DATE_COLUMN
 from predicting_flight_arrival_delays.data.transform import (
     OTHER,
     Transformer,
@@ -22,7 +22,7 @@ def small_df() -> pd.DataFrame:
     """A minimal frame: two categoricals, two numerics, one date, twelve rows."""
     return pd.DataFrame(
         {
-            "FlightDate": pd.to_datetime(
+            DATE_COLUMN: pd.to_datetime(
                 ["2025-01-%02d" % (i + 1) for i in range(12)]
             ),
             "Origin": ["ATL"] * 5 + ["DFW"] * 4 + ["ORD"] * 2 + ["RARE"],
@@ -112,7 +112,7 @@ class TestToSparseMatrix:
     @pytest.fixture
     def encoded(self, small_df):
         return encode_categoricals(
-            small_df.drop(columns=["FlightDate"]), ["Origin", "Airline"], "onehot"
+            small_df.drop(columns=[DATE_COLUMN]), ["Origin", "Airline"], "onehot"
         )
 
     def test_returns_a_csr_matrix(self, encoded):
@@ -402,7 +402,7 @@ class TestTransformerFit:
             small_df, small_y
         )
 
-        assert "FlightDate" not in out.columns
+        assert DATE_COLUMN not in out.columns
 
     def test_input_frame_is_not_mutated(self, small_df, small_y):
         before = small_df.copy()
@@ -413,13 +413,296 @@ class TestTransformerFit:
         pd.testing.assert_frame_equal(small_df, before)
 
 
+def two_airports_sharing_a_code() -> tuple[pd.DataFrame, pd.Series]:
+    n = 200
+    return pd.DataFrame(
+        {
+            DATE_COLUMN: pd.to_datetime(["2025-01-01"] * n + ["2025-06-01"] * n),
+            "Origin": ["AUS"] * (2 * n),
+            "OriginAirportID": [10423] * n + [16440] * n,
+            "Distance": [1000.0] * (2 * n),
+        }
+    ), pd.Series([0] * n + [1] * n)
+
+
+class TestCyclicalColumnsBecomeAPointOnACircle:
+
+    @pytest.fixture
+    def hours(self):
+        return pd.DataFrame(
+            {
+                "FlightDate": pd.to_datetime(["2025-01-01"] * 4),
+                "DepTimeDecimal": [23.5, 0.5, 12.0, 6.0],
+                "Distance": [1.0, 2.0, 3.0, 4.0],
+            }
+        )
+
+    def a_fitted(self, hours):
+        t = Transformer(min_category_count=1)
+        t.fit(hours, pd.Series([0, 1, 0, 1]))
+        return t
+
+    def test_the_column_is_replaced_by_a_pair(self, hours):
+        out = self.a_fitted(hours).transform(hours)
+
+        assert "DepTimeDecimal" not in out.columns
+        assert {"DepTimeDecimalSin", "DepTimeDecimalCos"} <= set(out.columns)
+
+    def test_the_pair_is_numeric(self, hours):
+        transformer = self.a_fitted(hours)
+
+        assert "DepTimeDecimalSin" in transformer.numeric_columns
+        assert "DepTimeDecimalCos" in transformer.numeric_columns
+
+    def test_midnight_stops_being_a_cliff(self, hours):
+        cycled = self.a_fitted(hours)._as_cycles(hours.copy())
+        point = lambda i: np.array(
+            [cycled["DepTimeDecimalSin"].iloc[i], cycled["DepTimeDecimalCos"].iloc[i]]
+        )
+
+        across_midnight = np.linalg.norm(point(0) - point(1))
+        half_a_day = np.linalg.norm(point(0) - point(2))
+
+        assert across_midnight < half_a_day
+
+    def test_the_two_halves_land_on_the_unit_circle(self, hours):
+        cycled = self.a_fitted(hours)._as_cycles(hours.copy())
+
+        radius = cycled["DepTimeDecimalSin"] ** 2 + cycled["DepTimeDecimalCos"] ** 2
+
+        assert np.allclose(radius, 1.0)
+
+    def test_a_column_that_is_absent_is_simply_skipped(self, hours):
+        out = self.a_fitted(hours).transform(hours)
+
+        assert not any(c.startswith("ArrTimeDecimal") for c in out.columns)
+
+    def test_the_caller_s_frame_is_left_alone(self, hours):
+        self.a_fitted(hours).transform(hours)
+
+        assert "DepTimeDecimal" in hours.columns
+
+
+class TestAirportIdsAreReadAsLabels:
+    """An airport id is a number that names a place; it does not measure one. Read
+    as an integer it is scaled and split on by range, which groups airports by the
+    order BTS registered them in."""
+
+    @pytest.fixture
+    def fitted(self, small_df, small_y):
+        flights = small_df.copy()
+        flights["OriginAirportID"] = [10397] * 5 + [11298] * 4 + [13930] * 2 + [12892]
+       
+        t = Transformer(min_category_count=1, max_onehot_categories=0, encoding="native")
+        t.fit(flights, small_y)
+        return t, flights
+
+    def test_the_id_is_categorical_and_not_numeric(self, fitted):
+        transformer, _ = fitted
+
+        assert "OriginAirportID" in transformer.categorical_columns
+        assert "OriginAirportID" not in transformer.numeric_columns
+
+    def test_the_categories_are_the_ids_as_strings(self, fitted):
+        transformer, _ = fitted
+
+        assert "10397" in transformer.category_keep["OriginAirportID"]
+
+    def test_an_id_never_flown_folds_into_other(self, fitted):
+        """The point of the cast: an airport the model has no history for is handled
+        the way any unseen category is, with no out-of-range number reaching the
+        scaler."""
+        transformer, flights = fitted
+        unknown = flights.head(1).copy().assign(OriginAirportID=99999)
+
+        assert transformer.transform(unknown)["OriginAirportID"].iloc[0] == OTHER
+
+    def test_a_missing_id_folds_into_other_too(self, fitted):
+        transformer, flights = fitted
+        missing = flights.head(1).copy().assign(OriginAirportID=np.nan)
+
+        assert transformer.transform(missing)["OriginAirportID"].iloc[0] == OTHER
+
+    def test_an_unknown_id_scores_at_the_global_delay_rate(self, fitted):
+        """With no history to draw on, the shrinkage formula falls back to the base
+        rate rather than to zero."""
+        transformer, flights = fitted
+        unknown = transformer._as_labels(
+            flights.head(1).copy().assign(OriginAirportID=99999)
+        )
+
+        rate = transformer._apply_delay_rates_internal(unknown)["OriginAirportIDDelayRate"]
+
+        assert rate.iloc[0] == pytest.approx(transformer.global_delay_rate_)
+
+    def test_the_caller_s_frame_keeps_its_integers(self, fitted):
+        """The cast happens on the copy the transformer works with."""
+        transformer, flights = fitted
+        transformer.transform(flights)
+
+        assert flights["OriginAirportID"].dtype == "int64"
+
+    def test_a_column_that_is_not_an_id_is_left_numeric(self, fitted):
+        transformer, _ = fitted
+
+        assert "Distance" in transformer.numeric_columns
+
+
+class TestWideCategoricalsBecomeARate:
+    """A categorical with more values than max_onehot_categories costs a column per
+    value under onehot, for signal a single historical rate already orders. It is
+    given that rate; the original then goes, but only where it would have cost.
+    """
+
+    @pytest.fixture
+    def wide(self, small_df, small_y):
+        """A frame whose Origin holds more values than the threshold allows."""
+        flights = small_df.copy()
+        flights["Origin"] = [f"A{i:02d}" for i in range(len(flights))]
+        return flights, small_y
+
+    def test_a_wide_column_is_found(self, wide):
+        flights, y = wide
+        t = Transformer(min_category_count=1, max_onehot_categories=3)
+
+        t.fit(flights, y)
+
+        assert "Origin" in t.wide_columns_
+
+    def test_it_gets_a_delay_rate(self, wide):
+        flights, y = wide
+        t = Transformer(min_category_count=1, max_onehot_categories=3)
+
+        out = t.fit_transform(flights, y)
+
+        assert "OriginDelayRate" in out.columns
+
+    def test_under_onehot_the_original_is_dropped(self, wide):
+        """Where every value would cost a column, the rate stands in for it."""
+        flights, y = wide
+        t = Transformer(min_category_count=1, max_onehot_categories=3, encoding="onehot")
+
+        out = t.fit_transform(flights, y)
+
+        assert "Origin" not in out.columns
+
+    def test_under_native_the_original_stays(self, wide):
+        """A category costs nothing extra there, so the model gets both readings."""
+        flights, y = wide
+        t = Transformer(min_category_count=1, max_onehot_categories=3, encoding="native")
+
+        out = t.fit_transform(flights, y)
+
+        assert "Origin" in out.columns
+        assert "OriginDelayRate" in out.columns
+
+    def test_a_narrow_column_is_left_alone(self, wide):
+        flights, y = wide
+        t = Transformer(min_category_count=1, max_onehot_categories=3)
+
+        out = t.fit_transform(flights, y)
+
+        assert "Airline" in out.columns
+        assert "AirlineDelayRate" not in out.columns
+
+    def test_a_named_column_keeps_its_original_however_wide(self, wide):
+        """The point of naming one: both readings, whatever the encoding costs."""
+        flights, y = wide
+        t = Transformer(
+            min_category_count=1,
+            max_onehot_categories=3,
+            delay_rate_columns=["Origin"],
+            encoding="onehot",
+        )
+
+        out = t.fit_transform(flights, y)
+
+        assert "Origin" in out.columns
+        assert "OriginDelayRate" in out.columns
+        assert "Origin" not in t.wide_columns_
+
+    def test_transform_treats_new_rows_the_way_fit_did(self, wide):
+        """Scoring must reproduce the training layout, or the columns will not line
+        up with the model."""
+        flights, y = wide
+        t = Transformer(min_category_count=1, max_onehot_categories=3, encoding="onehot")
+        fitted = t.fit_transform(flights, y)
+
+        scored = t.transform(flights.head(3))
+
+        assert list(scored.columns) == list(fitted.columns)
+
+
+class TestDelayRatesAreKeyedOnTheAirportId:
+    """A code can name two airports - BTS reassigned "AUS" when Austin's old airport
+    closed - so keying the history on it would blend them into one average. The id
+    never moves, which is why it is the default key.
+    """
+
+    @pytest.fixture
+    def two_airports_one_code(self):
+        return two_airports_sharing_a_code()
+
+    def test_the_history_is_keyed_on_the_id(self, two_airports_one_code):
+        flights, y = two_airports_one_code
+        t = Transformer(min_category_count=1, max_onehot_categories=0)
+        t.fit(flights, y)
+
+        assert "OriginAirportID" in t.delay_rate_stats_
+
+    def test_two_airports_under_one_code_keep_separate_histories(
+        self, two_airports_one_code
+    ):
+        flights, y = two_airports_one_code
+        t = Transformer(min_category_count=1, max_onehot_categories=0)
+        t.fit(flights, y)
+
+        stats = t.delay_rate_stats_["OriginAirportID"]
+        learned = (stats["sum"] / stats["count"]).to_dict()
+
+        assert learned["10423"] == pytest.approx(0.0)
+        assert learned["16440"] == pytest.approx(1.0)
+
+    def test_keying_on_the_code_would_have_blended_them(self, two_airports_one_code):
+        flights, y = two_airports_one_code
+        t = Transformer(min_category_count=1, delay_rate_columns=["Origin"])
+        t.fit(flights, y)
+
+        stats = t.delay_rate_stats_["Origin"]
+        learned = (stats["sum"] / stats["count"]).to_dict()
+
+        assert learned["AUS"] == pytest.approx(0.5)
+
+    def test_transform_reaches_the_right_history_from_raw_integers(self):
+        """A caller hands over integer ids; the cast to labels happens inside, so
+        the two must still meet."""
+        flights, y = two_airports_sharing_a_code()
+        t = Transformer(min_category_count=1)
+        t.fit(flights, y)
+
+        scored = t.transform(flights)
+
+        assert scored["OriginAirportID"].isin(["10423", "16440"]).all()
+
+    def test_a_scored_flight_gets_its_own_airport_history(self, two_airports_one_code):
+        flights, y = two_airports_one_code
+        t = Transformer(min_category_count=1, max_onehot_categories=0)
+        t.fit(flights, y)
+
+        never_late = t._apply_delay_rates_internal(t._as_labels(flights.head(1).copy()))
+        always_late = t._apply_delay_rates_internal(t._as_labels(flights.tail(1).copy()))
+
+        assert never_late["OriginAirportIDDelayRate"].iloc[0] < 0.2
+        assert always_late["OriginAirportIDDelayRate"].iloc[0] > 0.8
+
+
 class TestTransformerDelayRates:
     @pytest.fixture
     def rate_df(self):
         """Six flights out of two airports, in chronological order."""
         return pd.DataFrame(
             {
-                "FlightDate": pd.to_datetime(
+                DATE_COLUMN: pd.to_datetime(
                     ["2025-01-01", "2025-01-02", "2025-01-03",
                      "2025-01-04", "2025-01-05", "2025-01-06"]
                 ),
@@ -460,7 +743,7 @@ class TestTransformerDelayRates:
             numeric_columns=["Distance"],
             categorical_columns=["Origin"],
         )
-        rates = t._fit_delay_rates_internal(rate_df, rate_y, rate_df["FlightDate"])
+        rates = t._fit_delay_rates_internal(rate_df, rate_y, rate_df[DATE_COLUMN])
 
         k = t.delay_rate_shrinkage
         # First flight of each airport has no prior history at all.
@@ -494,7 +777,7 @@ class TestTransformerDelayRates:
         t = Transformer(min_category_count=1, delay_rate_columns=["Origin"])
         shuffled = rate_df.iloc[::-1]
         rates = t._fit_delay_rates_internal(
-            shuffled, rate_y.iloc[::-1], shuffled["FlightDate"]
+            shuffled, rate_y.iloc[::-1], shuffled[DATE_COLUMN]
         )
 
         assert rates["OriginDelayRate"].loc[0] == pytest.approx(0.5)

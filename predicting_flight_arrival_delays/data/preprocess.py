@@ -120,7 +120,7 @@ def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 4. Holday features
+# 4. Holiday features
 # ---------------------------------------------------------------------------
 def add_holiday_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add US federal holiday features to each flight.
@@ -285,13 +285,13 @@ def add_carrier_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add each flight's airport-carrier combination, for historical delay rates.
 
     Args:
-        df: Flights with Origin, Dest and ReportingAirline.
+        df: Flights with OriginAirportID, DestAirportID and ReportingAirline.
 
     Returns:
         The same DataFrame with "OriginCarrier" and "DestCarrier" added.
     """
-    df["OriginCarrier"] = df["Origin"] + df["ReportingAirline"]
-    df["DestCarrier"] = df["Dest"] + df["ReportingAirline"]
+    df["OriginCarrier"] = df["OriginAirportID"].astype(str) + df["ReportingAirline"]
+    df["DestCarrier"] = df["DestAirportID"].astype(str) + df["ReportingAirline"]
     return df
 
 

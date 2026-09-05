@@ -1,4 +1,16 @@
-"""Per-prediction explanations for the flight-delay classifiers."""
+"""Per-prediction explanations for the flight-delay classifiers.
+
+Every explanation here is an additive decomposition: a base value plus one
+contribution per column, summing back to what the model said. That identity is what
+lets the serving path draw a waterfall that closes on the probability it reported,
+and it holds for both families - SHAP values for the trees, the closed form for the
+linear models, which are already a sum of contributions.
+
+The columns those contributions arrive on are the model's, though, where an airport
+is three hundred one-hot columns. Reading them out as they come would name none of
+what a caller recognises, so they are folded back onto the request columns before
+anyone sees them.
+"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -41,33 +53,36 @@ def explain_prediction(
     X: pd.DataFrame,
     model_type: str,
     top_k: int = 5,
+    feature_means: dict[str, float] | None = None,
 ):
     """Build a feature-level explanation for a single sample's prediction.
 
-    Uses coefficients for logistic regression, or SHAP TreeExplainer for
-    tree-based models (random forest, decision tree, lightgbm). Calibration
-    wrappers (CalibratedClassifierCV/FrozenEstimator) are unwrapped first, so
-    the explanation reflects the underlying base estimator. Only the first
-    row of X is explained.
+    Two paths, both additive. SHAP TreeExplainer for the tree models (random
+    forest, decision tree, lightgbm), and the closed form for logistic regression,
+    where the model is already a sum of contributions and the Shapley values can be
+    read straight off it. Calibration wrappers (CalibratedClassifierCV/
+    FrozenEstimator) are unwrapped first, so the explanation reflects the underlying
+    base estimator. Only the first row of X is explained.
 
     Args:
         model: A fitted estimator, possibly wrapped in
             CalibratedClassifierCV(FrozenEstimator(base_estimator)).
         X: Features to explain; only the first row (X.iloc[[0]]) is used.
         model_type: Which explanation strategy to use. "logreg"/
-            "logistic_regression" for coefficient-based explanations; one of
-            TREE_MODEL_TYPES ("random_forest", "decision_tree", "lightgbm")
-            for SHAP-based explanations. Case-insensitive.
+            "logistic_regression" for the linear path; one of TREE_MODEL_TYPES
+            ("random_forest", "decision_tree", "lightgbm") for the SHAP path.
+            Case-insensitive.
         top_k: How many top features (by absolute contribution) to return.
+        feature_means: The average training flight on these columns.
 
     Returns:
         Up to top_k dicts, sorted by absolute contribution descending, each
         with:
             - "feature": Column name.
-            - "value": Signed contribution (coefficient or SHAP value).
+            - "value": Signed contribution.
             - "abs_value": Its absolute value, used for ranking.
         An empty list if X is empty, model_type is unsupported, the model
-        lacks coef_ (logistic regression path), or SHAP explanation fails -
+        lacks coef_ (linear path), or the SHAP explanation fails -
         never raises for these cases, only logs a warning/error.
     """
 
@@ -81,14 +96,14 @@ def explain_prediction(
     feature_names = x.columns.tolist()
 
     # ---------------------------------------------------------------------
-    # 1) Logistic Regression → use coefficients
+    # 1) Logistic Regression
     # ---------------------------------------------------------------------
     if model_type in ("logreg", "logistic_regression"):
-        logger.info("Using coefficient-based explanation for Logistic Regression.")
+        logger.info("Explaining a linear model in closed form.")
 
         if not hasattr(model, "coef_"):
             logger.error(
-                "Model has no coef_ attribute;cannot build coefficient-based explanation."
+                "Model has no coef_ attribute; cannot explain a linear model."
             )
             return []
 
@@ -101,18 +116,27 @@ def explain_prediction(
             )
 
         n = min(len(feature_names), coef.shape[0])
+       
+        values = np.asarray(x.to_numpy(), dtype=float).reshape(-1)
+        if feature_means:
+            centre = np.array(
+                [float(feature_means.get(name, 0.0)) for name in feature_names],
+                dtype=float,
+            )
+            values = values - centre
+        contributions = coef[:n] * values[:n]
         explanations = [
             {
                 "feature": feature_names[i],
-                "value": float(coef[i]),
-                "abs_value": float(abs(coef[i])),
+                "value": float(contributions[i]),
+                "abs_value": float(abs(contributions[i])),
             }
             for i in range(n)
         ]
 
         explanations = sorted(explanations, key=lambda d: d["abs_value"], reverse=True)[:top_k]
         logger.info(
-            f"Built coefficient-based explanation. Returning top {len(explanations)} features."
+            f"Explained a linear model. Returning top {len(explanations)} features."
         )
         return explanations
 
@@ -272,3 +296,248 @@ def save_shap_waterfall_plot(
     except Exception as e:
         logger.error(f"Failed to save SHAP waterfall plot: {e}")
         return None
+
+def _encoded_importance(model: Any, columns: list[str]) -> dict[str, float]:
+    """How much the estimator leans on each of its own input columns.
+
+    Args:
+        model: A fitted estimator, possibly wrapped in calibration.
+        columns: The column names the model was fitted on, in order.
+
+    Returns:
+        One weight per column, or an empty dict if the estimator exposes neither
+        importances nor coefficients, or reports a different number of them.
+    """
+    base = _unwrap_calibration(model)
+
+    if hasattr(base, "feature_importances_"):
+        weights = np.asarray(base.feature_importances_, dtype=float)
+    elif hasattr(base, "coef_"):
+        weights = np.abs(np.asarray(base.coef_, dtype=float)).ravel()
+    else:
+        logger.warning(f"{type(base).__name__} reports no importances - skipping.")
+        return {}
+
+    if len(weights) != len(columns):
+        logger.warning(
+            f"{type(base).__name__} reports {len(weights)} importances for "
+            f"{len(columns)} columns - skipping."
+        )
+        return {}
+
+    return dict(zip(columns, weights, strict=True))
+
+
+def _ancestor(column: str, raw_columns: list[str], transformer: Any) -> str | None:
+    """Trace one of the model's columns back to the request column it came from.
+
+    The inverse of what encoding did, and it has to agree with app.inputs.contributes:
+    a column is either carried through as itself, one-hot expanded, or turned into a
+    delay rate.
+
+    Args:
+        column: A column the model was fitted on.
+        raw_columns: The request columns it could descend from, longest first.
+
+    Returns:
+        The request column it came from, or None if it came from something the
+        caller never sends - the weather, for instance.
+    """
+    if column in raw_columns:
+        return column
+
+    for raw in raw_columns:
+        if column == f"{raw}DelayRate" and raw in transformer.delay_rate_columns:
+            return raw
+        if column.startswith(f"{raw}_") and raw in transformer.category_keep:
+            return raw
+
+    return None
+
+
+def request_column_importance(
+    model: Any, columns: list[str], transformer: Any, raw_columns: list[str]
+) -> dict[str, float]:
+    """Rank the columns a caller sends by how much the model leans on them.
+
+    A request column rarely reaches the model as itself: it arrives as a block of
+    one-hot columns, or as a delay rate, or both. Its weight here is the sum of what
+    its descendants carry.
+
+    Args:
+        model: The fitted estimator.
+        columns: The column names it was fitted on, in order.
+        transformer: The fitted transformer that produced them.
+        raw_columns: The columns a caller can send, from app.inputs.
+
+    Returns:
+        Request column to its share of the total weight, largest first. Shares sum
+        to at most 1: what the service supplies by itself - the weather - is left
+        out, since a caller cannot be warned about a column they do not send.
+        Empty if the estimator reports no importances.
+    """
+    encoded = _encoded_importance(model, columns)
+    if not encoded:
+        return {}
+
+    by_length = sorted(raw_columns, key=len, reverse=True)
+    total = float(sum(encoded.values())) or 1.0
+
+    folded: dict[str, float] = {}
+    for column, weight in encoded.items():
+        raw = _ancestor(column, by_length, transformer)
+        if raw is not None:
+            folded[raw] = folded.get(raw, 0.0) + float(weight) / total
+
+    return dict(sorted(folded.items(), key=lambda item: item[1], reverse=True))
+
+
+def request_column_contributions(
+    model: Any,
+    X: pd.DataFrame,
+    transformer: Any,
+    model_type: str,
+    top_k: int = 5,
+    feature_means: dict[str, float] | None = None,
+) -> list[dict[str, Any]]:
+    """Explain one prediction in terms of the columns a person recognises.
+
+    Args:
+        model: The fitted estimator that produced the prediction.
+        X: The prepared matrix; only its first row is explained.
+        transformer: The fitted transformer that built the columns.
+        model_type: "logistic_regression" or one of the tree types.
+        top_k: How many columns to report.
+        feature_means: The average training flight, passed through so a linear
+            model measures each column against it.
+
+    Returns:
+        Up to top_k dicts, largest absolute effect first, each with "column" and
+        "contribution" - positive towards a delay, negative towards an on-time
+        arrival. Empty if the explanation could not be built.
+    """
+    detailed = explain_prediction(
+        model, X, model_type, top_k=len(X.columns), feature_means=feature_means
+    )
+    if not detailed:
+        return []
+
+    sources = sorted(
+        set(transformer.category_keep) | set(transformer.delay_rate_columns),
+        key=len,
+        reverse=True,
+    )
+
+    folded: dict[str, float] = {}
+    for item in detailed:
+        column = _ancestor(item["feature"], sources, transformer) or item["feature"]
+        folded[column] = folded.get(column, 0.0) + float(item["value"])
+
+    ranked = sorted(folded.items(), key=lambda item: abs(item[1]), reverse=True)
+    return [
+        {"column": column, "contribution": contribution}
+        for column, contribution in ranked[:top_k]
+    ]
+
+
+def _logit(p: float) -> float:
+    """The log-odds of a probability, kept away from the infinities at the ends."""
+    p = float(np.clip(p, 1e-6, 1 - 1e-6))
+    return float(np.log(p / (1 - p)))
+
+
+def _base_value(
+    model: Any, model_type: str, feature_means: dict[str, float] | None = None
+) -> float | None:
+    """What the model answers before it knows anything about this flight.
+
+    The point a waterfall starts from. Without it the steps have no origin, and a
+    chart could only show them floating around zero.
+
+    Args:
+        model: A fitted estimator, possibly wrapped in calibration.
+        model_type: "logistic_regression" or one of the tree types.
+        feature_means: The average training flight.
+
+    Returns:
+        The base value in the same units as the contributions, or None if it cannot
+        be read.
+    """
+    base = _unwrap_calibration(model)
+    model_type = model_type.lower()
+
+    if model_type in ("logreg", "logistic_regression"):
+        intercept = getattr(base, "intercept_", None)
+        if intercept is None:
+            return None
+        start = float(np.ravel(intercept)[0])
+        if feature_means:
+            coef = np.ravel(base.coef_)
+            centre = np.array(
+                [float(feature_means.get(c, 0.0)) for c in getattr(
+                    base, "feature_names_in_", list(feature_means))],
+                dtype=float,
+            )
+            start += float(np.dot(coef[: len(centre)], centre[: len(coef)]))
+        return start
+
+    if model_type in TREE_MODEL_TYPES:
+        try:
+            expected = shap.TreeExplainer(base).expected_value
+        except Exception as e:
+            logger.error(f"Could not read the SHAP base value: {e}")
+            return None
+        expected = np.ravel(expected)
+        return float(expected[1] if expected.size > 1 else expected[0])
+
+    return None
+
+
+def waterfall_terms(
+    model: Any,
+    X: pd.DataFrame,
+    transformer: Any,
+    model_type: str,
+    served_probability: float,
+    top_k: int = 5,
+    feature_means: dict[str, float] | None = None,
+) -> dict[str, Any] | None:
+    """Everything a waterfall needs to close on the probability that was served.
+
+    Args:
+        model: The fitted estimator that produced the prediction.
+        X: The prepared matrix; only its first row is explained.
+        transformer: The fitted transformer that built the columns.
+        model_type: "logistic_regression" or one of the tree types.
+        served_probability: The probability the caller was given, calibration
+            included.
+        top_k: How many columns to report on their own.
+
+    Returns:
+        The base value, the leading contributions, the summed rest and the
+        calibration step - or None if no explanation could be built.
+    """
+    folded = request_column_contributions(
+        model, X, transformer, model_type, top_k=len(X.columns),
+        feature_means=feature_means,
+    )
+    base = _base_value(model, model_type, feature_means)
+    if not folded or base is None:
+        return None
+
+    total = base + sum(item["contribution"] for item in folded)
+
+    raw = float(_unwrap_calibration(model).predict_proba(X.iloc[[0]])[0, 1])
+    in_log_odds = abs(total - _logit(raw)) <= abs(total - raw)
+    link = _logit if in_log_odds else float
+
+    leading = folded[:top_k]
+    return {
+        "base_value": base,
+        "contributions": leading,
+        "other_contribution": sum(
+            item["contribution"] for item in folded[top_k:]
+        ),
+        "calibration": link(served_probability) - total,
+        "log_odds": in_log_odds,
+    }

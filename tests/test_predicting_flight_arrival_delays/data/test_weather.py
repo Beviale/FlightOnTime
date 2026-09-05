@@ -10,6 +10,7 @@ from predicting_flight_arrival_delays.config import (
     MAX_LEAD_DAYS,
     PREVIOUS_RUNS_URL,
     WEATHER_MODEL,
+    DATE_COLUMN,
 )
 from predicting_flight_arrival_delays.data import weather as weather_module
 from predicting_flight_arrival_delays.data.weather import (
@@ -232,7 +233,7 @@ class TestRunCommand:
                 "OriginAirportID": [10397, 10397],
                 "DestAirportID": [12892, 12892],
                 "LeadDays": [0, 2],
-                "FlightDate": pd.to_datetime(["2025-03-01", "2025-03-04"]),
+                DATE_COLUMN: pd.to_datetime(["2025-03-01", "2025-03-04"]),
             }
         )
         flights_path = tmp_path / "flights.parquet"

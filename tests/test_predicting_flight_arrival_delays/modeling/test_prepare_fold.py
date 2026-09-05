@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sp
 
-from predicting_flight_arrival_delays.config import TARGET
+from predicting_flight_arrival_delays.config import TARGET, DATE_COLUMN
 from predicting_flight_arrival_delays.data.features import select_features_variant
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import (
@@ -26,8 +26,31 @@ def small_transformer(monkeypatch):
 @pytest.fixture
 def fold(flights_df):
     """One walk-forward fold: train, validation and test, split by date."""
-    df = select_features_variant(flights_df, "noweather").sort_values("FlightDate")
+    df = select_features_variant(flights_df, "noweather").sort_values(DATE_COLUMN)
     return df.iloc[:180], df.iloc[180:240], df.iloc[240:]
+
+
+@pytest.fixture
+def transformer_kwargs(monkeypatch):
+    """Record how prepare_fold builds its transformer."""
+    recorded = {}
+
+    def build(**kwargs):
+        recorded.update(kwargs)
+        return Transformer(min_category_count=5, **kwargs)
+
+    monkeypatch.setattr(tesm_module, "Transformer", build)
+    return recorded
+
+
+class TestTheEncodingReachesTheTransformer:
+    @pytest.mark.parametrize("encoding", ["onehot", "native"])
+    def test_it_is_the_one_prepare_fold_was_given(self, fold, transformer_kwargs, encoding):
+        train_df, _, _ = fold
+
+        prepare_fold(train_df, encoding)
+
+        assert transformer_kwargs["encoding"] == encoding
 
 
 class TestPrepareFold:
@@ -35,7 +58,7 @@ class TestPrepareFold:
         """Dense one-hot on Origin/Dest is what exhausted the RAM in production."""
         train_df, validation_df, test_df = fold
 
-        X_fit, _, X_val, _, X_test, _ = prepare_fold(
+        X_fit, _, X_val, _, X_test, _, *_ = prepare_fold(
             train_df, "onehot", test_df=test_df, validation_df=validation_df
         )
 
@@ -47,7 +70,7 @@ class TestPrepareFold:
         """LightGBM reads category dtype directly, so nothing is converted."""
         train_df, validation_df, test_df = fold
 
-        X_fit, _, X_val, _, X_test, _ = prepare_fold(
+        X_fit, _, X_val, _, X_test, _, *_ = prepare_fold(
             train_df, "native", test_df=test_df, validation_df=validation_df
         )
 
@@ -59,7 +82,7 @@ class TestPrepareFold:
         """Alignment happens before the sparse conversion, while names still exist."""
         train_df, validation_df, test_df = fold
 
-        X_fit, _, X_val, _, X_test, _ = prepare_fold(
+        X_fit, _, X_val, _, X_test, _, *_ = prepare_fold(
             train_df, "onehot", test_df=test_df, validation_df=validation_df
         )
 
@@ -68,7 +91,7 @@ class TestPrepareFold:
     def test_row_counts_are_preserved_without_resampling(self, fold):
         train_df, validation_df, test_df = fold
 
-        X_fit, y_fit, X_val, y_val, X_test, y_test = prepare_fold(
+        X_fit, y_fit, X_val, y_val, X_test, y_test, *_ = prepare_fold(
             train_df, "onehot", test_df=test_df, validation_df=validation_df
         )
 
@@ -79,7 +102,7 @@ class TestPrepareFold:
     def test_validation_is_optional(self, fold):
         train_df, _, test_df = fold
 
-        _, _, X_val, y_val, X_test, _ = prepare_fold(train_df, "onehot", test_df=test_df)
+        _, _, X_val, y_val, X_test, _, *_ = prepare_fold(train_df, "onehot", test_df=test_df)
 
         assert X_val is None
         assert y_val is None
@@ -89,7 +112,7 @@ class TestPrepareFold:
         """Phase 1 never touches the test set - it does not even read the file."""
         train_df, validation_df, _ = fold
 
-        _, _, X_val, _, X_test, y_test = prepare_fold(
+        _, _, X_val, _, X_test, y_test, *_ = prepare_fold(
             train_df, "onehot", validation_df=validation_df
         )
 
@@ -100,7 +123,7 @@ class TestPrepareFold:
     def test_resampling_balances_only_the_training_fold(self, fold):
         train_df, validation_df, test_df = fold
 
-        _, y_fit, _, y_val, _, y_test = prepare_fold(
+        _, y_fit, _, y_val, _, y_test, *_ = prepare_fold(
             train_df, "onehot", test_df=test_df,
             validation_df=validation_df, resample="undersample",
         )
@@ -113,7 +136,7 @@ class TestPrepareFold:
     def test_resampling_works_after_the_sparse_conversion(self, fold):
         train_df, _, _ = fold
 
-        X_fit, y_fit, _, _, _, _ = prepare_fold(
+        X_fit, y_fit, _, _, _, _, *_ = prepare_fold(
             train_df, "onehot", resample="oversample"
         )
 
@@ -129,7 +152,7 @@ class TestPrepareFold:
     def test_the_target_is_split_off_not_encoded(self, fold):
         train_df, _, _ = fold
 
-        _, y_fit, _, _, _, _ = prepare_fold(train_df, "onehot")
+        _, y_fit, _, _, _, _, *_ = prepare_fold(train_df, "onehot")
 
         assert y_fit.name == TARGET
         assert set(y_fit.unique()) <= {0, 1}

@@ -26,6 +26,7 @@ import pandas as pd
 from sklearn.metrics import precision_recall_curve
 import typer
 
+from predicting_flight_arrival_delays.app.inputs import CANDIDATE_INPUTS
 from predicting_flight_arrival_delays.config import (
     DAGSHUB_REPO_NAME,
     DAGSHUB_REPO_OWNER,
@@ -33,17 +34,12 @@ from predicting_flight_arrival_delays.config import (
     METRICS_DIR,
     PROCESSED_DATA_DIR,
     PRODUCTION_VARIANTS,
-)
-from predicting_flight_arrival_delays.data.features import build_xy
-from predicting_flight_arrival_delays.data.transform import (
-    Transformer,
-    align_columns,
-    encode_categoricals,
-    resample_training_data,
-    sparse_column_order,
-    to_sparse_matrix,
+    WINNER_MODEL_STAGE,
 )
 from predicting_flight_arrival_delays.modeling import evaluate
+from predicting_flight_arrival_delays.modeling.explainability import (
+    request_column_importance,
+)
 from predicting_flight_arrival_delays.modeling.train import HYPERPARAMS
 from predicting_flight_arrival_delays.modeling.train import train as train_model
 from predicting_flight_arrival_delays.modeling.train_evaluate_save_metrics import prepare_fold
@@ -149,9 +145,7 @@ def register_winner(
     encoding = ENCODING[algorithm]
     all_folds = all_fold_dirs(variant)
     fold_dir = all_folds[-1]  # the last fold: used for Step 2, the model registration
-    train_df = pd.read_parquet(fold_dir / "train.parquet")
-    validation_df = pd.read_parquet(fold_dir / "validation.parquet")
-    test_df = pd.read_parquet(fold_dir / "test.parquet")
+
 
     with mlflow.start_run(run_name=f"{variant}__final__{algorithm}"):
         # --- Step 1: evaluation, averaged across every fold
@@ -162,7 +156,10 @@ def register_winner(
             fold_validation_df = pd.read_parquet(fold / "validation.parquet")
             fold_test_df = pd.read_parquet(fold / "test.parquet")
 
-            X_fit_f, y_fit_f, X_val_f, y_val_f, X_test_f, y_test_f = prepare_fold(
+            (
+                X_fit_f, y_fit_f, X_val_f, y_val_f, X_test_f, y_test_f,
+                transformer, feature_columns, feature_means,
+            ) = prepare_fold(
                 fold_train_df, encoding, test_df=fold_test_df,
                 validation_df=fold_validation_df, resample=resample,
             )
@@ -194,41 +191,12 @@ def register_winner(
             )
             return
 
-        # --- Step 2: the model that is registered.
-        full_train_df = pd.concat([train_df, validation_df], ignore_index=True)
-        X_full, y_full = build_xy(full_train_df)
 
-        transformer = Transformer(encoding=encoding).fit(X_full, y_full)
-        X_full = transformer.transform(X_full)
-        transformer.select_features(X_full, y_full)
-        X_full = transformer.apply_selection(X_full)
-        cat_cols = [c for c in transformer.categorical_columns if c in X_full.columns]
-        X_full = encode_categoricals(X_full, cat_cols, encoding)
-
-        X_test2, y_test2 = build_xy(test_df)
-        X_test2 = transformer.transform(X_test2)
-        X_test2 = transformer.apply_selection(X_test2)
-        X_test2 = encode_categoricals(X_test2, cat_cols, encoding)
-        X_full, X_test2 = align_columns(X_full, X_test2, encoding)
-        if encoding == "onehot":
-            X_test2 = to_sparse_matrix(X_test2)
-
-        X_full, y_full = resample_training_data(X_full, y_full, resample, encoding)
-
-        feature_columns = (
-            sparse_column_order(X_full) if encoding == "onehot" else list(X_full.columns)
-        )
-
-        if encoding == "onehot":
-            X_full = to_sparse_matrix(X_full)
-
-        model = train_model(
-            X_full, y_full, algorithm, config, calibrate, X_val=X_test2, y_val=y_test2
-        )
-        final_threshold = choose_threshold(y_test2, model.predict_proba(X_test2)[:, 1], 1.2)
+        model, final_threshold = fold_model, fold_threshold
+        X_full = X_fit_f
 
         dataset = from_pandas(
-            pd.concat([full_train_df, test_df], ignore_index=True),
+            pd.concat([fold_train_df, fold_validation_df], ignore_index=True),
             source=str(fold_dir),
             name=f"{variant}_final_train",
             digest=get_dvc_data_hash(PROCESSED_DATA_DIR / "selection"),
@@ -252,6 +220,13 @@ def register_winner(
         mlflow.log_metrics(metrics)
         mlflow.log_metric("operating_threshold", final_threshold)
 
+        importance = request_column_importance(
+            model, feature_columns, transformer, CANDIDATE_INPUTS
+        )
+        if importance:
+            leading = list(importance)[:5]
+            logger.info(f"{variant}: the model leans most on {', '.join(leading)}")
+
         register_model_bundle(
             model=model,
             transformer=transformer,
@@ -259,6 +234,8 @@ def register_winner(
             registered_model_name=f"flight-delay-{variant}",
             signature_sample=X_full[:100].toarray() if hasattr(X_full, "toarray") else X_full.head(100),
             alias=alias,
+            importance=importance,
+            feature_means=feature_means,
         )
         logger.success(
             f"Registered flight-delay-{variant} ({n_features} features) "
@@ -273,10 +250,13 @@ def register_winner(
             model_file = save_dir / "model.joblib"
             transformer_file = save_dir / "transformer.joblib"
             columns_file = save_dir / "columns.json"
+            importance_file = save_dir / "importance.json"
 
             joblib.dump(model, model_file)
             transformer.save(transformer_file)
             columns_file.write_text(json.dumps(feature_columns))
+            if importance:
+                importance_file.write_text(json.dumps(importance, indent=2))
 
             logger.info(f"Model also saved locally to {safe_relative_path(model_file)}")
             logger.info(f"Transformer also saved locally to {safe_relative_path(transformer_file)}")
@@ -285,10 +265,10 @@ def register_winner(
 
 @app.command()
 def run(
-    experiment: str = typer.Option("flight-delay-v2", help="MLflow experiment name"),
+    experiment: str = typer.Option("flight-delay-v3", help="MLflow experiment name"),
     calibrate: bool = typer.Option(True, help="Wrap estimators in isotonic calibration"),
     alias: str | None = typer.Option(
-        "champion",
+        WINNER_MODEL_STAGE,
         help="Alias to promote each variant's winning model version under.",
     ),
     models_path: Path | None = typer.Option(

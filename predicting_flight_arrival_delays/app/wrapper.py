@@ -1,0 +1,335 @@
+"""What the interface calls.
+
+Gradio binds a Python function to every button and panel, and those functions live
+here. Each one takes what the widgets hold, sends a request to the service's own
+API, and turns the answer into the markdown or the table the page displays.
+"""
+from typing import Any
+
+import httpx
+from loguru import logger
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import pandas as pd
+
+from predicting_flight_arrival_delays.config import API_URL
+
+TIMEOUT_SECONDS = 60.0
+
+
+TOWARDS_DELAY = "#c0392b"
+TOWARDS_ON_TIME = "#27ae60"
+NEUTRAL = "#34495e"
+
+VARIANT_LABEL = {
+    "all": "full model, weather included",
+    "noweather": "fallback model, no weather",
+}
+WEATHER_LABEL = {
+    "ok": "forecast retrieved",
+    "beyond_forecast_horizon": "flight too far ahead for a forecast to exist",
+    "unavailable": "weather service unreachable",
+    "unknown_airport": "airport with no known coordinates",
+}
+
+
+async def call(method: str, path: str, **kwargs) -> dict[str, Any]:
+    """Send one request to the service's own API.
+
+    Args:
+        method: HTTP method.
+        path: Path on the API, starting with a slash.
+        **kwargs: Passed through to httpx.
+
+    Returns:
+        The decoded body on success, or {"error": "..."} describing what went wrong.
+    """
+    async with httpx.AsyncClient(timeout=TIMEOUT_SECONDS) as client:
+        try:
+            response = await client.request(method, f"{API_URL}{path}", **kwargs)
+        except httpx.HTTPError as e:
+            logger.error(f"{method} {path} failed: {e}")
+            return {"error": f"Service unreachable: {e}"}
+
+    if response.is_success:
+        return response.json()
+
+    try:
+        detail = response.json().get("detail", response.text)
+    except ValueError:
+        detail = response.text
+    logger.warning(f"{method} {path} answered {response.status_code}: {detail}")
+    return {"error": f"{response.status_code} - {detail}"}
+
+
+def render_contributions(explanations: list[dict[str, Any]]):
+    """Draw what pushed one answer, as a bar either side of zero.
+
+    Args:
+        explanations: The "explanations" block of a prediction response.
+
+    Returns:
+        A matplotlib figure, or None when there is nothing to draw.
+    """
+    if not explanations:
+        return None
+
+    columns = [item["column"] for item in explanations][::-1]
+    weights = [item["contribution"] for item in explanations][::-1]
+
+    figure, axes = plt.subplots(figsize=(7, 0.5 * len(columns) + 1.2))
+    axes.barh(
+        columns,
+        weights,
+        color=[TOWARDS_DELAY if w > 0 else TOWARDS_ON_TIME for w in weights],
+    )
+    axes.axvline(0, color="#444444", linewidth=0.8)
+    axes.set_xlabel("towards on time            towards a delay")
+    axes.set_title("What pushed this answer")
+    axes.spines[["top", "right"]].set_visible(False)
+    figure.tight_layout()
+    return figure
+
+
+def render_waterfall(terms: dict[str, Any] | None, probability: float):
+    """Draw how the answer was reached, step by step, ending on the answer itself.
+
+    Args:
+        terms: The "waterfall" block of a prediction response.
+        probability: The probability the page is showing.
+
+    Returns:
+        A matplotlib figure, or None when there is nothing to draw.
+    """
+    if not terms or not terms.get("contributions"):
+        return None
+
+    steps = (
+        [("starts at", terms["base_value"])]
+        + [(item["column"], item["contribution"]) for item in terms["contributions"]]
+        + [("everything else", terms["other_contribution"]),
+           ("calibration", terms["calibration"])]
+    )
+
+    figure, axes = plt.subplots(figsize=(8, 0.5 * len(steps) + 1.6))
+    rows = list(range(len(steps) + 1))[::-1]
+
+    running = steps[0][1]
+    axes.barh(rows[0], running, color=NEUTRAL)
+    for row, (_, move) in zip(rows[1:-1], steps[1:], strict=True):
+        axes.barh(row, move, left=running, color=TOWARDS_DELAY if move > 0 else TOWARDS_ON_TIME)
+        running += move
+        axes.text(running, row, f"  {move:+.2f}", va="center", fontsize=8, color="#555")
+    axes.barh(rows[-1], running, color=NEUTRAL)
+
+    axes.set_yticks(rows)
+    axes.set_yticklabels([name for name, _ in steps] + ["the answer"])
+    axes.axvline(0, color="#444444", linewidth=0.8)
+    axes.set_xlabel(
+        "log-odds" if terms.get("log_odds", True) else "probability"
+    )
+    axes.set_title(f"How this answer was reached — {probability:.1%}")
+    axes.spines[["top", "right"]].set_visible(False)
+    figure.tight_layout()
+    return figure
+
+
+def render_prediction(data: dict[str, Any]) -> str:
+    """Turn one scored flight into something a person can read.
+
+    Args:
+        data: The data block of a prediction response.
+
+    Returns:
+        Markdown stating the risk, and what the answer is based on.
+    """
+    probability = data["delay_probability"]
+    delayed = data["is_delayed"]
+    verdict = "🔴 At risk of delay" if delayed else "🟢 Expected on time"
+
+    variant = VARIANT_LABEL.get(data["variant"], data["variant"])
+    weather = WEATHER_LABEL.get(data["weather"], data["weather"])
+
+    lines = [
+        f"# {verdict}",
+        f"## Probability of delay: {probability:.1%}",
+        "",
+        f"Threshold above which a flight is called late: **{data['threshold']:.1%}**.",
+        f"Answered by the **{variant}** — {weather}.",
+    ]
+    if data["variant"] == "noweather":
+        lines.append(
+            "\n> Without a forecast this estimate is less informed than the one the "
+            "main model would have given."
+        )
+
+    explanations = data.get("explanations") or []
+    if explanations:
+        lines.append("\n### What pushed this answer")
+        lines += [
+            f"- **{item['column']}** pushed "
+            + ("towards a delay" if item["contribution"] > 0 else "towards arriving on time")
+            + f" ({item['contribution']:+.3f})"
+            for item in explanations
+        ]
+
+    approximated = data.get("approximated") or []
+    if approximated:
+        lines.append(
+            "\n> ⚠️ **This answer may be less accurate than it looks.** The model "
+            "leans heavily on the following, and the request left them out, so a "
+            "training average stood in for each: "
+            + ", ".join(f"`{column}`" for column in approximated)
+            + ". Sending them should give a sharper answer."
+        )
+    return "\n".join(lines)
+
+
+async def predict_lookup(
+    flight_date, marketing_carrier, operating_carrier, number, origin, dest
+) -> str:
+    """Score a flight the user only named.
+
+    Args:
+        flight_date: Departure date, as the date picker gives it.
+        marketing_carrier: The code the flight is sold under.
+        operating_carrier: The code of the airline flying it.
+        number: Flight number.
+        origin: Departure airport, IATA.
+        dest: Arrival airport, IATA.
+
+    Returns:
+        The answer as markdown, and a chart of what pushed it - or None in place of
+        the chart when the served model reports nothing to draw.
+    """
+    if not all([flight_date, marketing_carrier, operating_carrier, number, origin, dest]):
+        return "Fill in every field.", None
+
+    payload = {
+        "FlightDate": str(flight_date)[:10],
+        "MarketingCarrier": marketing_carrier,
+        "ReportingAirline": operating_carrier,
+        "FlightNumber": int(number),
+        "Origin": origin,
+        "Dest": dest,
+    }
+
+    body = await call("POST", "/predictions/lookup?explain=true", json=payload)
+    if "error" in body:
+        return f"### Could not answer\n\n{body['error']}", None
+
+    data = body["data"]
+    resolved = data["resolved"]
+    answer = render_prediction(data) + (
+        f"\n\n---\n**Flight found:** {resolved['Origin']} → {resolved['Dest']}, "
+        f"scheduled departure at {resolved['DepTimeDecimal']:.2f} local, "
+        f"{resolved['Distance']:.0f} miles."
+    )
+    chart = render_waterfall(
+        data.get("waterfall"), data["delay_probability"]
+    ) or render_contributions(data.get("explanations") or [])
+    return answer, chart
+
+
+async def predict_batch(file) -> pd.DataFrame:
+    """Score a CSV of flights described in full.
+
+    Args:
+        file: The uploaded file, as Gradio hands it over.
+
+    Returns:
+        One row per flight with the answer, or a single row describing the failure.
+    """
+    if file is None:
+        return pd.DataFrame({"error": ["Upload a CSV first."]})
+
+    try:
+        flights = pd.read_csv(file)
+    except Exception as e:
+        logger.error(f"Could not read the uploaded CSV: {e}")
+        return pd.DataFrame({"error": [f"Unreadable CSV: {e}"]})
+
+    payload = flights.where(pd.notna(flights), None).to_dict(orient="records")
+    body = await call("POST", "/batch-predictions", json=payload)
+    if "error" in body:
+        return pd.DataFrame({"error": [body["error"]]})
+
+    return pd.DataFrame(
+        [
+            {
+                "flight": row["index"],
+                "verdict": "🔴 At risk" if row["is_delayed"] else "🟢 On time",
+                "probability": f"{row['delay_probability']:.1%}",
+                "model": row["variant"],
+                "weather": WEATHER_LABEL.get(row["weather"], row["weather"]),
+            }
+            for row in body["data"]["results"]
+        ]
+    )
+
+
+def _as_markdown_table(rows: dict[str, Any]) -> str:
+    """Render a flat mapping as a two-column table."""
+    lines = ["| | |", "|---|---|"]
+    lines += [f"| {key} | {value} |" for key, value in sorted(rows.items())]
+    return "\n".join(lines)
+
+
+async def get_metrics() -> str:
+    """Report how each served model scored when it was released."""
+    body = await call("GET", "/model/metrics")
+    if "error" in body:
+        return f"### Metrics unavailable\n\n{body['error']}"
+
+    blocks = []
+    for variant, info in sorted(body["data"].items()):
+        numbers = {key: f"{value:.4f}" for key, value in info["metrics"].items()}
+        blocks.append(
+            f"## {variant} — {VARIANT_LABEL.get(variant, '')}\n\n"
+            f"Operating threshold: **{info['operating_threshold']:.3f}**\n\n"
+            + _as_markdown_table(numbers)
+            + f"\n\nRun: `{info['run_id']}`"
+        )
+    return "\n\n---\n\n".join(blocks)
+
+
+async def get_hyperparameters() -> str:
+    """Report how each served model was configured and trained."""
+    body = await call("GET", "/model/hyperparameters")
+    if "error" in body:
+        return f"### Hyperparameters unavailable\n\n{body['error']}"
+
+    blocks = []
+    for variant, info in sorted(body["data"].items()):
+        blocks.append(
+            f"## {variant}\n\n### The algorithm's own hyperparameters\n\n"
+            + _as_markdown_table(info["hyperparameters"])
+            + "\n\n### How the run was configured\n\n"
+            + _as_markdown_table(info["training"])
+        )
+    return "\n\n---\n\n".join(blocks)
+
+
+async def get_inputs() -> str:
+    """Report which columns a manual request has to carry."""
+    body = await call("GET", "/model/inputs")
+    if "error" in body:
+        return f"### Not available\n\n{body['error']}"
+
+    data = body["data"]
+    if not data.get("derived_from_served_models", True):
+        return (
+            "## No model is in service"
+        )
+
+    return (
+        "## Columns a manual request must carry\n\n"
+        f"{', '.join(f'`{c}`' for c in data['required'])}\n\n"
+        "## Columns the served models do not read\n\n"
+        "Feature selection dropped them, so sending them changes nothing.\n\n"
+        f"{', '.join(f'`{c}`' for c in data['ignored']) or '_none_'}\n\n"
+        "## Added by the service\n\n"
+        f"{', '.join(f'`{c}`' for c in data['supplied_by_the_service'])}"
+    )
