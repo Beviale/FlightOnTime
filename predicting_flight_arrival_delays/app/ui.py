@@ -75,10 +75,13 @@ def build_lookup_tab() -> None:
     predict = gr.Button("Estimate the risk of delay", variant="primary")
     answer = gr.Markdown()
 
+
+    contributions = gr.Plot(show_label=False)
+
     predict.click(
         fn=wrapper.predict_lookup,
         inputs=[flight_date, marketing, operating, number, origin, dest],
-        outputs=answer,
+        outputs=[answer, contributions],
     )
 
 
@@ -87,9 +90,7 @@ def build_batch_tab() -> None:
     gr.Markdown(
         "### A group of flights\n"
         "For callers who already hold the data: a CSV with one row per flight, "
-        "carrying the columns the served models read. The exact list is under "
-        "**What to send** — it moves with the model version, so it is worth reading "
-        "there rather than trusting a list written by hand."
+        "carrying the columns the served models read."
     )
 
     uploaded = gr.File(label="CSV of flights", file_types=[".csv"])
@@ -120,9 +121,7 @@ def build() -> gr.Blocks:
 
             with gr.TabItem("Metrics"):
                 gr.Markdown(
-                    "How the served models scored when they were released, on data "
-                    "they had never been trained on. They say nothing about how the "
-                    "models are doing in production now."
+                    "How the served models scored when they were released."
                 )
                 metrics = gr.Markdown()
                 interface.load(fn=wrapper.get_metrics, outputs=metrics)

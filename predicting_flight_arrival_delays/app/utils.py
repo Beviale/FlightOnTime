@@ -107,7 +107,11 @@ def load_bundles() -> dict[str, Bundle]:
     Returns:
         The variants that loaded, keyed by variant.
     """
-    dagshub.init(repo_owner=DAGSHUB_REPO_OWNER, repo_name=DAGSHUB_REPO_NAME, mlflow=True)
+    try:
+        dagshub.init(repo_owner=DAGSHUB_REPO_OWNER, repo_name=DAGSHUB_REPO_NAME, mlflow=True)
+    except Exception as e:
+        logger.error(f"Could not reach the model registry: {e}")
+        return {}
 
     bundles = {}
     for variant in SERVED_VARIANTS:
