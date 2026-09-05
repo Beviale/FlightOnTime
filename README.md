@@ -1,3 +1,14 @@
+---
+title: FlightOnTime
+emoji: "✈️"
+colorFrom: blue
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+license: mit
+---
+
 # FlightOnTime
 
 <a target="_blank" href="https://cookiecutter-data-science.drivendata.org/">
