@@ -1,0 +1,360 @@
+Iata,AirportId,CityName,State
+ABE,10135,"Allentown/Bethlehem/Easton, PA",PA
+ABI,10136,"Abilene, TX",TX
+ABQ,10140,"Albuquerque, NM",NM
+ABR,10141,"Aberdeen, SD",SD
+ABY,10146,"Albany, GA",GA
+ACK,10154,"Nantucket, MA",MA
+ACT,10155,"Waco, TX",TX
+ACV,10157,"Arcata/Eureka, CA",CA
+ACY,10158,"Atlantic City, NJ",NJ
+ADK,10165,"Adak Island, AK",AK
+ADQ,10170,"Kodiak, AK",AK
+AEX,10185,"Alexandria, LA",LA
+AGS,10208,"Augusta, GA",GA
+AKN,10245,"King Salmon, AK",AK
+ALB,10257,"Albany, NY",NY
+ALO,10268,"Waterloo, IA",IA
+AMA,10279,"Amarillo, TX",TX
+ANC,10299,"Anchorage, AK",AK
+APN,10333,"Alpena, MI",MI
+ASE,10372,"Aspen, CO",CO
+ATL,10397,"Atlanta, GA",GA
+ATW,10408,"Appleton, WI",WI
+ATY,10409,"Watertown, SD",SD
+AUS,10423,"Austin, TX",TX
+AVL,10431,"Asheville, NC",NC
+AVP,10434,"Scranton/Wilkes-Barre, PA",PA
+AZA,10466,"Phoenix, AZ",AZ
+AZO,10469,"Kalamazoo, MI",MI
+BDL,10529,"Hartford, CT",CT
+BET,10551,"Bethel, AK",AK
+BFF,10558,"Scottsbluff, NE",NE
+BFL,10561,"Bakersfield, CA",CA
+BGM,10577,"Binghamton, NY",NY
+BGR,10581,"Bangor, ME",ME
+BHM,10599,"Birmingham, AL",AL
+BIH,10617,"Bishop, CA",CA
+BIL,10620,"Billings, MT",MT
+BIS,10627,"Bismarck/Mandan, ND",ND
+BJI,10631,"Bemidji, MN",MN
+BLI,10666,"Bellingham, WA",WA
+BLV,10676,"Belleville, IL",IL
+BMI,10685,"Bloomington/Normal, IL",IL
+BNA,10693,"Nashville, TN",TN
+BOI,10713,"Boise, ID",ID
+BOS,10721,"Boston, MA",MA
+BPT,10728,"Beaumont/Port Arthur, TX",TX
+BQK,10731,"Brunswick, GA",GA
+BQN,10732,"Aguadilla, PR",PR
+BRD,10739,"Brainerd, MN",MN
+BRO,10747,"Brownsville, TX",TX
+BRW,10754,"Barrow, AK",AK
+BTM,10779,"Butte, MT",MT
+BTR,10781,"Baton Rouge, LA",LA
+BTV,10785,"Burlington, VT",VT
+BUF,10792,"Buffalo, NY",NY
+BUR,10800,"Burbank, CA",CA
+BWI,10821,"Baltimore, MD",MD
+BZN,10849,"Bozeman, MT",MT
+CAE,10868,"Columbia, SC",SC
+CAK,10874,"Akron, OH",OH
+CDC,10918,"Cedar City, UT",UT
+CDV,10926,"Cordova, AK",AK
+CHA,10980,"Chattanooga, TN",TN
+CHO,10990,"Charlottesville, VA",VA
+CHS,10994,"Charleston, SC",SC
+CID,11003,"Cedar Rapids/Iowa City, IA",IA
+CIU,11013,"Sault Ste. Marie, MI",MI
+CKB,11027,"Clarksburg/Fairmont, WV",WV
+CLD,11041,"Carlsbad, CA",CA
+CLE,11042,"Cleveland, OH",OH
+CLL,11049,"College Station/Bryan, TX",TX
+CLT,11057,"Charlotte, NC",NC
+CMH,11066,"Columbus, OH",OH
+CMI,11067,"Champaign/Urbana, IL",IL
+CMX,11076,"Hancock/Houghton, MI",MI
+COD,11097,"Cody, WY",WY
+COS,11109,"Colorado Springs, CO",CO
+COU,11111,"Columbia, MO",MO
+CPR,11122,"Casper, WY",WY
+CRP,11140,"Corpus Christi, TX",TX
+CRW,11146,"Charleston/Dunbar, WV",WV
+CSG,11150,"Columbus, GA",GA
+CVG,11193,"Cincinnati, OH",KY
+CWA,11203,"Mosinee, WI",WI
+CYS,11233,"Cheyenne, WY",WY
+DAB,11252,"Daytona Beach, FL",FL
+DAL,11259,"Dallas, TX",TX
+DAY,11267,"Dayton, OH",OH
+DCA,11278,"Washington, DC",VA
+DDC,11283,"Dodge City, KS",KS
+DEC,11288,"Decatur, IL",IL
+DEN,11292,"Denver, CO",CO
+DFW,11298,"Dallas/Fort Worth, TX",TX
+DHN,11308,"Dothan, AL",AL
+DIK,11315,"Dickinson, ND",ND
+DLG,11336,"Dillingham, AK",AK
+DLH,11337,"Duluth, MN",MN
+DRO,11413,"Durango, CO",CO
+DSM,11423,"Des Moines, IA",IA
+DTW,11433,"Detroit, MI",MI
+DVL,11447,"Devils Lake, ND",ND
+EAR,11468,"Kearney, NE",NE
+EAU,11471,"Eau Claire, WI",WI
+ECP,11481,"Panama City, FL",FL
+EGE,11503,"Eagle, CO",CO
+EKO,11525,"Elko, NV",NV
+ELM,11537,"Elmira/Corning, NY",NY
+ELP,11540,"El Paso, TX",TX
+ERI,11577,"Erie, PA",PA
+ESC,11587,"Escanaba, MI",MI
+EUG,11603,"Eugene, OR",OR
+EVV,11612,"Evansville, IN",IN
+EWN,11617,"New Bern/Morehead/Beaufort, NC",NC
+EWR,11618,"Newark, NJ",NJ
+EYW,11624,"Key West, FL",FL
+FAI,11630,"Fairbanks, AK",AK
+FAR,11637,"Fargo, ND",ND
+FAT,11638,"Fresno, CA",CA
+FAY,11641,"Fayetteville, NC",NC
+FCA,11648,"Kalispell, MT",MT
+FLG,11695,"Flagstaff, AZ",AZ
+FLL,11697,"Fort Lauderdale, FL",FL
+FMN,11711,"Farmington, NM",NM
+FNT,11721,"Flint, MI",MI
+FOD,11725,"Fort Dodge, IA",IA
+FSD,11775,"Sioux Falls, SD",SD
+FSM,11778,"Fort Smith, AR",AR
+FWA,11823,"Fort Wayne, IN",IN
+GCC,11865,"Gillette, WY",WY
+GCK,11867,"Garden City, KS",KS
+GEG,11884,"Spokane, WA",WA
+GFK,11898,"Grand Forks, ND",ND
+GGG,11905,"Longview, TX",TX
+GJT,11921,"Grand Junction, CO",CO
+GNV,11953,"Gainesville, FL",FL
+GPT,11973,"Gulfport/Biloxi, MS",MS
+GRB,11977,"Green Bay, WI",WI
+GRI,11980,"Grand Island, NE",NE
+GRK,11982,"Killeen, TX",TX
+GRR,11986,"Grand Rapids, MI",MI
+GSO,11995,"Greensboro/High Point, NC",NC
+GSP,11996,"Greer, SC",SC
+GST,11997,"Gustavus, AK",AK
+GTF,12003,"Great Falls, MT",MT
+GTR,12007,"Columbus, MS",MS
+GUC,12012,"Gunnison, CO",CO
+GUF,16422,"Gulf Shores, AL",AL
+GUM,12016,"Guam, TT",TT
+HDN,12094,"Hayden, CO",CO
+HGR,12119,"Hagerstown, MD",MD
+HHH,12124,"Hilton Head, SC",SC
+HIB,12129,"Hibbing, MN",MN
+HLN,12156,"Helena, MT",MT
+HNL,12173,"Honolulu, HI",HI
+HOB,12177,"Hobbs, NM",NM
+HOU,12191,"Houston, TX",TX
+HPN,12197,"White Plains, NY",NY
+HRL,12206,"Harlingen/San Benito, TX",TX
+HSV,12217,"Huntsville, AL",AL
+HTS,12223,"Ashland, WV",WV
+HYA,12250,"Hyannis, MA",MA
+HYS,12255,"Hays, KS",KS
+IAD,12264,"Washington, DC",VA
+IAG,12265,"Niagara Falls, NY",NY
+IAH,12266,"Houston, TX",TX
+ICT,12278,"Wichita, KS",KS
+IDA,12280,"Idaho Falls, ID",ID
+ILM,12323,"Wilmington, NC",NC
+IMT,12335,"Iron Mountain/Kingsfd, MI",MI
+IND,12339,"Indianapolis, IN",IN
+INL,12343,"International Falls, MN",MN
+ISP,12391,"Islip, NY",NY
+ITH,12397,"Ithaca/Cortland, NY",NY
+ITO,12402,"Hilo, HI",HI
+JAC,12441,"Jackson, WY",WY
+JAN,12448,"Jackson/Vicksburg, MS",MS
+JAX,12451,"Jacksonville, FL",FL
+JFK,12478,"New York, NY",NY
+JLN,12511,"Joplin, MO",MO
+JMS,12519,"Jamestown, ND",ND
+JNU,12523,"Juneau, AK",AK
+JST,12559,"Johnstown, PA",PA
+KOA,12758,"Kona, HI",HI
+KTN,12819,"Ketchikan, AK",AK
+LAF,12878,"Lafayette, IN",IN
+LAN,12884,"Lansing, MI",MI
+LAR,12888,"Laramie, WY",WY
+LAS,12889,"Las Vegas, NV",NV
+LAW,12891,"Lawton/Fort Sill, OK",OK
+LAX,12892,"Los Angeles, CA",CA
+LBB,12896,"Lubbock, TX",TX
+LBE,12898,"Latrobe, PA",PA
+LBF,12899,"North Platte, NE",NE
+LBL,12902,"Liberal, KS",KS
+LCH,12915,"Lake Charles, LA",LA
+LCK,12917,"Columbus, OH",OH
+LEX,12945,"Lexington, KY",KY
+LFT,12951,"Lafayette, LA",LA
+LGA,12953,"New York, NY",NY
+LGB,12954,"Long Beach, CA",CA
+LIH,12982,"Lihue, HI",HI
+LIT,12992,"Little Rock, AR",AR
+LNK,13029,"Lincoln, NE",NE
+LNS,13032,"Lancaster, PA",PA
+LRD,13061,"Laredo, TX",TX
+LSE,13076,"La Crosse, WI",WI
+LWB,13121,"Lewisburg, WV",WV
+LWS,13127,"Lewiston, ID",ID
+LYH,13139,"Lynchburg, VA",VA
+MAF,13158,"Midland/Odessa, TX",TX
+MBS,13184,"Saginaw/Bay City/Midland, MI",MI
+MCI,13198,"Kansas City, MO",MO
+MCO,13204,"Orlando, FL",FL
+MCW,13211,"Mason City, IA",IA
+MDT,13230,"Harrisburg, PA",PA
+MDW,13232,"Chicago, IL",IL
+MEI,13241,"Meridian, MS",MS
+MEM,13244,"Memphis, TN",TN
+MFE,13256,"Mission/McAllen/Edinburg, TX",TX
+MFR,13264,"Medford, OR",OR
+MGM,13277,"Montgomery, AL",AL
+MGW,13282,"Morgantown, WV",WV
+MHK,13290,"Manhattan/Ft. Riley, KS",KS
+MHT,13296,"Manchester, NH",NH
+MIA,13303,"Miami, FL",FL
+MKE,13342,"Milwaukee, WI",WI
+MLB,13360,"Melbourne, FL",FL
+MLI,13367,"Moline, IL",IL
+MLU,13377,"Monroe, LA",LA
+MOB,13422,"Mobile, AL",AL
+MOT,13433,"Minot, ND",ND
+MQT,13459,"Marquette, MI",MI
+MRY,13476,"Monterey, CA",CA
+MSN,13485,"Madison, WI",WI
+MSO,13486,"Missoula, MT",MT
+MSP,13487,"Minneapolis, MN",MN
+MSY,13495,"New Orleans, LA",LA
+MTJ,13502,"Montrose/Delta, CO",CO
+MVY,13541,"Martha's Vineyard, MA",MA
+MYR,13577,"Myrtle Beach, SC",SC
+OAJ,13795,"Jacksonville/Camp Lejeune, NC",NC
+OAK,13796,"Oakland, CA",CA
+OGG,13830,"Kahului, HI",HI
+OKC,13851,"Oklahoma City, OK",OK
+OMA,13871,"Omaha, NE",NE
+OME,13873,"Nome, AK",AK
+ONT,13891,"Ontario, CA",CA
+ORD,13930,"Chicago, IL",IL
+ORF,13931,"Norfolk, VA",VA
+ORH,13933,"Worcester, MA",MA
+OTH,13964,"North Bend/Coos Bay, OR",OR
+OTZ,13970,"Kotzebue, AK",AK
+PAE,14004,"Everett, WA",WA
+PAH,14006,"Paducah, KY",KY
+PBG,14025,"Plattsburgh, NY",NY
+PBI,14027,"West Palm Beach/Palm Beach, FL",FL
+PDX,14057,"Portland, OR",OR
+PGD,14082,"Punta Gorda, FL",FL
+PHF,14098,"Newport News/Williamsburg, VA",VA
+PHL,14100,"Philadelphia, PA",PA
+PHX,14107,"Phoenix, AZ",AZ
+PIA,14108,"Peoria, IL",IL
+PIB,14109,"Hattiesburg/Laurel, MS",MS
+PIE,14112,"St. Petersburg, FL",FL
+PIH,14113,"Pocatello, ID",ID
+PIR,14120,"Pierre, SD",SD
+PIT,14122,"Pittsburgh, PA",PA
+PLN,14150,"Pellston, MI",MI
+PNS,14193,"Pensacola, FL",FL
+PPG,14222,"Pago Pago, TT",TT
+PQI,14231,"Presque Isle/Houlton, ME",ME
+PRC,14237,"Prescott, AZ",AZ
+PSC,14252,"Pasco/Kennewick/Richland, WA",WA
+PSE,14254,"Ponce, PR",PR
+PSG,14256,"Petersburg, AK",AK
+PSM,14259,"Portsmouth, NH",NH
+PSP,14262,"Palm Springs, CA",CA
+PVD,14307,"Providence, RI",RI
+PVU,14314,"Provo, UT",UT
+PWM,14321,"Portland, ME",ME
+RAP,14457,"Rapid City, SD",SD
+RDD,14487,"Redding, CA",CA
+RDM,14489,"Bend/Redmond, OR",OR
+RDU,14492,"Raleigh/Durham, NC",NC
+RFD,14512,"Rockford, IL",IL
+RHI,14520,"Rhinelander, WI",WI
+RIC,14524,"Richmond, VA",VA
+RIW,14534,"Riverton/Lander, WY",WY
+RKS,14543,"Rock Springs, WY",WY
+RNO,14570,"Reno, NV",NV
+ROA,14574,"Roanoke, VA",VA
+ROC,14576,"Rochester, NY",NY
+ROW,14588,"Roswell, NM",NM
+RST,14633,"Rochester, MN",MN
+RSW,14635,"Fort Myers, FL",FL
+SAF,14674,"Santa Fe, NM",NM
+SAN,14679,"San Diego, CA",CA
+SAT,14683,"San Antonio, TX",TX
+SAV,14685,"Savannah, GA",GA
+SBA,14689,"Santa Barbara, CA",CA
+SBN,14696,"South Bend, IN",IN
+SBP,14698,"San Luis Obispo, CA",CA
+SCC,14709,"Deadhorse, AK",AK
+SCE,14711,"State College, PA",PA
+SCK,14716,"Stockton, CA",CA
+SDF,14730,"Louisville, KY",KY
+SEA,14747,"Seattle, WA",WA
+SFB,14761,"Sanford, FL",FL
+SFO,14771,"San Francisco, CA",CA
+SGF,14783,"Springfield, MO",MO
+SGU,14794,"St. George, UT",UT
+SHD,14802,"Staunton, VA",VA
+SHR,14812,"Sheridan, WY",WY
+SHV,14814,"Shreveport, LA",LA
+SIT,14828,"Sitka, AK",AK
+SJC,14831,"San Jose, CA",CA
+SJT,14842,"San Angelo, TX",TX
+SJU,14843,"San Juan, PR",PR
+SLC,14869,"Salt Lake City, UT",UT
+SLN,14877,"Salina, KS",KS
+SMF,14893,"Sacramento, CA",CA
+SMX,14905,"Santa Maria, CA",CA
+SNA,14908,"Santa Ana, CA",CA
+SPI,14952,"Springfield, IL",IL
+SPN,14955,"Saipan, TT",TT
+SPS,14960,"Wichita Falls, TX",TX
+SRQ,14986,"Sarasota/Bradenton, FL",FL
+STC,15008,"St. Cloud, MN",MN
+STL,15016,"St. Louis, MO",MO
+STS,15023,"Santa Rosa, CA",CA
+STT,15024,"Charlotte Amalie, VI",VI
+STX,15027,"Christiansted, VI",VI
+SUN,15041,"Sun Valley/Hailey/Ketchum, ID",ID
+SUX,15048,"Sioux City, IA",IA
+SWF,15070,"Newburgh/Poughkeepsie, NY",NY
+SWO,15074,"Stillwater, OK",OK
+SYR,15096,"Syracuse, NY",NY
+TLH,15249,"Tallahassee, FL",FL
+TOL,15295,"Toledo, OH",OH
+TPA,15304,"Tampa, FL",FL
+TRI,15323,"Bristol/Johnson City/Kingsport, TN",TN
+TTN,15356,"Trenton, NJ",NJ
+TUL,15370,"Tulsa, OK",OK
+TUS,15376,"Tucson, AZ",AZ
+TVC,15380,"Traverse City, MI",MI
+TWF,15389,"Twin Falls, ID",ID
+TXK,15401,"Texarkana, AR",AR
+TYR,15411,"Tyler, TX",TX
+TYS,15412,"Knoxville, TN",TN
+USA,12544,"Concord, NC",NC
+VCT,15569,"Victoria, TX",TX
+VPS,15624,"Valparaiso, FL",FL
+VRB,15628,"Vero Beach, FL",FL
+WRG,15841,"Wrangell, AK",AK
+WYS,15897,"West Yellowstone, MT",MT
+XNA,15919,"Fayetteville, AR",AR
+XWA,16869,"Williston, ND",ND
+YAK,15991,"Yakutat, AK",AK
+YUM,16218,"Yuma, AZ",AZ
