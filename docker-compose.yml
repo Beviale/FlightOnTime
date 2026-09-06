@@ -1,6 +1,7 @@
 #
 #   service      http://localhost:7860
 #   prometheus   http://localhost:9090
+#   grafana      http://localhost:4444
 #   locust       http://localhost:8089
 
 services:
@@ -32,6 +33,23 @@ services:
     depends_on: [app]
     networks: [monitoring]
 
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "4444:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on: [prometheus]
+    networks: [monitoring]
+
   locust:
     build:
       context: ./locust
@@ -53,3 +71,4 @@ networks:
 
 volumes:
   prometheus_data:
+  grafana_data:
