@@ -1,7 +1,7 @@
 """Tests for predicting_flight_arrival_delays.app.schema."""
 
-import pytest
 from pydantic import ValidationError
+import pytest
 
 from predicting_flight_arrival_delays.app.enrichment.builder import FEATURE_FRAME_COLUMNS
 from predicting_flight_arrival_delays.app.inputs import FORECAST_INPUTS

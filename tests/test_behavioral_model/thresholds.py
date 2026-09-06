@@ -1,5 +1,4 @@
-"""How large an effect a perturbation must produce, and how small it may stay.
-"""
+"""How large an effect a perturbation must produce, and how small it may stay."""
 
 # Mean probability shift a full min-to-max group perturbation must produce.
 # Measured: congestion +0.022 ('all') and +0.033 ('noweather'); weather +0.035.

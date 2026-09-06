@@ -6,11 +6,11 @@ import pytest
 from typer.testing import CliRunner
 
 from predicting_flight_arrival_delays.config import (
+    DATE_COLUMN,
     HISTORICAL_FORECAST_URL,
     MAX_LEAD_DAYS,
     PREVIOUS_RUNS_URL,
     WEATHER_MODEL,
-    DATE_COLUMN,
 )
 from predicting_flight_arrival_delays.data import weather as weather_module
 from predicting_flight_arrival_delays.data.weather import (
@@ -136,17 +136,13 @@ class TestBuildWeatherRequests:
         assert requests_map == {10397: {1}, 12892: {1}}
 
     def test_an_airport_on_both_ends_gets_one_entry(self):
-        df = pd.DataFrame(
-            {"OriginAirportID": [10397], "DestAirportID": [10397], "LeadDays": [3]}
-        )
+        df = pd.DataFrame({"OriginAirportID": [10397], "DestAirportID": [10397], "LeadDays": [3]})
 
         assert build_weather_requests(df) == {10397: {3}}
 
     def test_keys_and_values_are_plain_ints(self):
         """They become filenames, so numpy scalars would render awkwardly."""
-        df = pd.DataFrame(
-            {"OriginAirportID": [10397], "DestAirportID": [12892], "LeadDays": [1]}
-        )
+        df = pd.DataFrame({"OriginAirportID": [10397], "DestAirportID": [12892], "LeadDays": [1]})
         requests_map = build_weather_requests(df)
 
         assert all(type(k) is int for k in requests_map)
@@ -165,15 +161,22 @@ class TestDownloadWeather:
         )
 
     def test_one_file_per_airport_and_lead(self, tmp_path, airports, captured_calls):
-        download_weather({10397: {0, 1}, 12892: {0}}, airports, "2025-03-01", "2025-03-02",
-                         tmp_path / "weather", sleep=0)
+        download_weather(
+            {10397: {0, 1}, 12892: {0}},
+            airports,
+            "2025-03-01",
+            "2025-03-02",
+            tmp_path / "weather",
+            sleep=0,
+        )
         written = sorted(p.name for p in (tmp_path / "weather").glob("*.parquet"))
 
         assert written == ["10397_lead0.parquet", "10397_lead1.parquet", "12892_lead0.parquet"]
 
     def test_airport_id_is_the_first_column(self, tmp_path, airports, captured_calls):
-        download_weather({10397: {0}}, airports, "2025-03-01", "2025-03-02",
-                         tmp_path / "weather", sleep=0)
+        download_weather(
+            {10397: {0}}, airports, "2025-03-01", "2025-03-02", tmp_path / "weather", sleep=0
+        )
         df = pd.read_parquet(tmp_path / "weather" / "10397_lead0.parquet")
 
         assert df.columns[0] == "AirportId"
@@ -181,20 +184,23 @@ class TestDownloadWeather:
 
     def test_existing_files_are_not_refetched(self, tmp_path, airports, captured_calls):
         """An interrupted download can be restarted with the same arguments."""
-        download_weather({10397: {0}}, airports, "2025-03-01", "2025-03-02",
-                         tmp_path / "weather", sleep=0)
+        download_weather(
+            {10397: {0}}, airports, "2025-03-01", "2025-03-02", tmp_path / "weather", sleep=0
+        )
         calls_after_first = len(captured_calls)
 
-        download_weather({10397: {0}}, airports, "2025-03-01", "2025-03-02",
-                         tmp_path / "weather", sleep=0)
+        download_weather(
+            {10397: {0}}, airports, "2025-03-01", "2025-03-02", tmp_path / "weather", sleep=0
+        )
 
         assert len(captured_calls) == calls_after_first
 
     def test_airport_missing_from_the_reference_table_is_skipped(
         self, tmp_path, airports, captured_calls
     ):
-        download_weather({99999: {0}}, airports, "2025-03-01", "2025-03-02",
-                         tmp_path / "weather", sleep=0)
+        download_weather(
+            {99999: {0}}, airports, "2025-03-01", "2025-03-02", tmp_path / "weather", sleep=0
+        )
 
         assert list((tmp_path / "weather").glob("*.parquet")) == []
 
@@ -217,8 +223,14 @@ class TestDownloadWeather:
             }
 
         monkeypatch.setattr(weather_module, "fetch", flaky_fetch)
-        download_weather({10397: {0}, 12892: {0}}, airports, "2025-03-01", "2025-03-02",
-                         tmp_path / "weather", sleep=0)
+        download_weather(
+            {10397: {0}, 12892: {0}},
+            airports,
+            "2025-03-01",
+            "2025-03-02",
+            tmp_path / "weather",
+            sleep=0,
+        )
 
         assert [p.name for p in (tmp_path / "weather").glob("*.parquet")] == [
             "12892_lead0.parquet"
@@ -257,10 +269,14 @@ class TestRunCommand:
         result = runner.invoke(
             weather_module.app,
             [
-                "--flights-path", str(flights_path),
-                "--airports-path", str(airports_path),
-                "--output-dir", str(output_dir),
-                "--sleep", "0",
+                "--flights-path",
+                str(flights_path),
+                "--airports-path",
+                str(airports_path),
+                "--output-dir",
+                str(output_dir),
+                "--sleep",
+                "0",
             ],
         )
 
@@ -279,10 +295,14 @@ class TestRunCommand:
         runner.invoke(
             weather_module.app,
             [
-                "--flights-path", str(flights_path),
-                "--airports-path", str(airports_path),
-                "--output-dir", str(tmp_path / "weather"),
-                "--sleep", "0",
+                "--flights-path",
+                str(flights_path),
+                "--airports-path",
+                str(airports_path),
+                "--output-dir",
+                str(tmp_path / "weather"),
+                "--sleep",
+                "0",
             ],
         )
 
@@ -295,9 +315,12 @@ class TestRunCommand:
         result = runner.invoke(
             weather_module.app,
             [
-                "--flights-path", str(tmp_path / "absent.parquet"),
-                "--airports-path", str(airports_path),
-                "--output-dir", str(tmp_path / "weather"),
+                "--flights-path",
+                str(tmp_path / "absent.parquet"),
+                "--airports-path",
+                str(airports_path),
+                "--output-dir",
+                str(tmp_path / "weather"),
             ],
         )
 

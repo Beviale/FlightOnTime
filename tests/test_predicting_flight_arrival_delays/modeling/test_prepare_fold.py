@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sp
 
-from predicting_flight_arrival_delays.config import TARGET, DATE_COLUMN
+from predicting_flight_arrival_delays.config import DATE_COLUMN, TARGET
 from predicting_flight_arrival_delays.data.features import select_features_variant
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import (
@@ -124,8 +124,11 @@ class TestPrepareFold:
         train_df, validation_df, test_df = fold
 
         _, y_fit, _, y_val, _, y_test, *_ = prepare_fold(
-            train_df, "onehot", test_df=test_df,
-            validation_df=validation_df, resample="undersample",
+            train_df,
+            "onehot",
+            test_df=test_df,
+            validation_df=validation_df,
+            resample="undersample",
         )
 
         counts = y_fit.value_counts()
@@ -136,9 +139,7 @@ class TestPrepareFold:
     def test_resampling_works_after_the_sparse_conversion(self, fold):
         train_df, _, _ = fold
 
-        X_fit, y_fit, _, _, _, _, *_ = prepare_fold(
-            train_df, "onehot", resample="oversample"
-        )
+        X_fit, y_fit, _, _, _, _, *_ = prepare_fold(train_df, "onehot", resample="oversample")
 
         assert sp.issparse(X_fit)
         assert X_fit.shape[0] == len(y_fit)

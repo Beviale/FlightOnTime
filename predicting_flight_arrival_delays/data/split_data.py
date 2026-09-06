@@ -124,7 +124,9 @@ def split_folds(
     """
     try:
         complete_df = pd.read_parquet(input_path)
-        complete_df[DATE_COLUMN] = pd.to_datetime(complete_df[DATE_COLUMN]).astype("datetime64[ns]")
+        complete_df[DATE_COLUMN] = pd.to_datetime(complete_df[DATE_COLUMN]).astype(
+            "datetime64[ns]"
+        )
         complete_df = complete_df.sort_values(DATE_COLUMN)
 
         for variant in variants:
@@ -138,13 +140,11 @@ def split_folds(
                 fold_dir.mkdir(parents=True, exist_ok=True)
 
                 train_df = df[
-                    (df[DATE_COLUMN] >= fold.train_start)
-                    & (df[DATE_COLUMN] < fold.test_start)
+                    (df[DATE_COLUMN] >= fold.train_start) & (df[DATE_COLUMN] < fold.test_start)
                 ]
 
                 test_df = df[
-                    (df[DATE_COLUMN] >= fold.test_start)
-                    & (df[DATE_COLUMN] < fold.test_end)
+                    (df[DATE_COLUMN] >= fold.test_start) & (df[DATE_COLUMN] < fold.test_end)
                 ]
 
                 validation_df = None

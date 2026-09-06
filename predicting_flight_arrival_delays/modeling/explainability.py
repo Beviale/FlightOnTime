@@ -11,6 +11,7 @@ is three hundred one-hot columns. Reading them out as they come would name none 
 what a caller recognises, so they are folded back onto the request columns before
 anyone sees them.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -102,9 +103,7 @@ def explain_prediction(
         logger.info("Explaining a linear model in closed form.")
 
         if not hasattr(model, "coef_"):
-            logger.error(
-                "Model has no coef_ attribute; cannot explain a linear model."
-            )
+            logger.error("Model has no coef_ attribute; cannot explain a linear model.")
             return []
 
         coef = np.asarray(model.coef_[0]).reshape(-1)
@@ -116,7 +115,7 @@ def explain_prediction(
             )
 
         n = min(len(feature_names), coef.shape[0])
-       
+
         values = np.asarray(x.to_numpy(), dtype=float).reshape(-1)
         if feature_means:
             centre = np.array(
@@ -135,9 +134,7 @@ def explain_prediction(
         ]
 
         explanations = sorted(explanations, key=lambda d: d["abs_value"], reverse=True)[:top_k]
-        logger.info(
-            f"Explained a linear model. Returning top {len(explanations)} features."
-        )
+        logger.info(f"Explained a linear model. Returning top {len(explanations)} features.")
         return explanations
 
     # ---------------------------------------------------------------------
@@ -297,6 +294,7 @@ def save_shap_waterfall_plot(
         logger.error(f"Failed to save SHAP waterfall plot: {e}")
         return None
 
+
 def _encoded_importance(model: Any, columns: list[str]) -> dict[str, float]:
     """How much the estimator leans on each of its own input columns.
 
@@ -435,8 +433,7 @@ def request_column_contributions(
 
     ranked = sorted(folded.items(), key=lambda item: abs(item[1]), reverse=True)
     return [
-        {"column": column, "contribution": contribution}
-        for column, contribution in ranked[:top_k]
+        {"column": column, "contribution": contribution} for column, contribution in ranked[:top_k]
     ]
 
 
@@ -474,8 +471,10 @@ def _base_value(
         if feature_means:
             coef = np.ravel(base.coef_)
             centre = np.array(
-                [float(feature_means.get(c, 0.0)) for c in getattr(
-                    base, "feature_names_in_", list(feature_means))],
+                [
+                    float(feature_means.get(c, 0.0))
+                    for c in getattr(base, "feature_names_in_", list(feature_means))
+                ],
                 dtype=float,
             )
             start += float(np.dot(coef[: len(centre)], centre[: len(coef)]))
@@ -518,7 +517,11 @@ def waterfall_terms(
         calibration step - or None if no explanation could be built.
     """
     folded = request_column_contributions(
-        model, X, transformer, model_type, top_k=len(X.columns),
+        model,
+        X,
+        transformer,
+        model_type,
+        top_k=len(X.columns),
         feature_means=feature_means,
     )
     base = _base_value(model, model_type, feature_means)
@@ -535,9 +538,7 @@ def waterfall_terms(
     return {
         "base_value": base,
         "contributions": leading,
-        "other_contribution": sum(
-            item["contribution"] for item in folded[top_k:]
-        ),
+        "other_contribution": sum(item["contribution"] for item in folded[top_k:]),
         "calibration": link(served_probability) - total,
         "log_odds": in_log_odds,
     }

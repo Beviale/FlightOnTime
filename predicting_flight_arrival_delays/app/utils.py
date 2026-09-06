@@ -30,8 +30,7 @@ THRESHOLD_METRIC = "operating_threshold"
 
 @dataclass(frozen=True)
 class Bundle:
-    """One served model, with everything needed to score a flight with it.
-    """
+    """One served model, with everything needed to score a flight with it."""
 
     variant: str
     model: Any
@@ -107,7 +106,11 @@ def load_bundles() -> dict[str, Bundle]:
     Returns:
         The variants that loaded, keyed by variant.
     """
-    dagshub.init(repo_owner=DAGSHUB_REPO_OWNER, repo_name=DAGSHUB_REPO_NAME, mlflow=True)
+    try:
+        dagshub.init(repo_owner=DAGSHUB_REPO_OWNER, repo_name=DAGSHUB_REPO_NAME, mlflow=True)
+    except Exception as e:
+        logger.error(f"Could not reach the model registry: {e}")
+        return {}
 
     bundles = {}
     for variant in SERVED_VARIANTS:
@@ -170,8 +173,7 @@ def get_required_inputs(request: Request) -> set[str]:
 
 
 def construct_response(f):
-    """Wrap an endpoint's result in the API's common envelope.
-    """
+    """Wrap an endpoint's result in the API's common envelope."""
 
     @wraps(f)
     def wrap(request: Request, *args, **kwargs):

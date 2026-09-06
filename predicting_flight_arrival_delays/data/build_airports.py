@@ -24,6 +24,7 @@ app = typer.Typer()
 # Download
 # ---------------------------------------------------------------------------
 
+
 def download() -> None:
     """Download and extract the T_MASTER_CORD table via Playwright.
 
@@ -58,6 +59,7 @@ def download() -> None:
 # ---------------------------------------------------------------------------
 # Build
 # ---------------------------------------------------------------------------
+
 
 def build(output_path: Path) -> None:
     """Build the airport reference table used by the rest of the pipeline.
@@ -120,11 +122,10 @@ def build(output_path: Path) -> None:
 # CLI Command
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def run(
-    force_download: bool = typer.Option(
-        True, help="Re-download even if the file exists."
-    ),
+    force_download: bool = typer.Option(True, help="Re-download even if the file exists."),
     output_path: Path = typer.Option(
         EXTERNAL_DATA_DIR / "airports.csv", help="Output CSV file path for processed airport data."
     ),
@@ -132,7 +133,7 @@ def run(
     """Fetch the raw airport table if needed, then build the reference CSV.
 
     Args:
-        force_download (bool): Force re-downloading the raw source table 
+        force_download (bool): Force re-downloading the raw source table
             even if the corresponding CSV already exists on disk.
         output_path (Path): Path where the final processed CSV file will be saved.
     """

@@ -5,16 +5,15 @@ import pandas as pd
 import pytest
 from typer.testing import CliRunner
 
-from predicting_flight_arrival_delays.data.build_airport_identity import app, build_identity
 from predicting_flight_arrival_delays.config import DATE_COLUMN
+from predicting_flight_arrival_delays.data.build_airport_identity import app, build_identity
 
 runner = CliRunner()
 
 
 @pytest.fixture
 def warnings_logged() -> list[str]:
-    """Collect the warnings a call emits.
-    """
+    """Collect the warnings a call emits."""
     messages: list[str] = []
     sink = logger.add(messages.append, level="WARNING", format="{message}")
     yield messages
@@ -26,8 +25,14 @@ def flights(rows) -> pd.DataFrame:
     return pd.DataFrame(
         [(o[0], o[1], o[2], o[3], d[0], d[1], d[2], d[3], date) for date, o, d in rows],
         columns=[
-            "Origin", "OriginAirportID", "OriginCityName", "OriginState",
-            "Dest", "DestAirportID", "DestCityName", "DestState",
+            "Origin",
+            "OriginAirportID",
+            "OriginCityName",
+            "OriginState",
+            "Dest",
+            "DestAirportID",
+            "DestCityName",
+            "DestState",
             DATE_COLUMN,
         ],
     ).astype({DATE_COLUMN: "datetime64[ns]"})
@@ -147,10 +152,7 @@ class TestARenamedPlaceKeepsTheLatestSpelling:
         """Five hundred flights under the old place against one under the new: the
         rule is recency, so the single later flight still wins."""
         table = build_identity(
-            flights(
-                [("2025-01-01", self.EARLY, LAX)] * 500
-                + [("2025-09-01", self.LATE, LAX)]
-            )
+            flights([("2025-01-01", self.EARLY, LAX)] * 500 + [("2025-09-01", self.LATE, LAX)])
         ).set_index("Iata")
 
         assert table.loc["DCA", "CityName"] == "Washington, DC (Metropolitan Area)"
@@ -171,9 +173,7 @@ class TestARenamedPlaceKeepsTheLatestSpelling:
 
     def test_the_dropped_place_is_warned_about(self, warnings_logged):
         """Silently picking one of two names is how the wrong city reaches a caller."""
-        build_identity(
-            flights([("2025-01-01", self.EARLY, LAX), ("2025-09-01", self.LATE, LAX)])
-        )
+        build_identity(flights([("2025-01-01", self.EARLY, LAX), ("2025-09-01", self.LATE, LAX)]))
 
         warned = "".join(warnings_logged)
         assert "11278" in warned
@@ -221,9 +221,7 @@ class TestRunCommand:
     @pytest.fixture
     def flights_parquet(self, tmp_path):
         path = tmp_path / "flights_features.parquet"
-        flights([("2025-01-01", ATL, LAX), ("2025-02-01", ORD, ATL)]).to_parquet(
-            path, index=False
-        )
+        flights([("2025-01-01", ATL, LAX), ("2025-02-01", ORD, ATL)]).to_parquet(path, index=False)
         return path
 
     def test_the_table_is_written(self, tmp_path, flights_parquet):
@@ -251,8 +249,10 @@ class TestRunCommand:
         result = runner.invoke(
             app,
             [
-                "--flights-path", str(tmp_path / "absent.parquet"),
-                "--output-path", str(tmp_path / "out.csv"),
+                "--flights-path",
+                str(tmp_path / "absent.parquet"),
+                "--output-path",
+                str(tmp_path / "out.csv"),
             ],
         )
 

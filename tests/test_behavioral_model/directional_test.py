@@ -1,5 +1,4 @@
-"""Directional tests: changes that must move a prediction the right way.
-"""
+"""Directional tests: changes that must move a prediction the right way."""
 
 import numpy as np
 from scenarios import CONGESTION_LEVERS, WEATHER_LEVERS, calm, pin, present, storm

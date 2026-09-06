@@ -45,9 +45,12 @@ def prepare_fold(
     validation_df: pd.DataFrame | None = None,
     resample: str = "none",
 ) -> tuple[
-    pd.DataFrame, pd.Series,
-    pd.DataFrame | None, pd.Series | None,
-    pd.DataFrame | None, pd.Series | None,
+    pd.DataFrame,
+    pd.Series,
+    pd.DataFrame | None,
+    pd.Series | None,
+    pd.DataFrame | None,
+    pd.Series | None,
 ]:
     """Fit the transformer on train, transform every split, then resample train only.
 
@@ -101,17 +104,10 @@ def prepare_fold(
         if encoding == "onehot":
             X_test = to_sparse_matrix(X_test)
 
-
-
-    feature_columns = (
-        sparse_column_order(X_fit) if encoding == "onehot" else list(X_fit.columns)
-    )
-
+    feature_columns = sparse_column_order(X_fit) if encoding == "onehot" else list(X_fit.columns)
 
     feature_means = (
-        X_fit[feature_columns].mean().astype(float).to_dict()
-        if encoding == "onehot"
-        else {}
+        X_fit[feature_columns].mean().astype(float).to_dict() if encoding == "onehot" else {}
     )
 
     if encoding == "onehot":
@@ -120,8 +116,15 @@ def prepare_fold(
     X_fit, y_fit = resample_training_data(X_fit, y_fit, resample, encoding)
 
     return (
-        X_fit, y_fit, X_val, y_val, X_test, y_test,
-        transformer, feature_columns, feature_means,
+        X_fit,
+        y_fit,
+        X_val,
+        y_val,
+        X_test,
+        y_test,
+        transformer,
+        feature_columns,
+        feature_means,
     )
 
 
@@ -162,9 +165,7 @@ def train_and_evaluate(
             train_df, encoding, validation_df=validation_df, resample=resample
         )
 
-        estimator = train.train(
-            X_fit, y_fit, model, config, False, X_val=X_val, y_val=y_val
-        )
+        estimator = train.train(X_fit, y_fit, model, config, False, X_val=X_val, y_val=y_val)
 
         metrics_val = evaluate.evaluate(X_val, y_val, estimator)
 
@@ -240,7 +241,8 @@ def run(
             )
 
         val_fold_dirs = [
-            d for d in variant_dir.glob("fold_*")
+            d
+            for d in variant_dir.glob("fold_*")
             if d.is_dir() and (d / "validation.parquet").exists()
         ]
         if not val_fold_dirs:
@@ -252,21 +254,21 @@ def run(
         mlflow.set_experiment(experiment)
 
         with mlflow.start_run(run_name=f"{variant}__{model}__{config}"):
-            mlflow.log_params({
-                "variant": variant,
-                "algorithm": model,
-                "config": config,
-                "encoding": ENCODING[model],
-                "calibrated": False,
-                "resample": resample,
-                "final": False,
-                "n_folds": len(val_fold_dirs),
-                "dvc_data_hash": get_dvc_data_hash(data_path),
-                **{f"hp_{k}": v for k, v in HYPERPARAMS[model][config].items()},
-            })
-            metrics = train_and_evaluate(
-                val_fold_dirs, variant, model, config, resample
+            mlflow.log_params(
+                {
+                    "variant": variant,
+                    "algorithm": model,
+                    "config": config,
+                    "encoding": ENCODING[model],
+                    "calibrated": False,
+                    "resample": resample,
+                    "final": False,
+                    "n_folds": len(val_fold_dirs),
+                    "dvc_data_hash": get_dvc_data_hash(data_path),
+                    **{f"hp_{k}": v for k, v in HYPERPARAMS[model][config].items()},
+                }
             )
+            metrics = train_and_evaluate(val_fold_dirs, variant, model, config, resample)
             mlflow.set_tag("git_dirty", get_git_dirty())
             mlflow.log_metrics(metrics)
 

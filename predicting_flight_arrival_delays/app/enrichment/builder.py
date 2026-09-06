@@ -130,7 +130,6 @@ def build_feature_frame(
 
     today = today or datetime.now(UTC).date()
 
-
     df = pd.DataFrame([r.model_dump(exclude_unset=True) for r in requests])
     df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN])
     df["LeadDays"] = [lead_days(r.FlightDate, today) for r in requests]

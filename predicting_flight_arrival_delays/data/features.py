@@ -34,6 +34,7 @@ VARIANTS: dict[str, list[str]] = {
 # Methods
 # ---------------------------------------------------------------------------
 
+
 def get_feature_columns(df: pd.DataFrame, variant: str = "all") -> list[str]:
     """List the columns a given variant feeds to the model.
 
@@ -77,8 +78,7 @@ def select_features_variant(
 
     if drop_missing_weather:
         weather_present = [
-            c for c in WEATHER_COLUMNS_ORIGIN + WEATHER_COLUMNS_DESTINATION
-            if c in feature_cols
+            c for c in WEATHER_COLUMNS_ORIGIN + WEATHER_COLUMNS_DESTINATION if c in feature_cols
         ]
         if weather_present:
             before = len(df)
@@ -110,11 +110,11 @@ def build_xy(
 
     Returns:
         The feature matrix and the target, aligned on the same rows.
-        """
+    """
     if variant is not None:
         df = select_features_variant(df, variant, drop_missing_weather)
     X = df.drop(columns=[TARGET])
-    y = df[TARGET]  
+    y = df[TARGET]
 
     if variant is None:
         logger.info(f"Dataframe size: {X.shape[0]} rows, {X.shape[1]} features")

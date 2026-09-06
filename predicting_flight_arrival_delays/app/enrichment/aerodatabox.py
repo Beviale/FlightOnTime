@@ -144,7 +144,9 @@ def find_flight(marketing_carrier: str, number: int, flight_date: date, origin: 
         )
 
     if len(matches) > 1:
-        logger.warning(f"{code} on {flight_date} has {len(matches)} legs from {origin}; taking the first")
+        logger.warning(
+            f"{code} on {flight_date} has {len(matches)} legs from {origin}; taking the first"
+        )
     return matches[0]
 
 
@@ -164,7 +166,7 @@ def count_movements(airport: str, when_local: pd.Timestamp, arriving: bool) -> i
     """Count the flights sharing an airport and a scheduled local hour.
 
     This is the quantity the congestion features hold, rebuilt from the live schedule.
-    The window is the one clock hour the flight is scheduled in; 
+    The window is the one clock hour the flight is scheduled in;
     cancelled flights are included, because the training count was taken before cancellations
     were filtered out.
 
@@ -200,7 +202,7 @@ def count_movements(airport: str, when_local: pd.Timestamp, arriving: bool) -> i
         return 0
 
     movements = body.get("arrivals" if arriving else "departures", [])
-    
+
     domestic = [m for m in movements if _is_domestic((m.get("movement") or {}).get("airport"))]
 
     logger.info(

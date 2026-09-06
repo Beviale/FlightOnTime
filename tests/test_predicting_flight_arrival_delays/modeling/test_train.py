@@ -13,8 +13,7 @@ from sklearn.frozen import FrozenEstimator
 from sklearn.linear_model import LogisticRegression
 import yaml
 
-from predicting_flight_arrival_delays.config import DATE_COLUMN
-from predicting_flight_arrival_delays.config import SEED
+from predicting_flight_arrival_delays.config import DATE_COLUMN, SEED
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import train as train_module
 from predicting_flight_arrival_delays.modeling.train import (
@@ -63,9 +62,7 @@ class TestLoadHyperparams:
     def test_seed_is_injected_into_every_config(self, tmp_path):
         """Every run must be reproducible, whatever the YAML says."""
         path = tmp_path / "hp.yaml"
-        path.write_text(
-            yaml.safe_dump({"logistic_regression": {"default": {"max_iter": 100}}})
-        )
+        path.write_text(yaml.safe_dump({"logistic_regression": {"default": {"max_iter": 100}}}))
 
         loaded = _load_hyperparams(path)
 
@@ -152,8 +149,13 @@ class TestTrain:
         """Refitting during calibration would waste the fit and leak the split."""
         X, y = xy
         estimator = train(
-            X[:80], y[:80], "logistic_regression", "default",
-            calibrate=True, X_val=X[80:], y_val=y[80:],
+            X[:80],
+            y[:80],
+            "logistic_regression",
+            "default",
+            calibrate=True,
+            X_val=X[80:],
+            y_val=y[80:],
         )
 
         assert isinstance(estimator, CalibratedClassifierCV)
@@ -177,7 +179,11 @@ class TestTrain:
     def test_json_config_reaches_the_estimator(self, xy):
         X, y = xy
         estimator = train(
-            X, y, "logistic_regression", "default", calibrate=False,
+            X,
+            y,
+            "logistic_regression",
+            "default",
+            calibrate=False,
             json_config={"max_iter": 33, "random_state": SEED},
         )
 
@@ -193,8 +199,13 @@ class TestTrain:
     def test_lightgbm_trains_with_a_validation_set(self, xy):
         X, y = xy
         estimator = train(
-            X[:80], y[:80], "lightgbm", "fast", calibrate=False,
-            X_val=X[80:], y_val=y[80:],
+            X[:80],
+            y[:80],
+            "lightgbm",
+            "fast",
+            calibrate=False,
+            X_val=X[80:],
+            y_val=y[80:],
         )
 
         assert isinstance(estimator, LGBMClassifier)
@@ -207,7 +218,11 @@ class TestTrain:
         """
         X, y = xy
         estimator = train(
-            X[:80], y[:80], "lightgbm", "fast", calibrate=False,
+            X[:80],
+            y[:80],
+            "lightgbm",
+            "fast",
+            calibrate=False,
             json_config={
                 "n_estimators": 500,
                 "learning_rate": 0.1,
@@ -215,7 +230,8 @@ class TestTrain:
                 "random_state": SEED,
                 "early_stopping_rounds": 5,
             },
-            X_val=X[80:], y_val=y[80:],
+            X_val=X[80:],
+            y_val=y[80:],
         )
 
         # evals_result_ is populated only when a validation set actually reached fit().
@@ -226,7 +242,11 @@ class TestTrain:
         """The contrast case: no validation set means nothing to stop against."""
         X, y = xy
         estimator = train(
-            X, y, "lightgbm", "fast", calibrate=False,
+            X,
+            y,
+            "lightgbm",
+            "fast",
+            calibrate=False,
             json_config={
                 "n_estimators": 20,
                 "verbose": -1,
@@ -304,8 +324,12 @@ class TestTrainWithTransformer:
         train_df, validation_df = flights_df.iloc[:200], flights_df.iloc[200:]
 
         _, _, X_fit, columns = train_with_transformer(
-            train_df, "noweather", "logistic_regression", "default",
-            calibrate=False, evaluation_df=validation_df,
+            train_df,
+            "noweather",
+            "logistic_regression",
+            "default",
+            calibrate=False,
+            evaluation_df=validation_df,
         )
 
         assert X_fit.shape[0] == len(train_df)
@@ -319,7 +343,6 @@ class TestTrainWithTransformer:
 
 
 class TestRunCommandGuards:
-
     @pytest.fixture
     def train_path(self, tmp_path, flights_df):
         path = tmp_path / "train.parquet"
@@ -345,9 +368,7 @@ class TestRunCommandGuards:
         assert result.exit_code == 1
 
     def test_unknown_config(self, tmp_path, train_path):
-        result = self._invoke(
-            tmp_path, **{"--config": "turbo", "--train-path": str(train_path)}
-        )
+        result = self._invoke(tmp_path, **{"--config": "turbo", "--train-path": str(train_path)})
 
         assert result.exit_code == 1
 
@@ -427,10 +448,14 @@ class TestRunCommandRegistration:
             return CliRunner().invoke(
                 train_module.app,
                 [
-                    "--variant", "noweather",
-                    "--model", "logistic_regression",
-                    "--train-path", str(path),
-                    "--models-path", str(tmp_path / "models"),
+                    "--variant",
+                    "noweather",
+                    "--model",
+                    "logistic_regression",
+                    "--train-path",
+                    str(path),
+                    "--models-path",
+                    str(tmp_path / "models"),
                     "--no-calibrate",
                     *extra,
                 ],
@@ -453,8 +478,10 @@ class TestRunCommandRegistration:
 
     def test_the_bundle_is_registered_when_both_are_given(self, invoke, tracking):
         result = invoke(
-            "--experiment", "flight-delay-v3",
-            "--registered-model-name", "flight-delay-noweather",
+            "--experiment",
+            "flight-delay-v3",
+            "--registered-model-name",
+            "flight-delay-noweather",
         )
 
         assert result.exit_code == 0, result.output
@@ -463,8 +490,10 @@ class TestRunCommandRegistration:
 
     def test_the_run_records_what_produced_the_model(self, invoke, tracking):
         invoke(
-            "--experiment", "flight-delay-v3",
-            "--registered-model-name", "flight-delay-noweather",
+            "--experiment",
+            "flight-delay-v3",
+            "--registered-model-name",
+            "flight-delay-noweather",
         )
 
         assert tracking["params"]["variant"] == "noweather"
@@ -474,25 +503,32 @@ class TestRunCommandRegistration:
 
     def test_the_run_is_named_after_the_combination(self, invoke, tracking):
         invoke(
-            "--experiment", "flight-delay-v3",
-            "--registered-model-name", "flight-delay-noweather",
+            "--experiment",
+            "flight-delay-v3",
+            "--registered-model-name",
+            "flight-delay-noweather",
         )
 
         assert tracking["runs"] == ["noweather__logistic_regression__default"]
 
     def test_the_alias_is_forwarded(self, invoke, tracking):
         invoke(
-            "--experiment", "flight-delay-v3",
-            "--registered-model-name", "flight-delay-noweather",
-            "--alias", "champion",
+            "--experiment",
+            "flight-delay-v3",
+            "--registered-model-name",
+            "flight-delay-noweather",
+            "--alias",
+            "champion",
         )
 
         assert tracking["bundles"][0]["alias"] == "champion"
 
     def test_the_registered_columns_come_from_the_fitted_estimator(self, invoke, tracking):
         invoke(
-            "--experiment", "flight-delay-v3",
-            "--registered-model-name", "flight-delay-noweather",
+            "--experiment",
+            "flight-delay-v3",
+            "--registered-model-name",
+            "flight-delay-noweather",
         )
         columns = tracking["bundles"][0]["columns"]
 
@@ -507,10 +543,14 @@ class TestRunCommand:
         result = CliRunner().invoke(
             train_module.app,
             [
-                "--variant", "noweather",
-                "--model", "logistic_regression",
-                "--train-path", str(tmp_path / "absent.parquet"),
-                "--models-path", str(tmp_path / "models"),
+                "--variant",
+                "noweather",
+                "--model",
+                "logistic_regression",
+                "--train-path",
+                str(tmp_path / "absent.parquet"),
+                "--models-path",
+                str(tmp_path / "models"),
             ],
         )
 
@@ -525,18 +565,20 @@ class TestRunCommand:
         result = CliRunner().invoke(
             train_module.app,
             [
-                "--variant", "noweather",
-                "--model", "xgboost",
-                "--train-path", str(path),
-                "--models-path", str(tmp_path / "models"),
+                "--variant",
+                "noweather",
+                "--model",
+                "xgboost",
+                "--train-path",
+                str(path),
+                "--models-path",
+                str(tmp_path / "models"),
             ],
         )
 
         assert result.exit_code == 1
 
-    def test_saved_artifacts_form_a_complete_bundle(
-        self, tmp_path, flights_df, small_transformer
-    ):
+    def test_saved_artifacts_form_a_complete_bundle(self, tmp_path, flights_df, small_transformer):
         """A saved model is only usable next to its transformer and columns."""
         from typer.testing import CliRunner
 
@@ -547,11 +589,16 @@ class TestRunCommand:
         result = CliRunner().invoke(
             train_module.app,
             [
-                "--variant", "noweather",
-                "--model", "logistic_regression",
-                "--config", "default",
-                "--train-path", str(path),
-                "--models-path", str(models_path),
+                "--variant",
+                "noweather",
+                "--model",
+                "logistic_regression",
+                "--config",
+                "default",
+                "--train-path",
+                str(path),
+                "--models-path",
+                str(models_path),
                 "--no-calibrate",
             ],
         )

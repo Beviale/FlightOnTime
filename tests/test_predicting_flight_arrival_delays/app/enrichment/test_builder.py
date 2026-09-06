@@ -15,7 +15,7 @@ from predicting_flight_arrival_delays.app.enrichment.builder import (
     lead_days,
 )
 from predicting_flight_arrival_delays.app.schema import FlightRequest
-from predicting_flight_arrival_delays.config import MAX_LEAD_DAYS, DATE_COLUMN
+from predicting_flight_arrival_delays.config import DATE_COLUMN, MAX_LEAD_DAYS
 from predicting_flight_arrival_delays.data.features import (
     WEATHER_COLUMNS_DESTINATION,
     WEATHER_COLUMNS_ORIGIN,
@@ -147,9 +147,7 @@ class TestBuildFeatureFrame:
 
     def test_a_batch_keeps_one_row_per_request_in_order(self, body, today, stub_forecast):
         stub_forecast()
-        requests = [
-            FlightRequest(**body(FlightNumberReportingAirline=n)) for n in (1, 2, 3)
-        ]
+        requests = [FlightRequest(**body(FlightNumberReportingAirline=n)) for n in (1, 2, 3)]
 
         frame, statuses = build_feature_frame(requests, today=today)
 

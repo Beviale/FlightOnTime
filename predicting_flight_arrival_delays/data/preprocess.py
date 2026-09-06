@@ -1,5 +1,4 @@
-"""Preprocessing pipeline, PRE-SPLIT stage.
-"""
+"""Preprocessing pipeline, PRE-SPLIT stage."""
 
 from pathlib import Path
 
@@ -15,6 +14,7 @@ from predicting_flight_arrival_delays.config import (
     FULL_LEAD_COVERAGE_START,
     INTERIM_DATA_DIR,
     KEEP_COLUMNS,
+    MAX_BLOCK_MINUTES,
     MAX_LEAD_DAYS,
     RAW_DATA_DIR,
     SEED,
@@ -49,14 +49,14 @@ def add_congestion_features(df: pd.DataFrame) -> pd.DataFrame:
         The same DataFrame with "OriginCongestion" and "DestCongestion" added.
     """
     dep_hour = (df["CRSDepTime"].replace(2400, 0) // 100).astype(int)
-    df["OriginCongestion"] = df.groupby(
-        [df[DATE_COLUMN], df["Origin"], dep_hour]
-    )["Origin"].transform("count")
+    df["OriginCongestion"] = df.groupby([df[DATE_COLUMN], df["Origin"], dep_hour])[
+        "Origin"
+    ].transform("count")
 
     arr_hour = (df["CRSArrTime"].replace(2400, 0) // 100).astype(int)
-    df["DestCongestion"] = df.groupby(
-        [df[DATE_COLUMN], df["Dest"], arr_hour]
-    )["Dest"].transform("count")
+    df["DestCongestion"] = df.groupby([df[DATE_COLUMN], df["Dest"], arr_hour])["Dest"].transform(
+        "count"
+    )
     return df
 
 
@@ -64,11 +64,13 @@ def add_congestion_features(df: pd.DataFrame) -> pd.DataFrame:
 # 2. Cleaning
 # ---------------------------------------------------------------------------
 
+
 def load_and_clean(df: pd.DataFrame) -> pd.DataFrame:
     """Drop unusable flights.
 
     Flights dropped: cancelled, diverted, or with no arrival outcome recorded -
-    none of these have a valid target.
+    none of these have a valid target - and those whose scheduled block time is
+    not a duration a flight can have.
 
     Args:
         df: The Dataframe containing all the flights data.
@@ -82,6 +84,15 @@ def load_and_clean(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["ArrDel15"])
     logger.info(f"{n_raw} rows -> {len(df)} after dropping cancelled/diverted/no-target")
 
+
+    plausible = df["CRSElapsedTime"].between(1, MAX_BLOCK_MINUTES)
+    if not plausible.all():
+        logger.warning(
+            f"dropping {(~plausible).sum()} flights whose CRSElapsedTime is outside "
+            f"1..{MAX_BLOCK_MINUTES}: {sorted(df.loc[~plausible, 'CRSElapsedTime'].unique())}"
+        )
+        df = df[plausible]
+
     df["IsDelayed"] = df["ArrDel15"].astype(int)
     df = df.drop(columns=["Cancelled", "Diverted", "ArrDel15"])
 
@@ -91,6 +102,7 @@ def load_and_clean(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # 3. Temporal features
 # ---------------------------------------------------------------------------
+
 
 def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
     """Calendar features and local scheduled time.
@@ -113,8 +125,8 @@ def add_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
         raw = df[time_col].replace(2400, 0)
         hours = raw // 100
         minutes = raw % 100
-        df[f"{prefix}Hour"] = hours.astype(int)        
-        df[f"{prefix}TimeDecimal"] = hours + minutes / 60  
+        df[f"{prefix}Hour"] = hours.astype(int)
+        df[f"{prefix}TimeDecimal"] = hours + minutes / 60
 
     return df
 
@@ -141,7 +153,6 @@ def add_holiday_features(df: pd.DataFrame) -> pd.DataFrame:
 
     df["IsHoliday"] = dates.map(lambda d: d in US_HOLIDAYS).astype(int)
 
-
     start = df[DATE_COLUMN].min() - pd.DateOffset(years=1)
     end = df[DATE_COLUMN].max() + pd.DateOffset(years=1)
     holiday_dates = sorted(d for d in US_HOLIDAYS[start:end])
@@ -158,6 +169,7 @@ def add_holiday_features(df: pd.DataFrame) -> pd.DataFrame:
     df["DaysToNearestHoliday"] = df[DATE_COLUMN].map(mapping)
 
     return df
+
 
 # ---------------------------------------------------------------------------
 # 5. Aircraft Schedule Features
@@ -181,6 +193,7 @@ def add_aircraft_schedule_features(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # 6. Lead time assignment
 # ---------------------------------------------------------------------------
+
 
 def assign_lead_days(df: pd.DataFrame, seed: int = SEED) -> pd.DataFrame:
     """Assign one forecast lead time per flight.
@@ -214,6 +227,7 @@ def assign_lead_days(df: pd.DataFrame, seed: int = SEED) -> pd.DataFrame:
 # 7. UTC conversion
 # ---------------------------------------------------------------------------
 
+
 def add_utc_columns(df: pd.DataFrame, airports: pd.DataFrame) -> pd.DataFrame:
     """Convert local scheduled times to UTC hourly timestamps, at origin and destination.
 
@@ -224,11 +238,11 @@ def add_utc_columns(df: pd.DataFrame, airports: pd.DataFrame) -> pd.DataFrame:
         The same DataFrame with "DepUtcHour" and "ArrUtcHour"` added.
     """
     tz_map = airports.set_index("AirportId")["Timezone"].to_dict()
- 
+
     # --- Departure: local origin time -> UTC ---
     tz_series = df["OriginAirportID"].map(tz_map)
     local_naive = df[DATE_COLUMN].dt.normalize() + pd.to_timedelta(df["DepHour"], unit="h")
- 
+
     dep_utc = pd.Series(pd.NaT, index=df.index, dtype="datetime64[ns, UTC]")
     for tz_name, idx in tz_series.groupby(tz_series).groups.items():
         dep_utc.loc[idx] = (
@@ -237,16 +251,18 @@ def add_utc_columns(df: pd.DataFrame, airports: pd.DataFrame) -> pd.DataFrame:
             .dt.tz_convert("UTC")
         )
     df["DepUtcHour"] = dep_utc
- 
+
     # --- Arrival: departure UTC + scheduled duration, floored to the hour.
-    df["ArrUtcHour"] = (
-        dep_utc + pd.to_timedelta(df["CRSElapsedTime"], unit="minute")
-    ).dt.floor("h")
- 
+    df["ArrUtcHour"] = (dep_utc + pd.to_timedelta(df["CRSElapsedTime"], unit="minute")).dt.floor(
+        "h"
+    )
+
     n_missing = df["DepUtcHour"].isna().sum() + df["ArrUtcHour"].isna().sum()
     if n_missing:
-        logger.warning(f"{n_missing} timestamps could not be converted (unknown airport or DST edge)")
- 
+        logger.warning(
+            f"{n_missing} timestamps could not be converted (unknown airport or DST edge)"
+        )
+
     in_flights = set(df["OriginAirportID"])
     in_table = set(airports["AirportId"])
     missing_airports = in_flights - in_table
@@ -261,6 +277,7 @@ def add_utc_columns(df: pd.DataFrame, airports: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # 8. Add Turnaround features
 # ---------------------------------------------------------------------------
+
 
 def add_turnaround_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add each flight's scheduled turnaround time since its aircraft's previous leg.
@@ -277,6 +294,7 @@ def add_turnaround_features(df: pd.DataFrame) -> pd.DataFrame:
     prev_arr = df.groupby("TailNumber")["ArrUtcHour"].shift(1)
     df["ScheduledTurnaround"] = (df["DepUtcHour"] - prev_arr).dt.total_seconds() / 60
     return df
+
 
 # ---------------------------------------------------------------------------
 # 9. Carrier-airport interaction features
@@ -298,6 +316,7 @@ def add_carrier_features(df: pd.DataFrame) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 # Join weather to flights
 # ---------------------------------------------------------------------------
+
 
 def join_weather_to_flights(flights: pd.DataFrame, weather_dir: Path) -> pd.DataFrame:
     """Attach the weather at both origin and destination to each flight.
@@ -340,6 +359,7 @@ def join_weather_to_flights(flights: pd.DataFrame, weather_dir: Path) -> pd.Data
 # Commands
 # ---------------------------------------------------------------------------
 
+
 @app.command()
 def prepare_flights(
     bts_path: Path = typer.Argument(RAW_DATA_DIR),
@@ -363,16 +383,16 @@ def prepare_flights(
         df = pd.concat(
             [pd.read_csv(p, usecols=lambda c: c in needed) for p in paths],
             ignore_index=True,
-        )        
+        )
         df.columns = [to_pascal_case(c) for c in df.columns]
-        df = add_congestion_features(df)  
-        df = load_and_clean(df)       
+        df = add_congestion_features(df)
+        df = load_and_clean(df)
         df = add_temporal_features(df)
         df = add_holiday_features(df)
-        df = add_aircraft_schedule_features(df) 
+        df = add_aircraft_schedule_features(df)
         df = assign_lead_days(df)
         df = add_utc_columns(df, airports)
-        df = add_turnaround_features(df) 
+        df = add_turnaround_features(df)
         df = add_carrier_features(df)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -381,6 +401,7 @@ def prepare_flights(
     except Exception as e:
         logger.exception(f"An error occurred while preprocess the flights: {e}")
         raise typer.Exit(code=1) from None
+
 
 @app.command()
 def join_weather(
@@ -404,6 +425,7 @@ def join_weather(
     except Exception as e:
         logger.exception(f"An error occurred while attaching the weather to the flights: {e}")
         raise typer.Exit(code=1) from None
+
 
 if __name__ == "__main__":
     app()

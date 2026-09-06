@@ -5,7 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 from predicting_flight_arrival_delays.data import build_airports as build_airports_module
-from predicting_flight_arrival_delays.data.build_airports import build, app
+from predicting_flight_arrival_delays.data.build_airports import app, build
 
 runner = CliRunner()
 
@@ -185,9 +185,7 @@ class TestRunCommand:
         assert result.exit_code == 0, result.output
         assert downloads == []
 
-    def test_a_missing_table_is_fetched_even_without_force(
-        self, raw_dir, downloads, tmp_path
-    ):
+    def test_a_missing_table_is_fetched_even_without_force(self, raw_dir, downloads, tmp_path):
         result = runner.invoke(
             app, ["--no-force-download", "--output-path", str(tmp_path / "airports.csv")]
         )

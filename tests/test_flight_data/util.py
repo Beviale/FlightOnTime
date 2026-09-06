@@ -1,5 +1,4 @@
-"""Shared Great Expectations plumbing for the data suites.
-"""
+"""Shared Great Expectations plumbing for the data suites."""
 
 import json
 from pathlib import Path
@@ -8,7 +7,6 @@ import great_expectations as gx
 from loguru import logger
 import pandas as pd
 import pyarrow.parquet as pq
-
 
 SAMPLE_ROWS = 200_000
 
@@ -58,9 +56,7 @@ def validate(df: pd.DataFrame, expectations: list, name: str):
     data_asset = data_source.add_dataframe_asset(name=f"{name}_asset")
     batch_definition = data_asset.add_batch_definition_whole_dataframe("batch_definition")
 
-    suite = context.suites.add(
-        gx.core.expectation_suite.ExpectationSuite(name=f"{name}_suite")
-    )
+    suite = context.suites.add(gx.core.expectation_suite.ExpectationSuite(name=f"{name}_suite"))
     for expectation in expectations:
         suite.add_expectation(expectation)
     context.suites.add_or_update(suite)
@@ -113,9 +109,7 @@ def show_results(checkpoint_result) -> None:
         for expectation in validation.get("expectations", []):
             kwargs = expectation.get("kwargs", {})
             target = kwargs.get("column") or kwargs.get("column_A") or "table"
-            logger.info(
-                f"{target}: {expectation['expectation_type']} -> {expectation['success']}"
-            )
+            logger.info(f"{target}: {expectation['expectation_type']} -> {expectation['success']}")
             if not expectation["success"]:
                 logger.warning(kwargs)
                 logger.warning(expectation.get("result"))

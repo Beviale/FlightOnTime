@@ -1,10 +1,11 @@
 """Tests for predicting_flight_arrival_delays.app.wrapper."""
 
+from typing import ClassVar
+
 import httpx
 import pytest
 
 from predicting_flight_arrival_delays.app import wrapper
-
 
 SCORED = {
     "delay_probability": 0.62,
@@ -111,7 +112,9 @@ class TestRenderPrediction:
         assert "62.0%" in wrapper.render_prediction(SCORED)
 
     def test_a_fallback_answer_says_so(self):
-        rendered = wrapper.render_prediction(SCORED | {"variant": "noweather", "weather": "unavailable"})
+        rendered = wrapper.render_prediction(
+            SCORED | {"variant": "noweather", "weather": "unavailable"}
+        )
 
         assert "fallback model" in rendered
         assert "less informed" in rendered
@@ -133,8 +136,19 @@ class TestPredictLookup:
 
     @pytest.mark.asyncio
     async def test_the_request_carries_what_the_api_asks_for(self, api):
-        sent = api({"data": SCORED | {"resolved": {"Origin": "DFW", "Dest": "LBB",
-                                                   "DepTimeDecimal": 7.0, "Distance": 282.0}}})
+        sent = api(
+            {
+                "data": SCORED
+                | {
+                    "resolved": {
+                        "Origin": "DFW",
+                        "Dest": "LBB",
+                        "DepTimeDecimal": 7.0,
+                        "Distance": 282.0,
+                    }
+                }
+            }
+        )
 
         await wrapper.predict_lookup("2026-08-26", "aa", "mq", 3500, "DFW", "LBB")
 
@@ -147,8 +161,19 @@ class TestPredictLookup:
     @pytest.mark.asyncio
     async def test_a_date_with_a_time_on_it_is_trimmed(self, api):
         """The picker can hand back a timestamp; the API takes a date."""
-        sent = api({"data": SCORED | {"resolved": {"Origin": "DFW", "Dest": "LBB",
-                                                   "DepTimeDecimal": 7.0, "Distance": 282.0}}})
+        sent = api(
+            {
+                "data": SCORED
+                | {
+                    "resolved": {
+                        "Origin": "DFW",
+                        "Dest": "LBB",
+                        "DepTimeDecimal": 7.0,
+                        "Distance": 282.0,
+                    }
+                }
+            }
+        )
 
         await wrapper.predict_lookup("2026-08-26 00:00:00", "AA", "MQ", 3500, "DFW", "LBB")
 
@@ -156,8 +181,19 @@ class TestPredictLookup:
 
     @pytest.mark.asyncio
     async def test_the_flight_that_was_found_is_shown_back(self, api):
-        api({"data": SCORED | {"resolved": {"Origin": "DFW", "Dest": "LBB",
-                                            "DepTimeDecimal": 7.0, "Distance": 282.0}}})
+        api(
+            {
+                "data": SCORED
+                | {
+                    "resolved": {
+                        "Origin": "DFW",
+                        "Dest": "LBB",
+                        "DepTimeDecimal": 7.0,
+                        "Distance": 282.0,
+                    }
+                }
+            }
+        )
 
         answer, _ = await wrapper.predict_lookup("2026-08-26", "AA", "MQ", 3500, "DFW", "LBB")
 
@@ -175,8 +211,7 @@ class TestPredictLookup:
 
 
 class TestTheWaterfall:
-
-    TERMS = {
+    TERMS: ClassVar[dict] = {
         "base_value": -1.30,
         "contributions": [
             {"column": "OriginCarrier", "contribution": 0.43},
@@ -232,29 +267,34 @@ class TestTheWaterfall:
 
 
 class TestTheContributionsChart:
-
     def test_one_bar_per_reason(self):
-        figure = wrapper.render_contributions([
-            {"column": "OriginCarrier", "contribution": 0.043},
-            {"column": "PrecipitationOrigin", "contribution": -0.012},
-        ])
+        figure = wrapper.render_contributions(
+            [
+                {"column": "OriginCarrier", "contribution": 0.043},
+                {"column": "PrecipitationOrigin", "contribution": -0.012},
+            ]
+        )
 
         assert len(figure.axes[0].patches) == 2
 
     def test_the_side_of_zero_says_which_way_it_pushed(self):
-        figure = wrapper.render_contributions([
-            {"column": "OriginCarrier", "contribution": 0.043},
-            {"column": "PrecipitationOrigin", "contribution": -0.012},
-        ])
+        figure = wrapper.render_contributions(
+            [
+                {"column": "OriginCarrier", "contribution": 0.043},
+                {"column": "PrecipitationOrigin", "contribution": -0.012},
+            ]
+        )
         widths = [p.get_width() for p in figure.axes[0].patches]
 
         assert min(widths) < 0 < max(widths)
 
     def test_the_two_directions_are_told_apart_by_colour(self):
-        figure = wrapper.render_contributions([
-            {"column": "a", "contribution": 0.5},
-            {"column": "b", "contribution": -0.5},
-        ])
+        figure = wrapper.render_contributions(
+            [
+                {"column": "a", "contribution": 0.5},
+                {"column": "b", "contribution": -0.5},
+            ]
+        )
         colours = {p.get_facecolor() for p in figure.axes[0].patches}
 
         assert len(colours) == 2
@@ -285,11 +325,26 @@ class TestPredictBatch:
 
     @pytest.mark.asyncio
     async def test_each_scored_flight_becomes_a_row(self, api, tmp_path):
-        api({"data": {"results": [
-            {"index": 0, **SCORED},
-            {"index": 1, **(SCORED | {"is_delayed": 0, "variant": "noweather",
-                                      "weather": "beyond_forecast_horizon"})},
-        ]}})
+        api(
+            {
+                "data": {
+                    "results": [
+                        {"index": 0, **SCORED},
+                        {
+                            "index": 1,
+                            **(
+                                SCORED
+                                | {
+                                    "is_delayed": 0,
+                                    "variant": "noweather",
+                                    "weather": "beyond_forecast_horizon",
+                                }
+                            ),
+                        },
+                    ]
+                }
+            }
+        )
         csv = tmp_path / "flights.csv"
         csv.write_text("FlightDate,OriginAirportID\n2026-08-26,12478\n2026-08-27,12478\n")
 
@@ -313,8 +368,17 @@ class TestPredictBatch:
 class TestModelPages:
     @pytest.mark.asyncio
     async def test_the_metrics_page_names_each_variant(self, api):
-        api({"data": {"all": {"run_id": "r1", "operating_threshold": 0.42,
-                              "metrics": {"pr_auc": 0.5}}}})
+        api(
+            {
+                "data": {
+                    "all": {
+                        "run_id": "r1",
+                        "operating_threshold": 0.42,
+                        "metrics": {"pr_auc": 0.5},
+                    }
+                }
+            }
+        )
 
         page = await wrapper.get_metrics()
 
@@ -323,9 +387,16 @@ class TestModelPages:
 
     @pytest.mark.asyncio
     async def test_the_inputs_page_separates_required_from_ignored(self, api):
-        api({"data": {"derived_from_served_models": True,
-                      "required": ["FlightDate"], "ignored": ["Month"],
-                      "supplied_by_the_service": ["LeadDays"]}})
+        api(
+            {
+                "data": {
+                    "derived_from_served_models": True,
+                    "required": ["FlightDate"],
+                    "ignored": ["Month"],
+                    "supplied_by_the_service": ["LeadDays"],
+                }
+            }
+        )
 
         page = await wrapper.get_inputs()
 
@@ -337,9 +408,16 @@ class TestModelPages:
     async def test_with_no_model_the_page_says_so_instead_of_listing(self, api):
         """The list would otherwise be captioned "feature selection dropped them",
         which is false when nothing was ever selected."""
-        api({"data": {"derived_from_served_models": False,
-                      "required": ["FlightDate"], "ignored": ["Month"],
-                      "supplied_by_the_service": ["LeadDays"]}})
+        api(
+            {
+                "data": {
+                    "derived_from_served_models": False,
+                    "required": ["FlightDate"],
+                    "ignored": ["Month"],
+                    "supplied_by_the_service": ["LeadDays"],
+                }
+            }
+        )
 
         page = await wrapper.get_inputs()
 
@@ -349,24 +427,41 @@ class TestModelPages:
 
     @pytest.mark.asyncio
     async def test_the_reasons_are_rendered_with_their_direction(self, api):
-        api({"data": {"delay_probability": 0.31, "is_delayed": 0, "variant": "all",
-                      "threshold": 0.5, "weather": "ok",
-                      "explanations": [
-                          {"column": "OriginCarrier", "contribution": 0.043},
-                          {"column": "PrecipitationOrigin", "contribution": -0.012},
-                      ]}})
+        api(
+            {
+                "data": {
+                    "delay_probability": 0.31,
+                    "is_delayed": 0,
+                    "variant": "all",
+                    "threshold": 0.5,
+                    "weather": "ok",
+                    "explanations": [
+                        {"column": "OriginCarrier", "contribution": 0.043},
+                        {"column": "PrecipitationOrigin", "contribution": -0.012},
+                    ],
+                }
+            }
+        )
 
         page = wrapper.render_prediction((await wrapper.call("GET", "/x"))["data"])
 
         assert "**OriginCarrier** pushed towards a delay" in page
         assert "**PrecipitationOrigin** pushed towards arriving on time" in page
 
-
     @pytest.mark.asyncio
     async def test_missing_important_inputs_are_flagged(self, api):
-        api({"data": {"delay_probability": 0.31, "is_delayed": 0, "variant": "all",
-                      "threshold": 0.5, "weather": "ok",
-                      "approximated": ["OriginCongestion", "OriginCarrier"]}})
+        api(
+            {
+                "data": {
+                    "delay_probability": 0.31,
+                    "is_delayed": 0,
+                    "variant": "all",
+                    "threshold": 0.5,
+                    "weather": "ok",
+                    "approximated": ["OriginCongestion", "OriginCarrier"],
+                }
+            }
+        )
 
         page = wrapper.render_prediction((await wrapper.call("GET", "/x"))["data"])
 
@@ -376,8 +471,18 @@ class TestModelPages:
 
     @pytest.mark.asyncio
     async def test_a_complete_request_gets_no_warning(self, api):
-        api({"data": {"delay_probability": 0.31, "is_delayed": 0, "variant": "all",
-                      "threshold": 0.5, "weather": "ok", "approximated": []}})
+        api(
+            {
+                "data": {
+                    "delay_probability": 0.31,
+                    "is_delayed": 0,
+                    "variant": "all",
+                    "threshold": 0.5,
+                    "weather": "ok",
+                    "approximated": [],
+                }
+            }
+        )
 
         page = wrapper.render_prediction((await wrapper.call("GET", "/x"))["data"])
 

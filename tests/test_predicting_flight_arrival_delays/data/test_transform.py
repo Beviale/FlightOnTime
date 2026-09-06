@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 import scipy.sparse as sp
 
-from predicting_flight_arrival_delays.config import SERVICE_COLUMNS2, TARGET, DATE_COLUMN
+from predicting_flight_arrival_delays.config import DATE_COLUMN, SERVICE_COLUMNS2, TARGET
 from predicting_flight_arrival_delays.data.transform import (
     OTHER,
     Transformer,
@@ -22,9 +22,7 @@ def small_df() -> pd.DataFrame:
     """A minimal frame: two categoricals, two numerics, one date, twelve rows."""
     return pd.DataFrame(
         {
-            DATE_COLUMN: pd.to_datetime(
-                ["2025-01-%02d" % (i + 1) for i in range(12)]
-            ),
+            DATE_COLUMN: pd.to_datetime([f"2025-01-{i + 1:02d}" for i in range(12)]),
             "Origin": ["ATL"] * 5 + ["DFW"] * 4 + ["ORD"] * 2 + ["RARE"],
             "Airline": ["AA", "DL"] * 6,
             "Distance": [100.0, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200],
@@ -132,9 +130,7 @@ class TestToSparseMatrix:
         """Dense-then-sparse ordering is what keeps train and test comparable."""
         matrix = to_sparse_matrix(encoded).toarray()
 
-        np.testing.assert_allclose(
-            matrix[:, 0], encoded["Distance"].to_numpy(dtype="float32")
-        )
+        np.testing.assert_allclose(matrix[:, 0], encoded["Distance"].to_numpy(dtype="float32"))
 
     def test_train_and_test_columns_correspond(self, encoded):
         """Converting aligned frames separately must yield matching layouts."""
@@ -234,9 +230,7 @@ class TestAlignThenSparse:
 
     @pytest.fixture
     def aligned(self):
-        train = pd.DataFrame(
-            {"Distance": [1.0, 2.0, 3.0], "Origin": ["ATL", "DFW", "ORD"]}
-        )
+        train = pd.DataFrame({"Distance": [1.0, 2.0, 3.0], "Origin": ["ATL", "DFW", "ORD"]})
         test = pd.DataFrame({"Distance": [4.0], "Origin": ["ATL"]})
 
         return align_columns(
@@ -406,9 +400,7 @@ class TestTransformerFit:
 
     def test_input_frame_is_not_mutated(self, small_df, small_y):
         before = small_df.copy()
-        Transformer(min_category_count=1, delay_rate_columns=[]).fit_transform(
-            small_df, small_y
-        )
+        Transformer(min_category_count=1, delay_rate_columns=[]).fit_transform(small_df, small_y)
 
         pd.testing.assert_frame_equal(small_df, before)
 
@@ -426,7 +418,6 @@ def two_airports_sharing_a_code() -> tuple[pd.DataFrame, pd.Series]:
 
 
 class TestCyclicalColumnsBecomeAPointOnACircle:
-
     @pytest.fixture
     def hours(self):
         return pd.DataFrame(
@@ -492,7 +483,7 @@ class TestAirportIdsAreReadAsLabels:
     def fitted(self, small_df, small_y):
         flights = small_df.copy()
         flights["OriginAirportID"] = [10397] * 5 + [11298] * 4 + [13930] * 2 + [12892]
-       
+
         t = Transformer(min_category_count=1, max_onehot_categories=0, encoding="native")
         t.fit(flights, small_y)
         return t, flights
@@ -527,9 +518,7 @@ class TestAirportIdsAreReadAsLabels:
         """With no history to draw on, the shrinkage formula falls back to the base
         rate rather than to zero."""
         transformer, flights = fitted
-        unknown = transformer._as_labels(
-            flights.head(1).copy().assign(OriginAirportID=99999)
-        )
+        unknown = transformer._as_labels(flights.head(1).copy().assign(OriginAirportID=99999))
 
         rate = transformer._apply_delay_rates_internal(unknown)["OriginAirportIDDelayRate"]
 
@@ -650,9 +639,7 @@ class TestDelayRatesAreKeyedOnTheAirportId:
 
         assert "OriginAirportID" in t.delay_rate_stats_
 
-    def test_two_airports_under_one_code_keep_separate_histories(
-        self, two_airports_one_code
-    ):
+    def test_two_airports_under_one_code_keep_separate_histories(self, two_airports_one_code):
         flights, y = two_airports_one_code
         t = Transformer(min_category_count=1, max_onehot_categories=0)
         t.fit(flights, y)
@@ -703,8 +690,14 @@ class TestTransformerDelayRates:
         return pd.DataFrame(
             {
                 DATE_COLUMN: pd.to_datetime(
-                    ["2025-01-01", "2025-01-02", "2025-01-03",
-                     "2025-01-04", "2025-01-05", "2025-01-06"]
+                    [
+                        "2025-01-01",
+                        "2025-01-02",
+                        "2025-01-03",
+                        "2025-01-04",
+                        "2025-01-05",
+                        "2025-01-06",
+                    ]
                 ),
                 "Origin": ["ATL", "ATL", "ATL", "DFW", "DFW", "DFW"],
                 "Distance": [100.0, 200, 300, 400, 500, 600],
@@ -776,9 +769,7 @@ class TestTransformerDelayRates:
         """The expanding window follows the dates, not the row order."""
         t = Transformer(min_category_count=1, delay_rate_columns=["Origin"])
         shuffled = rate_df.iloc[::-1]
-        rates = t._fit_delay_rates_internal(
-            shuffled, rate_y.iloc[::-1], shuffled[DATE_COLUMN]
-        )
+        rates = t._fit_delay_rates_internal(shuffled, rate_y.iloc[::-1], shuffled[DATE_COLUMN])
 
         assert rates["OriginDelayRate"].loc[0] == pytest.approx(0.5)
 
@@ -847,7 +838,9 @@ class TestTransformerSelectFeatures:
         selections = []
         for _ in range(2):
             t = Transformer(
-                min_category_count=1, delay_rate_columns=[], mi_sample_size=5,
+                min_category_count=1,
+                delay_rate_columns=[],
+                mi_sample_size=5,
                 min_mutual_info=0.05,
             )
             prepared = t.fit_transform(small_df, small_y)

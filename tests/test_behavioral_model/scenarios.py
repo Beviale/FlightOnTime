@@ -1,5 +1,4 @@
-"""Perturbations built from the data's own observed range.
-"""
+"""Perturbations built from the data's own observed range."""
 
 import pandas as pd
 

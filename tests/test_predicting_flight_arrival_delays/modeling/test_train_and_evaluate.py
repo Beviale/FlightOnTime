@@ -1,5 +1,4 @@
-"""Tests for train_evaluate_save_metrics.train_and_evaluate - selection phase 1.
-"""
+"""Tests for train_evaluate_save_metrics.train_and_evaluate - selection phase 1."""
 
 import json
 
@@ -7,8 +6,8 @@ import numpy as np
 import pytest
 from typer.testing import CliRunner
 
-from predicting_flight_arrival_delays.data.features import select_features_variant
 from predicting_flight_arrival_delays.config import DATE_COLUMN
+from predicting_flight_arrival_delays.data.features import select_features_variant
 from predicting_flight_arrival_delays.data.transform import Transformer
 from predicting_flight_arrival_delays.modeling import (
     train_evaluate_save_metrics as tesm_module,
@@ -16,7 +15,6 @@ from predicting_flight_arrival_delays.modeling import (
 from predicting_flight_arrival_delays.modeling.train_evaluate_save_metrics import (
     train_and_evaluate,
 )
-
 
 runner = CliRunner()
 
@@ -225,9 +223,12 @@ class TestRunCommand:
         result = runner.invoke(
             tesm_module.app,
             [
-                "--variant", "noweather",
-                "--model", "logistic_regression",
-                "--data-path", str(variant_root),
+                "--variant",
+                "noweather",
+                "--model",
+                "logistic_regression",
+                "--data-path",
+                str(variant_root),
             ],
         )
 
@@ -242,9 +243,12 @@ class TestRunCommand:
         runner.invoke(
             tesm_module.app,
             [
-                "--variant", "noweather",
-                "--model", "logistic_regression",
-                "--data-path", str(variant_root),
+                "--variant",
+                "noweather",
+                "--model",
+                "logistic_regression",
+                "--data-path",
+                str(variant_root),
             ],
         )
 
@@ -255,9 +259,12 @@ class TestRunCommand:
         runner.invoke(
             tesm_module.app,
             [
-                "--variant", "noweather",
-                "--model", "logistic_regression",
-                "--data-path", str(variant_root),
+                "--variant",
+                "noweather",
+                "--model",
+                "logistic_regression",
+                "--data-path",
+                str(variant_root),
             ],
         )
 
@@ -268,9 +275,12 @@ class TestRunCommand:
         runner.invoke(
             tesm_module.app,
             [
-                "--variant", "noweather",
-                "--model", "logistic_regression",
-                "--data-path", str(variant_root),
+                "--variant",
+                "noweather",
+                "--model",
+                "logistic_regression",
+                "--data-path",
+                str(variant_root),
             ],
         )
 
@@ -303,10 +313,14 @@ class TestRunCommand:
         result = runner.invoke(
             tesm_module.app,
             [
-                "--variant", "noweather",
-                "--model", "lightgbm",
-                "--data-path", str(variant_root),
-                "--resample", "smote",
+                "--variant",
+                "noweather",
+                "--model",
+                "lightgbm",
+                "--data-path",
+                str(variant_root),
+                "--resample",
+                "smote",
             ],
         )
 
@@ -318,9 +332,12 @@ class TestRunCommand:
         result = runner.invoke(
             tesm_module.app,
             [
-                "--variant", "all",
-                "--model", "logistic_regression",
-                "--data-path", str(variant_root),
+                "--variant",
+                "all",
+                "--model",
+                "logistic_regression",
+                "--data-path",
+                str(variant_root),
             ],
         )
 
@@ -338,9 +355,12 @@ class TestRunCommand:
         result = runner.invoke(
             tesm_module.app,
             [
-                "--variant", "noweather",
-                "--model", "logistic_regression",
-                "--data-path", str(tmp_path / "novalroot"),
+                "--variant",
+                "noweather",
+                "--model",
+                "logistic_regression",
+                "--data-path",
+                str(tmp_path / "novalroot"),
             ],
         )
 

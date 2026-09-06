@@ -102,17 +102,11 @@ def approximated_inputs(flight, bundle, floor: float) -> list[str]:
         Those the request left out, in the model's own order of importance. Empty
         when the request was complete, or when the version registered no ranking.
     """
-    ranked = [
-        column for column, share in bundle.importance.items() if share >= floor
-    ]
+    ranked = [column for column, share in bundle.importance.items() if share >= floor]
     if not ranked:
         return []
 
-    sent = {
-        name
-        for name in flight.supplied()
-        if getattr(flight, name, None) is not None
-    }
+    sent = {name for name in flight.supplied() if getattr(flight, name, None) is not None}
     return [column for column in ranked if column not in sent]
 
 
@@ -127,9 +121,7 @@ def complete_frame(df: pd.DataFrame, transformer) -> pd.DataFrame:
         A copy carrying every column the transformer will reach for.
     """
     df = df.copy()
-    derived = {
-        f"{c}DelayRate" for c in transformer.rate_columns() if c in df.columns
-    }
+    derived = {f"{c}DelayRate" for c in transformer.rate_columns() if c in df.columns}
 
     for column in transformer.numeric_columns:
         if column not in df.columns and column not in derived:

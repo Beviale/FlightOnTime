@@ -2,8 +2,8 @@
 
 from dataclasses import replace
 
-import pytest
 from fastapi.testclient import TestClient
+import pytest
 
 from predicting_flight_arrival_delays.app.inputs import (
     CANDIDATE_INPUTS,
@@ -11,8 +11,8 @@ from predicting_flight_arrival_delays.app.inputs import (
     required_inputs,
 )
 from predicting_flight_arrival_delays.app.main import app
-from predicting_flight_arrival_delays.app.utils import apply_bundles
 from predicting_flight_arrival_delays.app.routers import model_info
+from predicting_flight_arrival_delays.app.utils import apply_bundles
 
 TOKEN = "a-shared-secret"
 
@@ -207,7 +207,9 @@ class TestReload:
 
         assert response.status_code == 401
 
-    def test_a_token_with_an_accent_is_refused_not_crashed(self, client, monkeypatch, registry, bundles):
+    def test_a_token_with_an_accent_is_refused_not_crashed(
+        self, client, monkeypatch, registry, bundles
+    ):
         monkeypatch.setenv(model_info.RELOAD_TOKEN_VARIABLE, "segreto-àè")
         registry(bundles)
 

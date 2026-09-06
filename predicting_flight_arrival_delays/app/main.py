@@ -40,9 +40,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FlightOnTime - Flight Arrival Delay Prediction",
-    description=(
-        "Calibrated delay risk for scheduled U.S. flights, before departure."
-    ),
+    description=("Calibrated delay risk for scheduled U.S. flights, before departure."),
     version="0.1.0",
     lifespan=lifespan,
 )

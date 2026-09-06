@@ -1,13 +1,15 @@
 """Tests for predicting_flight_arrival_delays.app.inputs."""
 
+from typing import ClassVar
+
 import pandas as pd
 import pytest
 
 from predicting_flight_arrival_delays.app.enrichment.builder import build_feature_frame
 from predicting_flight_arrival_delays.app.inference import score
 from predicting_flight_arrival_delays.app.inputs import (
-    approximated_inputs,
     FORECAST_INPUTS,
+    approximated_inputs,
     complete_frame,
     contributes,
     contributing_columns,
@@ -20,8 +22,9 @@ CANDIDATES = list(FlightRequest.model_fields)
 
 
 class Stub:
-    def __init__(self, category_keep=None, delay_rate_columns=(), numeric_columns=(),
-                 impute_values=None):  # noqa: D107
+    def __init__(
+        self, category_keep=None, delay_rate_columns=(), numeric_columns=(), impute_values=None
+    ):
         self.category_keep = category_keep or {}
         self.delay_rate_columns = list(delay_rate_columns)
         self.wide_columns_ = []
@@ -36,14 +39,12 @@ class Stub:
 
 
 class StubBundle:
-
-    def __init__(self, importance):  # noqa: D107
+    def __init__(self, importance):
         self.importance = importance
 
 
 class TestApproximatedInputs:
-    
-    RANKED = {
+    RANKED: ClassVar[dict] = {
         "OriginCarrier": 0.20,
         "OriginCongestion": 0.12,
         "DestCongestion": 0.06,
@@ -68,11 +69,17 @@ class TestApproximatedInputs:
 
     def test_a_column_sent_as_null_counts_as_left_out(self):
         flight = FlightRequest(
-            FlightDate="2026-03-01", OriginAirportID=12478, DestAirportID=12892,
-            DepTimeDecimal=8.0, CRSElapsedTime=360.0, OriginCongestion=None,
+            FlightDate="2026-03-01",
+            OriginAirportID=12478,
+            DestAirportID=12892,
+            DepTimeDecimal=8.0,
+            CRSElapsedTime=360.0,
+            OriginCongestion=None,
         )
 
-        assert "OriginCongestion" in approximated_inputs(flight, StubBundle(self.RANKED), self.FLOOR)
+        assert "OriginCongestion" in approximated_inputs(
+            flight, StubBundle(self.RANKED), self.FLOOR
+        )
 
     def test_a_column_below_the_floor_is_not_worth_mentioning(self, body):
         payload = body()

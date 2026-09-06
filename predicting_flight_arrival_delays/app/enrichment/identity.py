@@ -93,8 +93,7 @@ def _distance_km(lat_a: float, lon_a: float, lat_b: float, lon_b: float) -> floa
     """Great-circle distance between two points, in kilometres."""
     lat_a, lon_a, lat_b, lon_b = map(radians, (lat_a, lon_a, lat_b, lon_b))
     haversine = (
-        sin((lat_b - lat_a) / 2) ** 2
-        + cos(lat_a) * cos(lat_b) * sin((lon_b - lon_a) / 2) ** 2
+        sin((lat_b - lat_a) / 2) ** 2 + cos(lat_a) * cos(lat_b) * sin((lon_b - lon_a) / 2) ** 2
     )
     return 2 * EARTH_RADIUS_KM * asin(sqrt(haversine))
 

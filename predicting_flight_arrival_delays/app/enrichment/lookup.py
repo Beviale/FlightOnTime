@@ -122,7 +122,6 @@ def rotation_features(leg: dict, flight_date: date) -> dict[str, float | None]:
         logger.warning(f"{registration} rotation does not contain this leg; features left empty")
         return empty
 
- 
     turnaround = None
     if position > 1:
         previous = arrival_of(ordered[position - 2]).floor("h")
@@ -149,7 +148,9 @@ def to_flight_request(lookup: FlightLookupRequest, calendar: pd.Series) -> Fligh
         FlightNotFoundError: If the flight, or one of its airports, is not known.
         ScheduleUnavailableError: If the schedule service cannot be reached.
     """
-    leg = find_flight(lookup.MarketingCarrier, lookup.FlightNumber, lookup.FlightDate, lookup.Origin)
+    leg = find_flight(
+        lookup.MarketingCarrier, lookup.FlightNumber, lookup.FlightDate, lookup.Origin
+    )
 
     arrival_iata = leg["arrival"]["airport"]["iata"]
     if arrival_iata != lookup.Dest:
@@ -157,7 +158,6 @@ def to_flight_request(lookup: FlightLookupRequest, calendar: pd.Series) -> Fligh
             f"{lookup.MarketingCarrier}{lookup.FlightNumber} leaves {lookup.Origin} for "
             f"{arrival_iata} on {lookup.FlightDate}, not for {lookup.Dest}."
         )
-
 
     origin = get_identity(lookup.Origin, leg["departure"]["airport"].get("location"))
     dest = get_identity(lookup.Dest, leg["arrival"]["airport"].get("location"))

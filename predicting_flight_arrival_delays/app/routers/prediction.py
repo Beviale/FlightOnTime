@@ -49,9 +49,7 @@ router = APIRouter(tags=["Prediction"])
 
 Explain = Query(
     default=False,
-    description=(
-        "Also report which columns pushed the answer where it went. Off by default."
-    ),
+    description=("Also report which columns pushed the answer where it went. Off by default."),
 )
 
 Threshold = Query(
@@ -59,8 +57,7 @@ Threshold = Query(
     gt=0,
     lt=1,
     description=(
-        "One cutoff for whichever variant answers, replacing the threshold it was "
-        "released with."
+        "One cutoff for whichever variant answers, replacing the threshold it was released with."
     ),
 )
 
@@ -320,8 +317,7 @@ def explain(request: Request, payload: FlightRequest, threshold: float | None = 
     bundle = get_bundles(request)[row.variant]
 
     logger.success(
-        f"Explained {payload.Origin}-{payload.Dest}: "
-        f"{row.delay_probability:.3f} ({row.variant})"
+        f"Explained {payload.Origin}-{payload.Dest}: {row.delay_probability:.3f} ({row.variant})"
     )
     return {
         "message": HTTPStatus.OK.phrase,
@@ -333,9 +329,7 @@ def explain(request: Request, payload: FlightRequest, threshold: float | None = 
             "variant": row.variant,
             "threshold": float(row.threshold),
             "weather": weather_status[0],
-            "approximated": approximated_inputs(
-                payload, bundle, IMPORTANT_COLUMN_SHARE
-            ),
+            "approximated": approximated_inputs(payload, bundle, IMPORTANT_COLUMN_SHARE),
             "explanations": _explain(frame, bundle),
             "waterfall": _waterfall(frame, bundle, float(row.delay_probability)),
         },
