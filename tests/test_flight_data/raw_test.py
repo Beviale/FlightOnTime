@@ -5,18 +5,25 @@ import pandas as pd
 import pytest
 from util import failures, show_results, validate
 
-from predicting_flight_arrival_delays.config import DATE_COLUMN, KEEP_COLUMNS, RAW_DATA_DIR
+from predicting_flight_arrival_delays.config import (
+    DATE_COLUMN,
+    KEEP_COLUMNS,
+    MAX_BLOCK_MINUTES,
+    RAW_DATA_DIR,
+)
+
 
 SAMPLE_ROWS = 200_000
 
 REQUIRED_COLUMNS = KEEP_COLUMNS + ["Cancelled", "Diverted", "ArrDel15"]
 
 
-def find_raw_csv():
-    """The first monthly extract on disk, or None if none were pulled."""
+def find_raw_csvs() -> list:
+    """Every monthly extract on disk, oldest first, empty if none were pulled.
+    """
     if not RAW_DATA_DIR.exists():
-        return None
-    return next(iter(sorted(RAW_DATA_DIR.rglob("*.csv"))), None)
+        return []
+    return sorted(RAW_DATA_DIR.rglob("*.csv"))
 
 
 def load_raw(path, n_rows: int | None = SAMPLE_ROWS) -> pd.DataFrame:
@@ -41,7 +48,11 @@ def build_expectations() -> list:
         gx.expectations.ExpectColumnValuesToBeInSet(column="Cancelled", value_set=[0, 1]),
         gx.expectations.ExpectColumnValuesToBeInSet(column="Diverted", value_set=[0, 1]),
         gx.expectations.ExpectColumnValuesToBeInSet(column="ArrDel15", value_set=[0, 1]),
-        gx.expectations.ExpectColumnValuesToNotBeNull(column="ArrDel15", mostly=0.95),
+        gx.expectations.ExpectColumnValuesToNotBeNull(
+            column="ArrDel15",
+            row_condition="Cancelled == 0 and Diverted == 0",
+            condition_parser="pandas",
+        ),
     ]
 
     # --- Identity
@@ -68,7 +79,7 @@ def build_expectations() -> list:
             column="CRSArrTime", min_value=1, max_value=2400
         ),
         gx.expectations.ExpectColumnValuesToBeBetween(
-            column="CRSElapsedTime", min_value=1, max_value=1440
+            column="CRSElapsedTime", min_value=1, max_value=MAX_BLOCK_MINUTES, mostly=0.9999
         ),
         gx.expectations.ExpectColumnValuesToBeBetween(
             column="Distance", min_value=1, max_value=6000
@@ -82,16 +93,21 @@ def build_expectations() -> list:
     return expectations
 
 
-@pytest.mark.skipif(find_raw_csv() is None, reason="no raw BTS extract pulled from DVC")
-def test_raw_flights_meet_expectations():
-    df = load_raw(find_raw_csv())
-    result = validate(df, build_expectations(), "flights_raw")
+@pytest.mark.parametrize("path", find_raw_csvs(), ids=lambda path: path.parent.name)
+def test_raw_flights_meet_expectations(path):
+    month = path.parent.name
+    result = validate(load_raw(path), build_expectations(), f"flights_raw::{month}")
 
     assert result.success, "\n".join(failures(result))
 
 
 if __name__ == "__main__":
-    path = find_raw_csv()
-    if path is None:
-        raise SystemExit(f"No raw CSV found under {RAW_DATA_DIR} -- run'`dvc pull' first.")
-    show_results(validate(load_raw(path, n_rows=None), build_expectations(), "flights_raw"))
+    paths = find_raw_csvs()
+    if not paths:
+        raise SystemExit(f"No raw CSV found under {RAW_DATA_DIR} -- run `dvc pull` first.")
+
+    for path in paths:
+        month = path.parent.name
+        print(f"\n=== {month} ===")
+        full = load_raw(path, n_rows=None)
+        show_results(validate(full, build_expectations(), f"flights_raw::{month}"))

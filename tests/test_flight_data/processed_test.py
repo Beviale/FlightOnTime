@@ -9,6 +9,7 @@ from util import SAMPLE_ROWS, failures, load_parquet_sample, show_results, valid
 from predicting_flight_arrival_delays.config import (
     DATE_COLUMN,
     INTERIM_DATA_DIR,
+    MAX_BLOCK_MINUTES,
     MAX_LEAD_DAYS,
     WEATHER_COLUMNS,
 )
@@ -132,7 +133,7 @@ def build_expectations() -> list:
             column="CRSArrTime", min_value=1, max_value=2400
         ),
         gx.expectations.ExpectColumnValuesToBeBetween(
-            column="CRSElapsedTime", min_value=1, max_value=1440
+            column="CRSElapsedTime", min_value=1, max_value=MAX_BLOCK_MINUTES
         ),
         gx.expectations.ExpectColumnValuesToBeBetween(
             column="Distance", min_value=1, max_value=6000

@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 from typer.testing import CliRunner
 
-from predicting_flight_arrival_delays.config import DATE_COLUMN, MAX_LEAD_DAYS
+from predicting_flight_arrival_delays.config import DATE_COLUMN, MAX_BLOCK_MINUTES, MAX_LEAD_DAYS
 from predicting_flight_arrival_delays.data import preprocess as preprocess_module
 from predicting_flight_arrival_delays.data.preprocess import (
     FULL_LEAD_COVERAGE_START,
@@ -78,6 +78,7 @@ class TestLoadAndClean:
                 "Cancelled": [0, 1, 0, 0, 0],
                 "Diverted": [0, 0, 1, 0, 0],
                 "ArrDel15": [0.0, 0.0, 0.0, 1.0, np.nan],
+                "CRSElapsedTime": [120.0] * 5,
                 "Origin": ["ATL"] * 5,
             }
         )
@@ -105,6 +106,22 @@ class TestLoadAndClean:
         load_and_clean(raw)
 
         pd.testing.assert_frame_equal(raw, before)
+
+    @pytest.mark.parametrize("block_time", [-60.0, -61.0, 0.0, 1510.0, MAX_BLOCK_MINUTES + 1])
+    def test_an_impossible_block_time_goes(self, raw, block_time):
+        raw.loc[0, "CRSElapsedTime"] = block_time
+
+        out = load_and_clean(raw)
+
+        assert list(out["IsDelayed"]) == [1]
+
+    @pytest.mark.parametrize("block_time", [1.0, 120.0, MAX_BLOCK_MINUTES])
+    def test_a_plausible_block_time_stays(self, raw, block_time):
+        raw.loc[0, "CRSElapsedTime"] = block_time
+
+        out = load_and_clean(raw)
+
+        assert len(out) == 2
 
 
 class TestAddTemporalFeatures:

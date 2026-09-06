@@ -95,6 +95,9 @@ KEEP_COLUMNS = [
     "Tail_Number",
 ]
 TARGET = "IsDelayed"
+
+MAX_BLOCK_MINUTES = 1440
+
 # Columns needed by the pipeline but never given to the model.
 SERVICE_COLUMNS = [
     "CRSDepTime",

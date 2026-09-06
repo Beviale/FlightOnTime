@@ -14,6 +14,7 @@ from predicting_flight_arrival_delays.config import (
     FULL_LEAD_COVERAGE_START,
     INTERIM_DATA_DIR,
     KEEP_COLUMNS,
+    MAX_BLOCK_MINUTES,
     MAX_LEAD_DAYS,
     RAW_DATA_DIR,
     SEED,
@@ -68,7 +69,8 @@ def load_and_clean(df: pd.DataFrame) -> pd.DataFrame:
     """Drop unusable flights.
 
     Flights dropped: cancelled, diverted, or with no arrival outcome recorded -
-    none of these have a valid target.
+    none of these have a valid target - and those whose scheduled block time is
+    not a duration a flight can have.
 
     Args:
         df: The Dataframe containing all the flights data.
@@ -81,6 +83,15 @@ def load_and_clean(df: pd.DataFrame) -> pd.DataFrame:
     df = df[(df["Cancelled"] == 0) & (df["Diverted"] == 0)].copy()
     df = df.dropna(subset=["ArrDel15"])
     logger.info(f"{n_raw} rows -> {len(df)} after dropping cancelled/diverted/no-target")
+
+
+    plausible = df["CRSElapsedTime"].between(1, MAX_BLOCK_MINUTES)
+    if not plausible.all():
+        logger.warning(
+            f"dropping {(~plausible).sum()} flights whose CRSElapsedTime is outside "
+            f"1..{MAX_BLOCK_MINUTES}: {sorted(df.loc[~plausible, 'CRSElapsedTime'].unique())}"
+        )
+        df = df[plausible]
 
     df["IsDelayed"] = df["ArrDel15"].astype(int)
     df = df.drop(columns=["Cancelled", "Diverted", "ArrDel15"])
