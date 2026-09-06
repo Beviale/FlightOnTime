@@ -7,6 +7,7 @@ answer is never mistaken for a full one.
 """
 
 from http import HTTPStatus
+from time import perf_counter
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -29,6 +30,7 @@ from predicting_flight_arrival_delays.app.inference import (
     score,
 )
 from predicting_flight_arrival_delays.app.inputs import approximated_inputs, complete_frame
+from predicting_flight_arrival_delays.app.monitoring import record_error, record_scoring
 from predicting_flight_arrival_delays.app.schema import FlightLookupRequest, FlightRequest
 from predicting_flight_arrival_delays.app.utils import (
     construct_response,
@@ -110,6 +112,7 @@ def _score(
     try:
         scored = score(frame, get_bundles(request), threshold)
     except ModelUnavailableError as e:
+        record_error(endpoint=str(request.url.path), reason="model_unavailable")
         raise HTTPException(status_code=HTTPStatus.SERVICE_UNAVAILABLE, detail=str(e)) from e
 
     return frame, weather_status, scored
@@ -174,7 +177,9 @@ def predict(
     explain: bool = Explain,
 ):
     """Score one scheduled flight."""
+    started = perf_counter()
     result = run_scoring(request, [payload], threshold, explain)[0]
+    record_scoring("/predictions", "single", [result], perf_counter() - started)
 
     logger.success(
         f"{payload.ReportingAirline}{payload.FlightNumberReportingAirline} "
@@ -199,16 +204,21 @@ def predict_batch(
         HTTPException: 422 if the batch is empty or larger than MAX_BATCH_SIZE.
     """
     if not payload:
+        record_error(endpoint="/batch-predictions", reason="empty_batch")
         raise HTTPException(
             status_code=HTTPStatus.UNPROCESSABLE_ENTITY, detail="The batch carries no flights."
         )
     if len(payload) > MAX_BATCH_SIZE:
+        record_error(endpoint="/batch-predictions", reason="batch_too_large")
         raise HTTPException(
             status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
             detail=f"Batch of {len(payload)} exceeds the limit of {MAX_BATCH_SIZE} flights.",
         )
 
+    started = perf_counter()
     results = run_scoring(request, payload, threshold)
+    record_scoring("/batch-predictions", "batch", results, perf_counter() - started)
+
     for index, result in enumerate(results):
         result["index"] = index
 
@@ -237,11 +247,15 @@ def predict_lookup(
     try:
         flights = resolve([payload])
     except (FlightNotFoundError, UnknownAirportError, AmbiguousAirportError) as e:
+        record_error(endpoint="/predictions/lookup", reason="flight_not_found")
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND, detail=str(e)) from e
     except ScheduleUnavailableError as e:
+        record_error(endpoint="/predictions/lookup", reason="schedule_unavailable")
         raise HTTPException(status_code=HTTPStatus.BAD_GATEWAY, detail=str(e)) from e
 
+    started = perf_counter()
     result = run_scoring(request, flights, threshold, explain)[0]
+    record_scoring("/predictions/lookup", "lookup", [result], perf_counter() - started)
     result["resolved"] = flights[0].model_dump(mode="json")
 
     logger.success(
@@ -312,9 +326,25 @@ def explain(request: Request, payload: FlightRequest, threshold: float | None = 
     A contribution is positive when it pushed towards a delay and negative when it
     pushed towards an on-time arrival.
     """
+    started = perf_counter()
     frame, weather_status, scored = _score(request, [payload], threshold)
     row = next(scored.itertuples())
     bundle = get_bundles(request)[row.variant]
+
+    record_scoring(
+        "/explanations",
+        "single",
+        [
+            {
+                "variant": row.variant,
+                "weather": weather_status[0],
+                "is_delayed": int(row.is_delayed),
+                "delay_probability": float(row.delay_probability),
+                "approximated": approximated_inputs(payload, bundle, IMPORTANT_COLUMN_SHARE),
+            }
+        ],
+        perf_counter() - started,
+    )
 
     logger.success(
         f"Explained {payload.Origin}-{payload.Dest}: {row.delay_probability:.3f} ({row.variant})"

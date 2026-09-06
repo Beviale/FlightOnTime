@@ -13,6 +13,7 @@ import gradio as gr
 from loguru import logger
 
 from predicting_flight_arrival_delays.app import ui
+from predicting_flight_arrival_delays.app.monitoring import instrumentator
 from predicting_flight_arrival_delays.app.routers import model_info, prediction
 from predicting_flight_arrival_delays.app.utils import (
     apply_bundles,
@@ -68,5 +69,8 @@ def status(request: Request):
         },
     }
 
+
+
+instrumentator.instrument(app).expose(app, include_in_schema=False, should_gzip=True)
 
 app = gr.mount_gradio_app(app, ui.build(), path="/")
