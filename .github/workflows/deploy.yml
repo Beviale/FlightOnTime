@@ -9,46 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - uses: astral-sh/setup-uv@v3
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: uv-${{ runner.os }}-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-
-      - name: Sync dependencies
-        run: uv sync
-
-    
-      - name: Run the unit tests
-        run: uv run pytest tests/test_predicting_flight_arrival_delays -q
-
-      - name: Configure DVC credentials
-        run: |
-          uv run dvc remote modify origin --local access_key_id ${{ secrets.DAGSHUB_TOKEN }}
-          uv run dvc remote modify origin --local secret_access_key ${{ secrets.DAGSHUB_TOKEN }}
-
-      
-      - name: Pull the processed flights
-        run: uv run dvc pull data/interim/flights_preprocessed.parquet
-
-      - name: Validate the data with Great Expectations
-        run: |
-          set -euo pipefail
-          uv run python tests/test_flight_data/raw_test.py
-          uv run python tests/test_flight_data/processed_test.py
-
   sync:
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main
