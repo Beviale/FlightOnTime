@@ -44,27 +44,12 @@ jobs:
 
       # The remote is an HTTP one (https://dagshub.com/.../FlightOnTime.dvc), not an
       # S3 bucket, so it takes basic auth and not access keys. The token goes in as
-      # the password; the username is already public in that URL.
-      #
-      # The guard is worth its four lines: an unset secret expands to nothing, the
-      # value is written empty, and DVC reports it as "expected str for dictionary
-      # value @ data['remote']['origin']['password']" - which says nothing about the
-      # secret being the thing that is missing.
+      # the password.
       - name: Configure DVC credentials
-        env:
-          DAGSHUB_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
         run: |
-          set -euo pipefail
-
-          if [ -z "${DAGSHUB_TOKEN}" ]; then
-            echo "The DAGSHUB_TOKEN secret is empty or not set."
-            echo "Add it under Settings > Secrets and variables > Actions > Secrets."
-            exit 1
-          fi
-
           uv run dvc remote modify origin --local auth basic
-          uv run dvc remote modify origin --local user Beviale
-          uv run dvc remote modify origin --local password "${DAGSHUB_TOKEN}"
+          uv run dvc remote modify origin --local user ${{ vars.DAGSHUB_USER }}
+          uv run dvc remote modify origin --local password ${{ secrets.DAGSHUB_TOKEN }}
 
  
       - name: Pull the data the suites read
