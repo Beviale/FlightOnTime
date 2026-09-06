@@ -23,6 +23,15 @@ jobs:
       - name: Sync dependencies
         run: uv sync
 
+      - name: Configure DVC credentials
+        run: |
+          uv run dvc remote modify origin --local auth basic
+          uv run dvc remote modify origin --local user ${{ vars.DAGSHUB_USER }}
+          uv run dvc remote modify origin --local password ${{ secrets.DAGSHUB_TOKEN }}
+
+      - name: Pull the airport reference tables
+        run: uv run dvc pull data/external/airports.csv data/external/airport_identity.csv
+
       - name: Run the unit tests
         run: uv run pytest tests/test_predicting_flight_arrival_delays -q
 
@@ -42,9 +51,6 @@ jobs:
       - name: Sync dependencies
         run: uv sync
 
-      # The remote is an HTTP one (https://dagshub.com/.../FlightOnTime.dvc), not an
-      # S3 bucket, so it takes basic auth and not access keys. The token goes in as
-      # the password.
       - name: Configure DVC credentials
         run: |
           uv run dvc remote modify origin --local auth basic
