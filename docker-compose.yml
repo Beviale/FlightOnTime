@@ -1,0 +1,55 @@
+#
+#   service      http://localhost:7860
+#   prometheus   http://localhost:9090
+#   locust       http://localhost:8089
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7860/status')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks: [monitoring]
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    depends_on: [app]
+    networks: [monitoring]
+
+  locust:
+    build:
+      context: ./locust
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    environment:
+      TARGET_HOST: http://app:7860
+      LOCUST_LEAD_DAYS_MIN: "10"
+      LOCUST_LEAD_DAYS_MAX: "40"
+    volumes:
+      - ./locust:/mnt/locust
+    depends_on: [app]
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
