@@ -84,7 +84,6 @@ def load_and_clean(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["ArrDel15"])
     logger.info(f"{n_raw} rows -> {len(df)} after dropping cancelled/diverted/no-target")
 
-
     plausible = df["CRSElapsedTime"].between(1, MAX_BLOCK_MINUTES)
     if not plausible.all():
         logger.warning(
