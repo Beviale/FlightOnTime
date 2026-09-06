@@ -12,15 +12,13 @@ from predicting_flight_arrival_delays.config import (
     RAW_DATA_DIR,
 )
 
-
 SAMPLE_ROWS = 200_000
 
 REQUIRED_COLUMNS = KEEP_COLUMNS + ["Cancelled", "Diverted", "ArrDel15"]
 
 
 def find_raw_csvs() -> list:
-    """Every monthly extract on disk, oldest first, empty if none were pulled.
-    """
+    """Every monthly extract on disk, oldest first, empty if none were pulled."""
     if not RAW_DATA_DIR.exists():
         return []
     return sorted(RAW_DATA_DIR.rglob("*.csv"))
