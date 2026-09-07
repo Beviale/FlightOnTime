@@ -5,6 +5,7 @@ state. Both production variants are loaded: 'all' answers whenever the weather r
 'noweather' covers the flights it did not.
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 
@@ -26,21 +27,21 @@ from predicting_flight_arrival_delays.app.utils import (
 )
 
 
+async def _load_in_background(app: FastAPI) -> None:
+    apply_bundles(app, await asyncio.to_thread(load_bundles))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Hold the served models, and what they expect to be asked for.
-
-    A version registered after startup is not picked up on its own: POST /model/reload
-    puts it into service without restarting.
-
-    The daily drift comparison is scheduled here too.
-    """
-    apply_bundles(app, load_bundles())
+    """Hold the served models, and what they expect to be asked for."""
+    apply_bundles(app, {})
+    loading = asyncio.create_task(_load_in_background(app))
     start_scheduler()
 
     try:
         yield
     finally:
+        loading.cancel()
         shutdown_scheduler()
         app.state.bundles = {}
         app.state.required_inputs = set()
