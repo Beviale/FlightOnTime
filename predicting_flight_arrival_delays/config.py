@@ -24,6 +24,9 @@ MODELS_DIR = PROJ_ROOT / "models"
 REPORTS_DIR = PROJ_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
 DRIFT_REPORTS_DIR = REPORTS_DIR / "drift"
+VALIDATION_REPORTS_DIR = REPORTS_DIR / "great_expectations"
+PYTEST_REPORTS_DIR = REPORTS_DIR / "pytest"
+LOCUST_REPORTS_DIR = REPORTS_DIR / "locust"
 # ------END Paths--------
 
 
