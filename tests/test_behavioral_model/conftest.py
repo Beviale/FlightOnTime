@@ -33,7 +33,6 @@ from predicting_flight_arrival_delays.config import (
 from predicting_flight_arrival_delays.modeling.predict import prepare_for_inference
 from predicting_flight_arrival_delays.utils import get_run_params, load_model_bundle
 
-
 ALIAS = WINNER_MODEL_STAGE
 
 
