@@ -222,10 +222,18 @@ class TestRegisterModelBundle:
 
         class FakeSklearn:
             @staticmethod
-            def log_model(model, artifact_path, signature, input_example, registered_model_name):
+            def log_model(
+                model,
+                artifact_path,
+                signature,
+                input_example,
+                registered_model_name,
+                skops_trusted_types,
+            ):
                 logged["registered_model_name"] = registered_model_name
                 logged["artifact_path"] = artifact_path
                 logged["signature"] = signature
+                logged["skops_trusted_types"] = skops_trusted_types
                 return _FakeModelInfo()
 
         class FakeMlflow:
@@ -301,6 +309,42 @@ class TestRegisterModelBundle:
         )
         assert _FakeClient.aliases == []
 
+    def test_the_types_skops_must_accept_are_declared(self, fake_mlflow, transformer):
+        from lightgbm import LGBMClassifier
+        from sklearn.calibration import CalibratedClassifierCV
+        from sklearn.frozen import FrozenEstimator
+
+        rng = np.random.default_rng(0)
+        X = pd.DataFrame(rng.normal(size=(120, 3)), columns=list("abc"))
+        y = (X["a"] > 0).astype(int)
+        base = LGBMClassifier(n_estimators=3, verbose=-1).fit(X, y)
+        model = CalibratedClassifierCV(FrozenEstimator(base), method="sigmoid").fit(X, y)
+
+        utils.register_model_bundle(
+            model=model,
+            transformer=transformer,
+            columns=list("abc"),
+            registered_model_name="flight-delay-all",
+        )
+
+        assert "lightgbm.basic.Booster" in fake_mlflow["skops_trusted_types"]
+
+    def test_a_model_skops_already_knows_declares_nothing(self, fake_mlflow, transformer):
+        from sklearn.linear_model import LogisticRegression
+
+        rng = np.random.default_rng(0)
+        X = pd.DataFrame(rng.normal(size=(60, 3)), columns=list("abc"))
+        model = LogisticRegression().fit(X, (X["a"] > 0).astype(int))
+
+        utils.register_model_bundle(
+            model=model,
+            transformer=transformer,
+            columns=list("abc"),
+            registered_model_name="flight-delay-all",
+        )
+
+        assert fake_mlflow["skops_trusted_types"] == []
+
     def test_custom_artifact_path_is_used_for_all_three(self, fake_mlflow, transformer):
         utils.register_model_bundle(
             model=object(),
@@ -320,7 +364,14 @@ class TestRegisterModelBundleSignature:
 
         class FakeSklearn:
             @staticmethod
-            def log_model(model, artifact_path, signature, input_example, registered_model_name):
+            def log_model(
+                model,
+                artifact_path,
+                signature,
+                input_example,
+                registered_model_name,
+                skops_trusted_types,
+            ):
                 record["signature"] = signature
                 record["input_example"] = input_example
                 return _FakeModelInfo()
@@ -414,16 +465,21 @@ class TestLoadModelBundle:
             "flight-delay-all", stage="champion"
         )
 
-        assert model == "model@runs:/run-for-champion/model"
+        assert model == "model@models:/flight-delay-all@champion"
         assert transformer == "restored-transformer"
         assert columns == ["Distance", "Origin_ATL"]
         assert run_id == "run-for-champion"
 
-    def test_everything_is_read_from_the_same_run(self, fake_registry):
-        """The bundle is self-contained: one run holds all three artifacts."""
+    def test_the_estimator_comes_from_the_registry_not_the_run(self, fake_registry):
         utils.load_model_bundle("flight-delay-all", stage="champion")
 
-        assert all("runs:/run-for-champion/" in uri for uri in fake_registry)
+        model_uri = fake_registry[0]
+        assert model_uri == "models:/flight-delay-all@champion"
+
+    def test_the_other_two_still_come_from_the_run(self, fake_registry):
+        utils.load_model_bundle("flight-delay-all", stage="champion")
+
+        assert all("runs:/run-for-champion/" in uri for uri in fake_registry[1:])
 
     def test_the_latest_version_is_used_without_a_stage(self, fake_registry):
         _, _, _, run_id = utils.load_model_bundle("flight-delay-all")
@@ -433,7 +489,7 @@ class TestLoadModelBundle:
     def test_a_custom_artifact_path_is_honoured(self, fake_registry):
         utils.load_model_bundle("flight-delay-all", stage="champion", artifact_path="bundle")
 
-        assert any(uri.endswith("/bundle") for uri in fake_registry)
+        assert all("/bundle/" in uri for uri in fake_registry[1:])
 
     def test_nothing_registered_is_reported(self, monkeypatch):
         class EmptyClient(_FakeClient):

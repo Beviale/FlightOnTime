@@ -1,0 +1,77 @@
+#
+#   service      http://localhost:7860
+#   prometheus   http://localhost:9090
+#   grafana      http://localhost:4444
+#   locust       http://localhost:8089
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "7860:7860"
+    env_file:
+      - .env
+    volumes:
+      - ./data/interim:/flightontime/data/interim
+      - ./reports/drift:/flightontime/reports/drift
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7860/status')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks: [monitoring]
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    depends_on: [app]
+    networks: [monitoring]
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "4444:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    depends_on: [prometheus]
+    networks: [monitoring]
+
+  locust:
+    build:
+      context: ./locust
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    environment:
+      TARGET_HOST: http://app:7860
+      LOCUST_LEAD_DAYS_MIN: "10"
+      LOCUST_LEAD_DAYS_MAX: "40"
+    volumes:
+      - ./locust:/mnt/locust
+    depends_on: [app]
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data:

@@ -23,7 +23,7 @@ class TestObviousCases:
         mildest = model.score(calm(sample)).mean()
         worst = model.score(storm(sample)).mean()
 
-        assert worst / mildest > MIN_SEPARATION_RATIO, (
+        assert worst / mildest > MIN_SEPARATION_RATIO[model.variant], (
             f"{model.name}: worst {worst:.3f} is only {worst / mildest:.2f}x mildest {mildest:.3f}"
         )
 

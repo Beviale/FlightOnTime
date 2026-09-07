@@ -175,9 +175,7 @@ def register_winner(
             fold_model = train_model(
                 X_fit_f, y_fit_f, algorithm, config, calibrate, X_val=X_val_f, y_val=y_val_f
             )
-            fold_threshold = choose_threshold(
-                y_val_f, fold_model.predict_proba(X_val_f)[:, 1], 1.2
-            )
+            fold_threshold = choose_threshold(y_val_f, fold_model.predict_proba(X_val_f)[:, 1])
             per_fold_metrics.append(
                 evaluate.evaluate(X_test_f, y_test_f, fold_model, fold_threshold, 1.2)
             )

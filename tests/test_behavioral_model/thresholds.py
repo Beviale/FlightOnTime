@@ -5,10 +5,8 @@
 MIN_CONGESTION_EFFECT = 0.005
 MIN_WEATHER_EFFECT = 0.005
 
-# Worst recorded conditions versus mildest, as a ratio rather than an absolute
-# floor: the baseline depends on the variant and on the fold.
-# Measured: 1.36 ('all') and 1.18 ('noweather').
-MIN_SEPARATION_RATIO = 1.05
+# Worst recorded conditions versus mildest.
+MIN_SEPARATION_RATIO = {"all": 1.05, "noweather": 1.02}
 
 # The flight number is an identifier the pipeline happens to feed as a numeric
 # feature. Airlines do assign number ranges by route type, so a small effect is

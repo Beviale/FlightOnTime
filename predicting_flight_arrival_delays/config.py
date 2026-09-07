@@ -23,6 +23,7 @@ MODELS_DIR = PROJ_ROOT / "models"
 # --Reports/Figures--
 REPORTS_DIR = PROJ_ROOT / "reports"
 FIGURES_DIR = REPORTS_DIR / "figures"
+DRIFT_REPORTS_DIR = REPORTS_DIR / "drift"
 # ------END Paths--------
 
 
@@ -95,6 +96,29 @@ KEEP_COLUMNS = [
     "Tail_Number",
 ]
 TARGET = "IsDelayed"
+
+# ------START Drift monitoring--------
+
+PRODUCTION_FEATURES_CSV = INTERIM_DATA_DIR / "production_features.csv"
+DRIFT_REFERENCE_CSV = INTERIM_DATA_DIR / "drift_reference.csv"
+DRIFT_STATE_JSON = INTERIM_DATA_DIR / "drift_state.json"
+
+
+DRIFT_SCORE_THRESHOLD = 0.2
+
+MIN_DRIFT_ROWS = 500
+DRIFT_REFERENCE_ROWS = 50_000
+
+DRIFT_WINDOW_DAYS = 7
+
+
+DRIFT_JOB_HOUR = 21
+DRIFT_JOB_MINUTE = 0
+
+DRIFT_SCHEDULE_ENABLED = os.environ.get("DRIFT_SCHEDULE_ENABLED", "1") == "1"
+
+DRIFT_JOB_TIMEOUT_SECONDS = 900
+# ------END Drift monitoring--------
 
 MAX_BLOCK_MINUTES = 1440
 

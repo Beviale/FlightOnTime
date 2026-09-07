@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 15s
+  external_labels:
+    monitor: flightontime
+
+scrape_configs:
+  - job_name: flightontime
+    scrape_interval: 5s
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["app:7860"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

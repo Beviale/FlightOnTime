@@ -39,8 +39,8 @@ class TestBatchIndependence:
 
     def test_a_single_airport_batch_is_not_mistaken_for_another(self, model, sample):
         """The batch that broke: one airport means most dummy columns are absent."""
-        airport = sample["Origin"].iloc[0]
-        selected = sample["Origin"].to_numpy() == airport
+        airport = sample["OriginAirportID"].iloc[0]
+        selected = sample["OriginAirportID"].to_numpy() == airport
 
         together = model.score(sample)[selected]
         apart = model.score(sample[selected])

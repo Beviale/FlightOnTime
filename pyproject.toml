@@ -17,6 +17,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "apscheduler>=3.11.0",
     "dagshub>=0.7.1",
     "fastapi>=0.120.0",
     "gradio>=5.49.1",
@@ -30,6 +31,7 @@ dependencies = [
     "mlflow-skinny>=3.15.1",
     "numpy",
     "pandas",
+    "prometheus-fastapi-instrumentator>=7.0.0",
     "python-dotenv",
     "pyyaml",
     "requests",
@@ -46,7 +48,12 @@ requires-python = "~=3.12.0"
 [tool.ruff]
 line-length = 99
 src = ["predicting_flight_arrival_delays"]
-include = ["pyproject.toml", "predicting_flight_arrival_delays/**/*.py", "tests/**/*.py"]
+include = [
+    "pyproject.toml",
+    "predicting_flight_arrival_delays/**/*.py",
+    "tests/**/*.py",
+    "scripts/**/*.py",
+]
 
 [tool.ruff.lint]
 extend-select = ["I"]  # Add import sorting

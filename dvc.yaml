@@ -84,6 +84,18 @@ stages:
       - data/interim/flights_preprocessed.parquet
 
 
+  build_drift_reference:
+    cmd: uv run predicting_flight_arrival_delays/data/drift_reference.py
+    deps:
+      - predicting_flight_arrival_delays/data/drift_reference.py
+      - data/interim/flights_preprocessed.parquet
+    params:
+      - predicting_flight_arrival_delays/config.py:
+          - DRIFT_REFERENCE_ROWS
+    outs:
+      - data/interim/drift_reference.csv
+
+
   split_data_cv:
     cmd: uv run predicting_flight_arrival_delays/data/split_data.py
     deps:

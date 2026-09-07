@@ -98,4 +98,4 @@ class TestProbabilitiesStayWellFormed:
         mildest = model.score(calm(sample)).mean()
         worst = model.score(storm(sample)).mean()
 
-        assert worst / mildest > MIN_SEPARATION_RATIO, model.name
+        assert worst / mildest > MIN_SEPARATION_RATIO[model.variant], model.name
