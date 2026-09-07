@@ -1,5 +1,6 @@
 """Shared plumbing for the serving layer: response shape and model bundles."""
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from functools import wraps
@@ -100,8 +101,15 @@ def load_bundle(variant: str, stage: str = WINNER_MODEL_STAGE) -> Bundle:
     )
 
 
-def load_bundles() -> dict[str, Bundle]:
+def load_bundles(on_each: Callable[[dict[str, Bundle]], None] | None = None) -> dict[str, Bundle]:
     """Load every served variant from the registry.
+
+    Args:
+        on_each: Called with everything loaded so far, each time one more variant
+            lands. A variant takes minutes to come down on a small container, and
+            without this the first would sit finished and unused while the second
+            downloaded - twice the window in which the service answers 503 about a
+            model it already has.
 
     Returns:
         The variants that loaded, keyed by variant.
@@ -118,6 +126,9 @@ def load_bundles() -> dict[str, Bundle]:
             bundles[variant] = load_bundle(variant)
         except Exception as e:
             logger.error(f"Could not load the '{variant}' model: {e}")
+        else:
+            if on_each is not None:
+                on_each(dict(bundles))
 
     if not bundles:
         logger.error("No model loaded - every prediction will answer 503.")
