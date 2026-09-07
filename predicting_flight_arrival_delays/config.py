@@ -186,7 +186,8 @@ IMPORTANT_COLUMN_SHARE = 0.05
 EXPLANATION_COLUMN_COUNT = 5
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
-FORECAST_TIMEOUT_SECONDS = 8
+
+FORECAST_TIMEOUT_SECONDS = 20
 
 
 # ---- Auto-lookup: flight schedules from AeroDataBox, via RapidAPI ----
