@@ -465,16 +465,21 @@ class TestLoadModelBundle:
             "flight-delay-all", stage="champion"
         )
 
-        assert model == "model@runs:/run-for-champion/model"
+        assert model == "model@models:/flight-delay-all@champion"
         assert transformer == "restored-transformer"
         assert columns == ["Distance", "Origin_ATL"]
         assert run_id == "run-for-champion"
 
-    def test_everything_is_read_from_the_same_run(self, fake_registry):
-        """The bundle is self-contained: one run holds all three artifacts."""
+    def test_the_estimator_comes_from_the_registry_not_the_run(self, fake_registry):
         utils.load_model_bundle("flight-delay-all", stage="champion")
 
-        assert all("runs:/run-for-champion/" in uri for uri in fake_registry)
+        model_uri = fake_registry[0]
+        assert model_uri == "models:/flight-delay-all@champion"
+
+    def test_the_other_two_still_come_from_the_run(self, fake_registry):
+        utils.load_model_bundle("flight-delay-all", stage="champion")
+
+        assert all("runs:/run-for-champion/" in uri for uri in fake_registry[1:])
 
     def test_the_latest_version_is_used_without_a_stage(self, fake_registry):
         _, _, _, run_id = utils.load_model_bundle("flight-delay-all")
@@ -484,7 +489,7 @@ class TestLoadModelBundle:
     def test_a_custom_artifact_path_is_honoured(self, fake_registry):
         utils.load_model_bundle("flight-delay-all", stage="champion", artifact_path="bundle")
 
-        assert any(uri.endswith("/bundle") for uri in fake_registry)
+        assert all("/bundle/" in uri for uri in fake_registry[1:])
 
     def test_nothing_registered_is_reported(self, monkeypatch):
         class EmptyClient(_FakeClient):
