@@ -226,4 +226,4 @@ if __name__ == "__main__":
     import pandas as pd
 
     full = pd.read_parquet(DATA_PATH)
-    show_results(validate(full, build_expectations(), "flights_processed"))
+    show_results(validate(full, build_expectations(), "flights_processed"), "flights_processed")

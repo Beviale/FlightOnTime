@@ -1,5 +1,6 @@
 """Shared Great Expectations plumbing for the data suites."""
 
+from datetime import UTC, datetime
 import json
 from pathlib import Path
 
@@ -7,6 +8,8 @@ import great_expectations as gx
 from loguru import logger
 import pandas as pd
 import pyarrow.parquet as pq
+
+from predicting_flight_arrival_delays.config import VALIDATION_REPORTS_DIR
 
 SAMPLE_ROWS = 200_000
 
@@ -99,8 +102,30 @@ def failures(checkpoint_result) -> list[str]:
     return lines
 
 
-def show_results(checkpoint_result) -> None:
-    """Print every expectation's outcome. Used when running as a script."""
+def save_results(described: dict, name: str) -> Path:
+    """Write one validation's full outcome to disk, timestamped.
+
+    Args:
+        described: The checkpoint result, as the dict describe() produces.
+        name: What was validated, used in the filename.
+
+    Returns:
+        The path written.
+    """
+    VALIDATION_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(UTC).strftime("%Y-%m-%d_%H-%M-%S")
+    path = VALIDATION_REPORTS_DIR / f"{name}_{stamp}.json"
+    path.write_text(json.dumps(described, indent=2), encoding="utf-8")
+    return path
+
+
+def show_results(checkpoint_result, name: str = "validation") -> None:
+    """Print every expectation's outcome and keep a copy. Used when running as a script.
+
+    Args:
+        checkpoint_result: What validate() returned.
+        name: What was validated, used in the report filename.
+    """
     described = json.loads(checkpoint_result.describe())
 
     for index, validation in enumerate(described.get("validation_results", []), 1):
@@ -114,7 +139,9 @@ def show_results(checkpoint_result) -> None:
                 logger.warning(kwargs)
                 logger.warning(expectation.get("result"))
 
+    path = save_results(described, name)
+
     if described.get("success"):
-        logger.success("Overall success: True")
+        logger.success(f"Overall success: True - report at {path}")
     else:
-        logger.error("Overall success: False")
+        logger.error(f"Overall success: False - report at {path}")

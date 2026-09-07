@@ -108,4 +108,6 @@ if __name__ == "__main__":
         month = path.parent.name
         print(f"\n=== {month} ===")
         full = load_raw(path, n_rows=None)
-        show_results(validate(full, build_expectations(), f"flights_raw::{month}"))
+        show_results(
+            validate(full, build_expectations(), f"flights_raw::{month}"), f"flights_raw_{month}"
+        )

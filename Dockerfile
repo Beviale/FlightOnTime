@@ -6,8 +6,9 @@ ENV PIP_NO_CACHE_DIR=1
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 
 
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl ca-certificates git \
+    curl ca-certificates git libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
 

@@ -65,6 +65,7 @@ services:
       LOCUST_LEAD_DAYS_MAX: "40"
     volumes:
       - ./locust:/mnt/locust
+      - ./reports/locust:/reports
     depends_on: [app]
     networks: [monitoring]
 
