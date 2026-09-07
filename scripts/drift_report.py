@@ -24,8 +24,15 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# Columns that describe the request.
-NOT_FEATURES = {"ObservedAt", "Variant", "FlightDate", "LeadDays"}
+
+NOT_FEATURES = {
+    "ObservedAt",
+    "Variant",
+    "FlightDate",
+    "LeadDays",
+    "Month",
+    "DaysToNearestHoliday",
+}
 
 
 def build_reference(source: Path, destination: Path, rows: int) -> pd.DataFrame:

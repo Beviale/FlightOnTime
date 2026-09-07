@@ -7,7 +7,7 @@ from predicting_flight_arrival_delays.app.enrichment import weather_live
 from predicting_flight_arrival_delays.app.enrichment.reference import Airport, get_airport
 from predicting_flight_arrival_delays.config import WEATHER_COLUMNS
 
-DEPARTURE = pd.Timestamp("2026-03-12 18:00", tz="UTC")
+DEPARTURE = pd.Timestamp("2037-03-12 18:00", tz="UTC")
 
 
 @pytest.fixture
@@ -17,7 +17,7 @@ def jfk() -> Airport:
 
 @pytest.fixture
 def series() -> pd.DataFrame:
-    index = pd.date_range("2026-03-11", "2026-03-13 23:00", freq="h", tz="UTC", name="Time")
+    index = pd.date_range("2037-03-11", "2037-03-13 23:00", freq="h", tz="UTC", name="Time")
     values = {
         "Temperature2m": 11.5,
         "Precipitation": 0.2,
@@ -63,7 +63,7 @@ class TestWeatherAt:
         weather_live.weather_at(jfk, DEPARTURE)
 
         _, _, start, end = calls[0]
-        assert (start, end) == ("2026-03-11", "2026-03-13")
+        assert (start, end) == ("2037-03-11", "2037-03-13")
 
     def test_a_second_lookup_on_the_same_day_is_served_from_the_cache(self, jfk, stub_fetch):
         calls = stub_fetch()

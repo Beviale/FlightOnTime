@@ -14,7 +14,7 @@ from predicting_flight_arrival_delays.app.enrichment.lookup import (
 )
 from predicting_flight_arrival_delays.app.schema import FlightLookupRequest
 
-FLIGHT_DATE = date(2026, 8, 25)
+FLIGHT_DATE = date(2037, 8, 25)
 
 
 AIRPORT_LOCATIONS = {
@@ -39,11 +39,11 @@ def a_leg(dest: str = "LBB", registration: str | None = None) -> dict:
     entry = {
         "departure": {
             "airport": {"iata": "DFW", "location": AIRPORT_LOCATIONS["DFW"]},
-            "scheduledTime": {"utc": "2026-08-25 12:00Z", "local": "2026-08-25 07:00-05:00"},
+            "scheduledTime": {"utc": "2037-08-25 12:00Z", "local": "2037-08-25 07:00-05:00"},
         },
         "arrival": {
             "airport": {"iata": dest, "location": AIRPORT_LOCATIONS.get(dest)},
-            "scheduledTime": {"utc": "2026-08-25 13:17Z", "local": "2026-08-25 08:17-05:00"},
+            "scheduledTime": {"utc": "2037-08-25 13:17Z", "local": "2037-08-25 08:17-05:00"},
         },
         "greatCircleDistance": {"mile": 281.95},
     }
@@ -84,10 +84,10 @@ class TestDecimalHour:
     @pytest.mark.parametrize(
         ("local", "expected"),
         [
-            ("2026-08-25 07:00-05:00", 7.0),
-            ("2026-08-25 08:17-05:00", 8 + 17 / 60),
-            ("2026-08-25 00:00-05:00", 0.0),
-            ("2026-08-25 23:30-05:00", 23.5),
+            ("2037-08-25 07:00-05:00", 7.0),
+            ("2037-08-25 08:17-05:00", 8 + 17 / 60),
+            ("2037-08-25 00:00-05:00", 0.0),
+            ("2037-08-25 23:30-05:00", 23.5),
         ],
     )
     def test_reads_the_local_clock_not_the_offset(self, local, expected):
@@ -112,9 +112,9 @@ class TestRotationFeatures:
     def test_the_position_and_the_count_come_from_the_day_s_legs(self, schedule):
         schedule(
             rotation=[
-                self.rotation_leg("2026-08-25 09:00Z", "2026-08-25 11:00Z"),
-                self.rotation_leg("2026-08-25 12:00Z", "2026-08-25 13:17Z"),
-                self.rotation_leg("2026-08-25 15:00Z", "2026-08-25 17:00Z"),
+                self.rotation_leg("2037-08-25 09:00Z", "2037-08-25 11:00Z"),
+                self.rotation_leg("2037-08-25 12:00Z", "2037-08-25 13:17Z"),
+                self.rotation_leg("2037-08-25 15:00Z", "2037-08-25 17:00Z"),
             ]
         )
 
@@ -126,8 +126,8 @@ class TestRotationFeatures:
     def test_the_turnaround_is_measured_from_the_previous_arrival(self, schedule):
         schedule(
             rotation=[
-                self.rotation_leg("2026-08-25 09:00Z", "2026-08-25 11:00Z"),
-                self.rotation_leg("2026-08-25 12:00Z", "2026-08-25 13:17Z"),
+                self.rotation_leg("2037-08-25 09:00Z", "2037-08-25 11:00Z"),
+                self.rotation_leg("2037-08-25 12:00Z", "2037-08-25 13:17Z"),
             ]
         )
 
@@ -140,19 +140,19 @@ class TestRotationFeatures:
         hours; a truer figure would be a value the model has never seen."""
         schedule(
             rotation=[
-                self.rotation_leg("2026-08-25 09:00Z", "2026-08-25 11:40Z"),
-                self.rotation_leg("2026-08-25 12:20Z", "2026-08-25 13:17Z"),
+                self.rotation_leg("2037-08-25 09:00Z", "2037-08-25 11:40Z"),
+                self.rotation_leg("2037-08-25 12:20Z", "2037-08-25 13:17Z"),
             ]
         )
         leg = a_leg(registration="N123AA")
-        leg["departure"]["scheduledTime"]["utc"] = "2026-08-25 12:20Z"
+        leg["departure"]["scheduledTime"]["utc"] = "2037-08-25 12:20Z"
 
         features = rotation_features(leg, FLIGHT_DATE)
 
         assert features["ScheduledTurnaround"] == 60
 
     def test_the_first_leg_of_the_day_has_no_turnaround(self, schedule):
-        schedule(rotation=[self.rotation_leg("2026-08-25 12:00Z", "2026-08-25 13:17Z")])
+        schedule(rotation=[self.rotation_leg("2037-08-25 12:00Z", "2037-08-25 13:17Z")])
 
         features = rotation_features(a_leg(registration="N123AA"), FLIGHT_DATE)
 
