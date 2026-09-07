@@ -28,7 +28,7 @@ from predicting_flight_arrival_delays.app.utils import (
 
 
 async def _load_in_background(app: FastAPI) -> None:
-    apply_bundles(app, await asyncio.to_thread(load_bundles))
+    await asyncio.to_thread(load_bundles, lambda ready: apply_bundles(app, ready))
 
 
 @asynccontextmanager
