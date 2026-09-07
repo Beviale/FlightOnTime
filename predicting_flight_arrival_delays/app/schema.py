@@ -27,10 +27,10 @@ fields they derive from.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 # BTS groups distance into 250-mile buckets, everything from 2500 miles up in the last.
 MAX_DISTANCE_GROUP = 11
@@ -44,6 +44,27 @@ CODE_FIELDS = [
     "OriginCarrier",
     "DestCarrier",
 ]
+
+
+def not_in_the_past(value: date) -> date:
+    """Refuse a flight that has already departed.
+
+    Args:
+        value: The flight date as sent.
+
+    Returns:
+        The same date, when it is today or later.
+
+    Raises:
+        ValueError: If the flight has already departed.
+    """
+    today = datetime.now(UTC).date()
+    if value < today:
+        raise ValueError(
+            f"FlightDate {value} is in the past. This model predicts before departure; "
+            f"for a flight that has already gone, the outcome is a matter of record."
+        )
+    return value
 
 
 class FlightRequest(BaseModel):
@@ -85,6 +106,8 @@ class FlightRequest(BaseModel):
     ScheduledTurnaround: float | None = Field(
         default=None, description="Minutes since the aircraft's previous leg"
     )
+
+    _future = field_validator("FlightDate")(not_in_the_past)
 
     @model_validator(mode="before")
     @classmethod
@@ -135,6 +158,8 @@ class FlightLookupRequest(BaseModel):
     FlightNumber: int = Field(gt=0, examples=[3500])
     Origin: str = Field(min_length=3, max_length=3, examples=["DFW"])
     Dest: str = Field(min_length=3, max_length=3, examples=["LBB"])
+
+    _future = field_validator("FlightDate")(not_in_the_past)
 
     @model_validator(mode="before")
     @classmethod

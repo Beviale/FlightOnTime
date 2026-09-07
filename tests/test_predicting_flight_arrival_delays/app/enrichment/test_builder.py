@@ -89,8 +89,8 @@ class TestBuildFeatureFrame:
 
         (origin_iata, departure), (dest_iata, arrival) = calls
         assert (origin_iata, dest_iata) == ("JFK", "LAX")
-        assert departure == pd.Timestamp("2026-03-12 18:00", tz="UTC")
-        assert arrival == pd.Timestamp("2026-03-13 00:00", tz="UTC")
+        assert departure == pd.Timestamp("2037-03-12 18:00", tz="UTC")
+        assert arrival == pd.Timestamp("2037-03-13 00:00", tz="UTC")
 
     def test_a_flight_beyond_the_horizon_never_calls_the_forecast_service(
         self, body, today, stub_forecast

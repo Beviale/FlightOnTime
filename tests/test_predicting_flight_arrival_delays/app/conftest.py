@@ -13,7 +13,7 @@ from predicting_flight_arrival_delays.data.transform import Transformer, encode_
 JFK_LAX = {
     "Month": 3,
     "DayOfWeek": 4,
-    "FlightDate": "2026-03-12",
+    "FlightDate": "2037-03-12",
     "IsHoliday": 0,
     "DaysToNearestHoliday": -12,
     "ReportingAirline": "AA",
@@ -108,7 +108,7 @@ def bundles(make_bundle) -> dict[str, Bundle]:
 
 @pytest.fixture
 def today() -> date:
-    return date(2026, 3, 10)
+    return date(2037, 3, 10)
 
 
 @pytest.fixture

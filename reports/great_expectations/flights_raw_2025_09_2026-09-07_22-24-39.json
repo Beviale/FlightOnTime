@@ -1,0 +1,665 @@
+{
+  "success": false,
+  "statistics": {
+    "evaluated_validations": 1,
+    "success_percent": 0.0,
+    "successful_validations": 0,
+    "unsuccessful_validations": 1
+  },
+  "validation_results": [
+    {
+      "success": false,
+      "statistics": {
+        "evaluated_expectations": 41,
+        "successful_expectations": 40,
+        "unsuccessful_expectations": 1,
+        "success_percent": 97.5609756097561
+      },
+      "expectations": [
+        {
+          "expectation_type": "expect_table_row_count_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "min_value": 1
+          },
+          "result": {
+            "observed_value": 562439
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "OriginAirportID"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "OriginAirportID",
+            "min_value": 1.0,
+            "max_value": 99999.0
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "DestAirportID"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "DestAirportID",
+            "min_value": 1.0,
+            "max_value": 99999.0
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Origin"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_match_regex",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Origin",
+            "regex": "^[A-Z]{3}$"
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Dest"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_match_regex",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Dest",
+            "regex": "^[A-Z]{3}$"
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Reporting_Airline"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Flight_Number_Reporting_Airline"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "FlightDate"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_not_be_null",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "FlightDate"
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "CRSDepTime"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "CRSDepTime",
+            "min_value": 1.0,
+            "max_value": 2400.0
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "CRSArrTime"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "CRSArrTime",
+            "min_value": 1.0,
+            "max_value": 2400.0
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "CRSElapsedTime"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "CRSElapsedTime",
+            "mostly": 0.9999,
+            "min_value": 1.0,
+            "max_value": 1440.0
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Distance"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Distance",
+            "min_value": 1.0,
+            "max_value": 6000.0
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "DistanceGroup"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "DayOfWeek"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "DayOfWeek",
+            "min_value": 1.0,
+            "max_value": 7.0
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Month"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_between",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Month",
+            "min_value": 1.0,
+            "max_value": 12.0
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "OriginState"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "DestState"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "OriginCityName"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "DestCityName"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Tail_Number"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_not_be_null",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Tail_Number",
+            "mostly": 0.95
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 219,
+            "unexpected_percent": 0.03893755589495038,
+            "partial_unexpected_list": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "partial_unexpected_counts": [
+              {
+                "value": null,
+                "count": 20
+              }
+            ],
+            "partial_unexpected_index_list": [
+              23240,
+              23412,
+              23563,
+              23664,
+              24560,
+              25408,
+              25604,
+              26284,
+              26593,
+              27496,
+              28429,
+              28811,
+              28998,
+              29228,
+              29551,
+              30140,
+              30412,
+              31136,
+              31192,
+              31234
+            ]
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Cancelled"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_not_be_null",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Cancelled"
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_in_set",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Cancelled",
+            "value_set": [
+              0,
+              1
+            ]
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Diverted"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_not_be_null",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Diverted"
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_in_set",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "Diverted",
+            "value_set": [
+              0,
+              1
+            ]
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 0,
+            "missing_percent": 0.0,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_to_exist",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "ArrDel15"
+          },
+          "result": {}
+        },
+        {
+          "expectation_type": "expect_column_values_to_be_in_set",
+          "success": true,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "ArrDel15",
+            "value_set": [
+              0,
+              1
+            ]
+          },
+          "result": {
+            "element_count": 562439,
+            "unexpected_count": 0,
+            "unexpected_percent": 0.0,
+            "partial_unexpected_list": [],
+            "missing_count": 4111,
+            "missing_percent": 0.7309237090600047,
+            "unexpected_percent_total": 0.0,
+            "unexpected_percent_nonmissing": 0.0,
+            "partial_unexpected_counts": [],
+            "partial_unexpected_index_list": []
+          }
+        },
+        {
+          "expectation_type": "expect_column_values_to_not_be_null",
+          "success": false,
+          "kwargs": {
+            "batch_id": "flights_raw::2025_09_source-flights_raw::2025_09_asset",
+            "column": "ArrDel15",
+            "row_condition": {
+              "pass_through_filter": "Cancelled == 0 and Diverted == 0",
+              "type": "pass_through"
+            },
+            "condition_parser": "pandas"
+          },
+          "result": {
+            "element_count": 558329,
+            "unexpected_count": 1,
+            "unexpected_percent": 0.00017910586768733131,
+            "partial_unexpected_list": [
+              null
+            ],
+            "partial_unexpected_counts": [
+              {
+                "value": null,
+                "count": 1
+              }
+            ],
+            "partial_unexpected_index_list": [
+              410705
+            ]
+          }
+        }
+      ],
+      "result_url": null
+    }
+  ]
+}

@@ -74,7 +74,7 @@ that closes on the probability given.
 - **Calibration**: `CalibratedClassifierCV` with isotonic regression over a
   `FrozenEstimator`, fitted on the fold's validation window — the base model is not refit,
   only its probabilities are mapped.
-- **Threshold**: chosen on validation by maximising **F-beta with beta = 1.2**.
+- **Threshold**: chosen on validation by maximising F-1 beta score.
 - **No resampling.** Oversampling, undersampling and SMOTE were all evaluated; none
   improved ROC-AUC, and all three damaged calibration, which is the property this service
   actually sells.
@@ -119,13 +119,6 @@ information that does not exist before departure.
 **ROC-AUC 0.696.** Out of a hundred pairs of one delayed and one on-time flight, the model
 orders about seventy correctly. Enough to rank flights usefully; not enough to call one.
 
-**The alert rate of 42%** is not a defect but a choice. `beta = 1.2` weights recall above
-precision by a factor of 1.44 — for a passenger, an unnecessary warning is an annoyance
-while a missed delay is a missed connection. On a problem with this much irreducible
-uncertainty, catching 63% of delays means flagging four flights in ten. Raising the
-threshold trades recall for precision; the probability is exposed precisely so that a
-caller can make that trade themselves.
-
 ### What each feature group is worth
 
 Read off the difference between variants:
@@ -153,10 +146,6 @@ AircraftDailyLegs      0.024
 DestCongestion         0.010
 OriginCongestion       0.002
 ```
-
-Congestion is nearly inert in this variant — 0.16% against 9.4% for `Month`. It is a real
-finding, not a bug, and it is recorded in the behavioural test thresholds: pinning
-congestion from its minimum to its maximum moves the prediction by only 3%.
 
 ## Explainability
 

@@ -12,7 +12,7 @@ from predicting_flight_arrival_delays.app.enrichment.aerodatabox import (
     find_flight,
 )
 
-FLIGHT_DATE = date(2026, 8, 25)
+FLIGHT_DATE = date(2037, 8, 25)
 
 
 def leg(origin: str, dest: str | None, hour: int = 7) -> dict:
@@ -22,13 +22,13 @@ def leg(origin: str, dest: str | None, hour: int = 7) -> dict:
         "departure": {
             "airport": {"iata": origin, "countryCode": "us"},
             "scheduledTime": {
-                "utc": f"2026-08-25 {hour + 5:02d}:00Z",
-                "local": f"2026-08-25 {hour:02d}:00-05:00",
+                "utc": f"2037-08-25 {hour + 5:02d}:00Z",
+                "local": f"2037-08-25 {hour:02d}:00-05:00",
             },
         },
         "arrival": {
             "airport": {"iata": dest, "countryCode": "us"} if dest else {},
-            "scheduledTime": {"utc": "2026-08-25 13:17Z", "local": "2026-08-25 08:17-05:00"},
+            "scheduledTime": {"utc": "2037-08-25 13:17Z", "local": "2037-08-25 08:17-05:00"},
         },
         "greatCircleDistance": {"mile": 281.95},
     }
@@ -103,7 +103,7 @@ class TestFindFlight:
 
         find_flight("AA", 3500, FLIGHT_DATE, "DFW")
 
-        assert "/flights/number/AA3500/2026-08-25" in calls[0][0]
+        assert "/flights/number/AA3500/2037-08-25" in calls[0][0]
 
 
 class TestRateLimiting:
@@ -143,31 +143,31 @@ class TestCountMovements:
     def test_only_flights_with_both_ends_on_us_soil_are_counted(self, responses):
         responses(self.departures("us", "us", "gb", "fr", "mx"))
 
-        assert count_movements("JFK", "2026-08-25 08:30", arriving=False) == 2
+        assert count_movements("JFK", "2037-08-25 08:30", arriving=False) == 2
 
     def test_the_us_territories_count_as_domestic(self, responses):
         responses(self.departures("us", "pr", "vi"))
 
-        assert count_movements("JFK", "2026-08-25 08:30", arriving=False) == 3
+        assert count_movements("JFK", "2037-08-25 08:30", arriving=False) == 3
 
     def test_the_window_is_the_one_hour_the_flight_sits_in(self, responses):
         calls = responses(self.departures("us"))
 
-        count_movements("JFK", "2026-08-25 08:47", arriving=False)
+        count_movements("JFK", "2037-08-25 08:47", arriving=False)
 
-        assert "/flights/airports/iata/JFK/2026-08-25T08:00/2026-08-25T08:59" in calls[0][0]
+        assert "/flights/airports/iata/JFK/2037-08-25T08:00/2037-08-25T08:59" in calls[0][0]
 
     def test_cancelled_flights_are_asked_for(self, responses):
         calls = responses(self.departures("us"))
 
-        count_movements("JFK", "2026-08-25 08:00", arriving=False)
+        count_movements("JFK", "2037-08-25 08:00", arriving=False)
 
         assert calls[0][1]["withCancelled"] == "true"
 
     def test_codeshares_are_excluded(self, responses):
         calls = responses(self.departures("us"))
 
-        count_movements("JFK", "2026-08-25 08:00", arriving=False)
+        count_movements("JFK", "2037-08-25 08:00", arriving=False)
 
         assert calls[0][1]["withCodeshared"] == "false"
 
@@ -182,12 +182,12 @@ class TestCountMovements:
             )
         )
 
-        assert count_movements("LBB", "2026-08-25 08:00", arriving=True) == 1
+        assert count_movements("LBB", "2037-08-25 08:00", arriving=True) == 1
 
     def test_an_hour_with_nothing_scheduled_counts_zero(self, responses):
         responses(FakeResponse(204))
 
-        assert count_movements("LBB", "2026-08-25 03:00", arriving=False) == 0
+        assert count_movements("LBB", "2037-08-25 03:00", arriving=False) == 0
 
 
 class TestMissingKey:

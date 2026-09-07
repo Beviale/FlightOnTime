@@ -69,7 +69,7 @@ class TestApproximatedInputs:
 
     def test_a_column_sent_as_null_counts_as_left_out(self):
         flight = FlightRequest(
-            FlightDate="2026-03-01",
+            FlightDate="2037-03-01",
             OriginAirportID=12478,
             DestAirportID=12892,
             DepTimeDecimal=8.0,
