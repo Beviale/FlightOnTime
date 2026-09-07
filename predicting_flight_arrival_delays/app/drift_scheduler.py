@@ -47,7 +47,6 @@ def drift_job() -> None:
         logger.warning("uv is not installed here, so the drift script cannot be run.")
         return
 
-    
     settings = [
         "--days",
         str(DRIFT_WINDOW_DAYS),
@@ -117,8 +116,7 @@ def start_scheduler() -> bool:
 
 
 def shutdown_scheduler() -> None:
-    """Stop the scheduler without waiting for a comparison in flight.
-    """
+    """Stop the scheduler without waiting for a comparison in flight."""
     if not scheduler.running:
         return
 
