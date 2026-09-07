@@ -70,6 +70,20 @@ def fetch(url: str, params: dict, timeout=180) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _trusted_types(model: Any) -> list[str]:
+    """The types skops must be told to accept when it loads this model back.
+
+    Args:
+        model: The fitted estimator about to be logged.
+
+    Returns:
+        The type names to trust, empty if skops already knows all of them.
+    """
+    import skops.io
+
+    return sorted(skops.io.get_untrusted_types(data=skops.io.dumps(model)))
+
+
 def register_model_bundle(
     model: Any,
     transformer: Any,
@@ -138,6 +152,7 @@ def register_model_bundle(
             signature=signature,
             input_example=input_example,
             registered_model_name=registered_model_name,
+            skops_trusted_types=_trusted_types(model),
         )
         mlflow.log_artifact(str(transformer_path), artifact_path=artifact_path)
         mlflow.log_artifact(str(columns_path), artifact_path=artifact_path)
@@ -201,7 +216,12 @@ def load_model_bundle(
     """
     run_id = _resolve_run_id(registered_model_name, stage)
 
-    model = mlflow.sklearn.load_model(f"runs:/{run_id}/{artifact_path}")
+    model_uri = (
+        f"models:/{registered_model_name}@{stage}"
+        if stage and stage != "None"
+        else f"models:/{registered_model_name}/latest"
+    )
+    model = mlflow.sklearn.load_model(model_uri)
 
     transformer_path = mlflow.artifacts.download_artifacts(
         f"runs:/{run_id}/{artifact_path}/transformer.joblib"

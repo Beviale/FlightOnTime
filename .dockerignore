@@ -17,6 +17,9 @@ data/*
 data/external/*
 !data/external/airports.csv
 !data/external/airport_identity.csv
+!data/interim/
+data/interim/*
+!data/interim/drift_reference.csv
 
 models/
 metrics/
