@@ -414,8 +414,7 @@ A FastAPI service, with Gradio mounted at the root.
 **User interface.** A Gradio application with two paths: auto-lookup from a flight number,
 and manual entry for a flight the schedule service does not know. The explanation is shown
 as a waterfall chart — base value, the leading contributions, the summed rest, and the
-calibration step — so the bars add up to the probability given rather than to something
-close to it.
+calibration step — so the bars add up to the probability given.
 
 **Containerisation.** A `Dockerfile` and a `.dockerignore` that ships the package and the two
 airport tables and nothing else. Notably it also installs `libgomp1`: LightGBM's OpenMP

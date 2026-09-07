@@ -127,8 +127,6 @@ would place them twenty-two apart.
 two airports sharing the code `AUS` produce a blended rate of 0.5, while keying on
 `OriginAirportID` separates them into 0.0 and 1.0. The code is ambiguous; the id is not.
 
-**Why the bare flight number is not a feature.** 92.3% of flight numbers are used by more
-than one airline, 4.77 on average. As a category it identifies nothing.
 
 ## Splits
 
