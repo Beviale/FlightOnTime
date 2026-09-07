@@ -328,14 +328,6 @@ folds, at the operating threshold each was released with:
 | **all** | 0.6958 | 0.4109 | 0.1591 | 0.631 | 0.341 | 0.235 | 41.9% |
 | **noweather** | 0.6763 | 0.3899 | 0.1639 | 0.654 | 0.319 | 0.227 | 46.9% |
 
-**How to read these.** The base rate is 22.3% of flights delayed, so a model that always
-answered "22.3%" would score a Brier of 0.173 — the 0.159 above is a 13% improvement on
-knowing nothing, which is modest and honest for a pre-departure prediction.
-
-The threshold is chosen by maximising F-beta with **beta = 1.2**, weighting recall above
-precision: for a passenger, an unnecessary warning is an annoyance while a missed delay
-is a missed connection. The alert rate near 42% is the direct consequence of that choice
-on a problem with this much irreducible uncertainty.
 
 ## Milestones Description
 
