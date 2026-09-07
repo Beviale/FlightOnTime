@@ -379,8 +379,7 @@ sends, so an explanation speaks the requester's vocabulary rather than the matri
 
 **Cards.** A [dataset card](docs/Dataset_Card.md) documenting the sources, the target, the
 splits and the defects found in the raw extracts; and a [model card](docs/Model_Card.md)
-for the two registered champions — what they are for, what they are not for, and how to
-read a Brier score of 0.159 on a problem with a 22% base rate.
+for the two registered champions — what they are for and what they are not for.
 
 ### Milestone 4 - API Integration
 
