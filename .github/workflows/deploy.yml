@@ -30,8 +30,11 @@ jobs:
           uv run dvc remote modify origin --local password ${{ secrets.DAGSHUB_TOKEN }}
 
     
-      - name: Pull the airport reference tables
-        run: uv run dvc pull data/external/airports.csv data/external/airport_identity.csv
+
+      - name: Pull what the service carries with it
+        run: |
+          uv run dvc pull data/external/airports.csv data/external/airport_identity.csv
+          uv run dvc pull data/interim/drift_reference.csv
 
   
       - name: Copy the serving files onto the deploy branch
@@ -51,6 +54,8 @@ jobs:
             "README.md"
             "data/external/airports.csv"
             "data/external/airport_identity.csv"
+            "data/interim/drift_reference.csv"
+            "scripts"
           )
 
           mkdir -p /tmp/to-deploy

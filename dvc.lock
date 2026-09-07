@@ -30,8 +30,8 @@ stages:
       size: 5555
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: d1247deb7a4a3214ee5fdbd9ee6c15ea
-      size: 12770
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         MASTER_CORD_PAGE: 
@@ -72,8 +72,8 @@ stages:
       size: 15902
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: d1247deb7a4a3214ee5fdbd9ee6c15ea
-      size: 12770
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         DATE_COLUMN: FlightDate
@@ -122,8 +122,8 @@ stages:
       size: 10103
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: d1247deb7a4a3214ee5fdbd9ee6c15ea
-      size: 12770
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         DATE_COLUMN: FlightDate
@@ -196,8 +196,8 @@ stages:
       size: 7053
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: d1247deb7a4a3214ee5fdbd9ee6c15ea
-      size: 12770
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         DATE_COLUMN: FlightDate
@@ -233,38 +233,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -309,8 +309,8 @@ stages:
     outs:
     - path: metrics/selection/all/lightgbm__default.json
       hash: md5
-      md5: 6f7c5c5f178665d3e478bb2d0682ea3c
-      size: 182
+      md5: fd7e5e5bdcd010416133c3d8421fbcf5
+      size: 183
   train_evaluate_save_metrics@1:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -318,38 +318,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -394,7 +394,7 @@ stages:
     outs:
     - path: metrics/selection/all/lightgbm__fast.json
       hash: md5
-      md5: f32cbccef5900bd95b5ff1be2d3933b3
+      md5: cefc6d597d08e59a9d56883ac6bfe2f3
       size: 183
   train_evaluate_save_metrics@2:
     cmd: uv run 
@@ -403,38 +403,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -479,8 +479,8 @@ stages:
     outs:
     - path: metrics/selection/all/lightgbm__deep.json
       hash: md5
-      md5: 3cb579a038b6693e485a3c4dd478af1d
-      size: 181
+      md5: 5895cc19ce60b65fbd5062d79640f50d
+      size: 183
   train_evaluate_save_metrics@3:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -488,38 +488,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -564,8 +564,8 @@ stages:
     outs:
     - path: metrics/selection/all/logistic_regression__default.json
       hash: md5
-      md5: 552a54b416187a112d30ccf5ea68a5b4
-      size: 181
+      md5: f8c84bb172795a08ce65fe8a7cbf490a
+      size: 183
   train_evaluate_save_metrics@6:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -573,38 +573,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -649,8 +649,8 @@ stages:
     outs:
     - path: metrics/selection/all/lightgbm__regularised.json
       hash: md5
-      md5: 02d4b4012147c3b12b46929de65e96cb
-      size: 180
+      md5: 7186c9ddb72a3a60394fc0066b411613
+      size: 182
   train_evaluate_save_metrics@4:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -658,38 +658,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -734,8 +734,8 @@ stages:
     outs:
     - path: metrics/selection/all/logistic_regression__weak_l2.json
       hash: md5
-      md5: 63fdbbe51979cc4186ad1fd8ca512473
-      size: 182
+      md5: e80185773a30565f2608aba4e570d973
+      size: 181
   train_evaluate_save_metrics@5:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -743,38 +743,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -819,8 +819,8 @@ stages:
     outs:
     - path: metrics/selection/all/logistic_regression__strong_l2.json
       hash: md5
-      md5: 952962145c85b43abee8f91fdd0b6813
-      size: 182
+      md5: c6b653b38735d770d63532efe1e2751d
+      size: 179
   train_evaluate_save_metrics@7:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -828,38 +828,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -904,8 +904,8 @@ stages:
     outs:
     - path: metrics/selection/noweather/logistic_regression__default.json
       hash: md5
-      md5: 0934c4bbf33febc16d983d06119110c1
-      size: 182
+      md5: 4db4964fff22fc0d541c8bf7529a298c
+      size: 181
   train_evaluate_save_metrics@8:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -913,38 +913,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -989,8 +989,8 @@ stages:
     outs:
     - path: metrics/selection/noweather/logistic_regression__weak_l2.json
       hash: md5
-      md5: 91d44878e4fd1087b9da3973b71f1ef0
-      size: 181
+      md5: ae60d663fd9c41d773a6df3e20a63e76
+      size: 182
   train_evaluate_save_metrics@9:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -998,38 +998,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1074,8 +1074,8 @@ stages:
     outs:
     - path: metrics/selection/noweather/logistic_regression__strong_l2.json
       hash: md5
-      md5: 61c580a418ca59cdc790bd16759c2248
-      size: 182
+      md5: 90c343421ca43a66124a4a7525be42d0
+      size: 181
   train_evaluate_save_metrics@10:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1083,38 +1083,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1159,8 +1159,8 @@ stages:
     outs:
     - path: metrics/selection/noweather/lightgbm__default.json
       hash: md5
-      md5: 124dc9890fc36ff2d794fb7fff5cdf71
-      size: 181
+      md5: 906c8e45ce8f58c2bed96e30348d7243
+      size: 182
   train_evaluate_save_metrics@11:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1168,38 +1168,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1244,8 +1244,8 @@ stages:
     outs:
     - path: metrics/selection/noweather/lightgbm__fast.json
       hash: md5
-      md5: 072137b7b7f6ebed63a9c785743cacbd
-      size: 182
+      md5: 0954f5a556449660b8f6ca21260649aa
+      size: 183
   train_evaluate_save_metrics@12:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1253,38 +1253,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1329,7 +1329,7 @@ stages:
     outs:
     - path: metrics/selection/noweather/lightgbm__deep.json
       hash: md5
-      md5: 4f506af87c3ade8be2b7a7cb0c230844
+      md5: 9daca14805aca2afb07550ec2fcf9a86
       size: 182
   train_evaluate_save_metrics@13:
     cmd: uv run 
@@ -1338,38 +1338,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1414,8 +1414,8 @@ stages:
     outs:
     - path: metrics/selection/noweather/lightgbm__regularised.json
       hash: md5
-      md5: ceac3ac70ba300dc17b949e850460ebe
-      size: 182
+      md5: a63f0af8fecf4548d03326832b1d098c
+      size: 183
   train_evaluate_save_metrics@14:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1423,38 +1423,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1499,8 +1499,8 @@ stages:
     outs:
     - path: metrics/selection/nocarrier/logistic_regression__default.json
       hash: md5
-      md5: e34ad1a4657be330df6529249b51a5a3
-      size: 181
+      md5: 57f1ed2920490fc2949ab7bf3cb5b26c
+      size: 183
   train_evaluate_save_metrics@15:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1508,38 +1508,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1584,8 +1584,8 @@ stages:
     outs:
     - path: metrics/selection/nocarrier/logistic_regression__weak_l2.json
       hash: md5
-      md5: f9a00800f6c673c8674fa3ab7520797d
-      size: 181
+      md5: 1aa49ec11e1c0d7ac3727f35db78b95e
+      size: 183
   train_evaluate_save_metrics@16:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1593,38 +1593,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1669,8 +1669,8 @@ stages:
     outs:
     - path: metrics/selection/nocarrier/logistic_regression__strong_l2.json
       hash: md5
-      md5: 5a8ca14465c448917abea92de4fcaab1
-      size: 182
+      md5: ebfba1eda12147a355bdb9b551211e76
+      size: 183
   train_evaluate_save_metrics@17:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1678,38 +1678,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1754,8 +1754,8 @@ stages:
     outs:
     - path: metrics/selection/nocarrier/lightgbm__default.json
       hash: md5
-      md5: da4c0c13ffe8f8dcbb309256ac9db217
-      size: 183
+      md5: e40930fb95edda8b8efd8fb6fc34ccbd
+      size: 184
   train_evaluate_save_metrics@18:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1763,38 +1763,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1839,8 +1839,8 @@ stages:
     outs:
     - path: metrics/selection/nocarrier/lightgbm__fast.json
       hash: md5
-      md5: 81c78a9c1bb7724e62dd7c41b5839c88
-      size: 182
+      md5: 089d36b14c49b3ef8119945042a403de
+      size: 184
   train_evaluate_save_metrics@19:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1848,38 +1848,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -1924,8 +1924,8 @@ stages:
     outs:
     - path: metrics/selection/nocarrier/lightgbm__deep.json
       hash: md5
-      md5: c4ee87a9a68bb2aa786ceb00860ad227
-      size: 182
+      md5: 34db61f75c0c2dfaeae4ccdc3099204a
+      size: 183
   train_evaluate_save_metrics@20:
     cmd: uv run 
       predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
@@ -1933,38 +1933,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: df4d3db4e502e3669d6519c6f7ec16f6.dir
-      size: 1563746928
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: fbb0dcf841b7c82101df328d6f0a1574
-      size: 4811
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: 2a941119cf8d93550416523b859c359f
-      size: 28891
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 930e23575747b9bb13a19937736e1a63
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: 1f7cd21314b53376b54c60c450d95691
-      size: 11481
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -2009,8 +2009,8 @@ stages:
     outs:
     - path: metrics/selection/nocarrier/lightgbm__regularised.json
       hash: md5
-      md5: 91f82e86a42e63404378be91e0305b04
-      size: 183
+      md5: 358d2a0f02d742b71ed98ad9d5ec26b4
+      size: 182
   build_airport_identity:
     cmd: uv run predicting_flight_arrival_delays/data/build_airport_identity.py
     deps:
@@ -2037,38 +2037,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: daf4c075e64cfd33df18f54e192e848e.dir
-      size: 1636802591
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: 5fef2216caa4a1e0aca28854004f3533
-      size: 4843
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: f32dd6c38ee5c5c1e773040ef368105c
-      size: 28742
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 730ff54d74cc759ee028476fc9dfeaef
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: e8b6a1354506a95e62bbaf91d1fe0366
-      size: 10255
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -2099,6 +2099,7 @@ stages:
         - TailNumber
         - Origin
         - Dest
+        - FlightNumberReportingAirline
         SERVICE_COLUMNS2:
         - FlightDate
         TARGET: IsDelayed
@@ -2112,7 +2113,7 @@ stages:
     outs:
     - path: metrics/selection/nocarrier/random_forest__default.json
       hash: md5
-      md5: 264e4789175db8a513fa6fa8f6fe9b9f
+      md5: ceb21c8bef0d771d49530369eb1a81d0
       size: 183
   train_evaluate_save_metrics@22:
     cmd: uv run 
@@ -2121,38 +2122,38 @@ stages:
     deps:
     - path: data/processed/selection
       hash: md5
-      md5: daf4c075e64cfd33df18f54e192e848e.dir
-      size: 1636802591
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
       nfiles: 27
     - path: predicting_flight_arrival_delays/data/features.py
       hash: md5
-      md5: 5fef2216caa4a1e0aca28854004f3533
-      size: 4843
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
     - path: predicting_flight_arrival_delays/data/transform.py
       hash: md5
-      md5: f32dd6c38ee5c5c1e773040ef368105c
-      size: 28742
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
     - path: predicting_flight_arrival_delays/modeling/evaluate.py
       hash: md5
-      md5: 12f2d7f6a7b437779296456215d80046
-      size: 10825
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
     - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
       hash: md5
       md5: 325b8b8a76e8d4c6306382c8c56f46a8
       size: 1148
     - path: predicting_flight_arrival_delays/modeling/train.py
       hash: md5
-      md5: bcbd83c17861a55f66b8ad01f57137db
-      size: 14061
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
     - path: 
         predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
       hash: md5
-      md5: 730ff54d74cc759ee028476fc9dfeaef
-      size: 10534
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
     - path: predicting_flight_arrival_delays/utils.py
       hash: md5
-      md5: e8b6a1354506a95e62bbaf91d1fe0366
-      size: 10255
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
     params:
       predicting_flight_arrival_delays/config.py:
         CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
@@ -2183,6 +2184,7 @@ stages:
         - TailNumber
         - Origin
         - Dest
+        - FlightNumberReportingAirline
         SERVICE_COLUMNS2:
         - FlightDate
         TARGET: IsDelayed
@@ -2196,5 +2198,169 @@ stages:
     outs:
     - path: metrics/selection/all/random_forest__default.json
       hash: md5
-      md5: ce01884c408f51ec58ec614f1acfc57c
-      size: 180
+      md5: 22e3570410cf526c319ec015d5e2f68d
+      size: 182
+  train_evaluate_save_metrics@23:
+    cmd: uv run 
+      predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py 
+      --variant noweather --model random_forest --config default
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
+      nfiles: 27
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
+    - path: predicting_flight_arrival_delays/modeling/evaluate.py
+      hash: md5
+      md5: 354faef0df4e9d0ecf136a304a32fc1a
+      size: 10796
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
+    params:
+      predicting_flight_arrival_delays/config.py:
+        CATEGORICAL_ASSOCIATION_THRESHOLD: 0.98
+        CORRELATION_THRESHOLD: 0.98
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        DATE_COLUMN: FlightDate
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        MIN_CATEGORY_COUNT: 1000
+        MIN_MUTUAL_INFO: 1e-05
+        MI_SAMPLE_SIZE: 500000
+        RESAMPLE_METHODS:
+        - none
+        - undersample
+        - oversample
+        - smote
+        SEED: 42
+        SERVICE_COLUMNS:
+        - CRSDepTime
+        - CRSArrTime
+        - DepUtcHour
+        - ArrUtcHour
+        - DepHour
+        - ArrHour
+        - TailNumber
+        - Origin
+        - Dest
+        - FlightNumberReportingAirline
+        SERVICE_COLUMNS2:
+        - FlightDate
+        TARGET: IsDelayed
+        WEATHER_COLUMNS:
+        - Temperature2m
+        - Precipitation
+        - Snowfall
+        - WindSpeed10m
+        - WindGusts10m
+        - WeatherCode
+    outs:
+    - path: metrics/selection/noweather/random_forest__default.json
+      hash: md5
+      md5: dd596e8e8a829fe776ee7af0385651d4
+      size: 182
+  select_and_register:
+    cmd: uv run predicting_flight_arrival_delays/modeling/select_and_register.py
+    deps:
+    - path: data/processed/selection
+      hash: md5
+      md5: ec173749c9d4ffc2e21475ec19f3f64a.dir
+      size: 1563270369
+      nfiles: 27
+    - path: metrics/selection
+      hash: md5
+      md5: 3ecda230732bd1fca23cc0522e2bdd58.dir
+      size: 4377
+      nfiles: 24
+    - path: predicting_flight_arrival_delays/data/features.py
+      hash: md5
+      md5: c11c35c2f7e03bf9bf9c9c2954512374
+      size: 4796
+    - path: predicting_flight_arrival_delays/data/transform.py
+      hash: md5
+      md5: b003e24d2170d3c14a798d1f39e9cf14
+      size: 30547
+    - path: predicting_flight_arrival_delays/modeling/hyperparams.yaml
+      hash: md5
+      md5: 325b8b8a76e8d4c6306382c8c56f46a8
+      size: 1148
+    - path: predicting_flight_arrival_delays/modeling/select_and_register.py
+      hash: md5
+      md5: e8fd41fc25e63d26ae9bbd57933f263a
+      size: 13099
+    - path: predicting_flight_arrival_delays/modeling/train.py
+      hash: md5
+      md5: f09723198a357d0f539d6af66f0960f8
+      size: 14324
+    - path: 
+        predicting_flight_arrival_delays/modeling/train_evaluate_save_metrics.py
+      hash: md5
+      md5: 136c7e1a62b623ad5e2660cdb7dec02a
+      size: 11052
+    - path: predicting_flight_arrival_delays/utils.py
+      hash: md5
+      md5: 42950f147717ce17d821609843fadba5
+      size: 13373
+    params:
+      predicting_flight_arrival_delays/config.py:
+        DAGSHUB_REPO_NAME: FlightOnTime
+        DAGSHUB_REPO_OWNER: Beviale
+        ENCODING:
+          logistic_regression: onehot
+          random_forest: onehot
+          lightgbm: native
+        PRODUCTION_VARIANTS:
+        - all
+        - noweather
+        WINNER_MODEL_STAGE: Champion
+    outs:
+    - path: metrics/winner
+      hash: md5
+      md5: c919613454c2be3074dafc2e640d4412.dir
+      size: 683
+      nfiles: 2
+  build_drift_reference:
+    cmd: uv run predicting_flight_arrival_delays/data/drift_reference.py
+    deps:
+    - path: data/interim/flights_preprocessed.parquet
+      hash: md5
+      md5: da256180032be4d2cdffe46966f417f2
+      size: 400939665
+    - path: predicting_flight_arrival_delays/data/drift_reference.py
+      hash: md5
+      md5: 1c759e2ca642958f22a0f0b7c0cb91a6
+      size: 1534
+    params:
+      predicting_flight_arrival_delays/config.py:
+        DRIFT_REFERENCE_ROWS: 50000
+    outs:
+    - path: data/interim/drift_reference.csv
+      hash: md5
+      md5: bd4c56276bd0704921ce6344f1b92cd2
+      size: 10407005

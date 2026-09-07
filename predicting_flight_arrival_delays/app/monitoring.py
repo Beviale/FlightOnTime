@@ -1,5 +1,4 @@
-"""Prometheus metrics for the serving application.
-"""
+"""Prometheus metrics for the serving application."""
 
 import os
 

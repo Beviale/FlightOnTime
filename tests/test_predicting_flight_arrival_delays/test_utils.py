@@ -222,10 +222,18 @@ class TestRegisterModelBundle:
 
         class FakeSklearn:
             @staticmethod
-            def log_model(model, artifact_path, signature, input_example, registered_model_name):
+            def log_model(
+                model,
+                artifact_path,
+                signature,
+                input_example,
+                registered_model_name,
+                skops_trusted_types,
+            ):
                 logged["registered_model_name"] = registered_model_name
                 logged["artifact_path"] = artifact_path
                 logged["signature"] = signature
+                logged["skops_trusted_types"] = skops_trusted_types
                 return _FakeModelInfo()
 
         class FakeMlflow:
@@ -301,6 +309,42 @@ class TestRegisterModelBundle:
         )
         assert _FakeClient.aliases == []
 
+    def test_the_types_skops_must_accept_are_declared(self, fake_mlflow, transformer):
+        from lightgbm import LGBMClassifier
+        from sklearn.calibration import CalibratedClassifierCV
+        from sklearn.frozen import FrozenEstimator
+
+        rng = np.random.default_rng(0)
+        X = pd.DataFrame(rng.normal(size=(120, 3)), columns=list("abc"))
+        y = (X["a"] > 0).astype(int)
+        base = LGBMClassifier(n_estimators=3, verbose=-1).fit(X, y)
+        model = CalibratedClassifierCV(FrozenEstimator(base), method="sigmoid").fit(X, y)
+
+        utils.register_model_bundle(
+            model=model,
+            transformer=transformer,
+            columns=list("abc"),
+            registered_model_name="flight-delay-all",
+        )
+
+        assert "lightgbm.basic.Booster" in fake_mlflow["skops_trusted_types"]
+
+    def test_a_model_skops_already_knows_declares_nothing(self, fake_mlflow, transformer):
+        from sklearn.linear_model import LogisticRegression
+
+        rng = np.random.default_rng(0)
+        X = pd.DataFrame(rng.normal(size=(60, 3)), columns=list("abc"))
+        model = LogisticRegression().fit(X, (X["a"] > 0).astype(int))
+
+        utils.register_model_bundle(
+            model=model,
+            transformer=transformer,
+            columns=list("abc"),
+            registered_model_name="flight-delay-all",
+        )
+
+        assert fake_mlflow["skops_trusted_types"] == []
+
     def test_custom_artifact_path_is_used_for_all_three(self, fake_mlflow, transformer):
         utils.register_model_bundle(
             model=object(),
@@ -320,7 +364,14 @@ class TestRegisterModelBundleSignature:
 
         class FakeSklearn:
             @staticmethod
-            def log_model(model, artifact_path, signature, input_example, registered_model_name):
+            def log_model(
+                model,
+                artifact_path,
+                signature,
+                input_example,
+                registered_model_name,
+                skops_trusted_types,
+            ):
                 record["signature"] = signature
                 record["input_example"] = input_example
                 return _FakeModelInfo()

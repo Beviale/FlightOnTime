@@ -13,6 +13,9 @@ services:
       - "7860:7860"
     env_file:
       - .env
+    volumes:
+      - ./data/interim:/flightontime/data/interim
+      - ./reports/drift:/flightontime/reports/drift
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7860/status')"]
       interval: 30s

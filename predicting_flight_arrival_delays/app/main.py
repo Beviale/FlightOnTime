@@ -13,6 +13,10 @@ import gradio as gr
 from loguru import logger
 
 from predicting_flight_arrival_delays.app import ui
+from predicting_flight_arrival_delays.app.drift_scheduler import (
+    shutdown_scheduler,
+    start_scheduler,
+)
 from predicting_flight_arrival_delays.app.monitoring import instrumentator
 from predicting_flight_arrival_delays.app.routers import model_info, prediction
 from predicting_flight_arrival_delays.app.utils import (
@@ -28,12 +32,16 @@ async def lifespan(app: FastAPI):
 
     A version registered after startup is not picked up on its own: POST /model/reload
     puts it into service without restarting.
+
+    The daily drift comparison is scheduled here too.
     """
     apply_bundles(app, load_bundles())
+    start_scheduler()
 
     try:
         yield
     finally:
+        shutdown_scheduler()
         app.state.bundles = {}
         app.state.required_inputs = set()
         logger.info("Released the served models on shutdown")
@@ -68,7 +76,6 @@ def status(request: Request):
             "interface": "/",
         },
     }
-
 
 
 instrumentator.instrument(app).expose(app, include_in_schema=False, should_gzip=True)

@@ -14,6 +14,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from loguru import logger
 import pandas as pd
 
+from predicting_flight_arrival_delays.app.drift import record_features
 from predicting_flight_arrival_delays.app.enrichment.aerodatabox import (
     FlightNotFoundError,
     ScheduleUnavailableError,
@@ -141,6 +142,8 @@ def run_scoring(
     """
     frame, weather_status, scored = _score(request, flights, threshold)
     bundles = get_bundles(request)
+
+    record_features(frame, list(scored["variant"]))
 
     results = []
     for position, (flight, row, status) in enumerate(
