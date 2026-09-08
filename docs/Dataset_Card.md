@@ -86,11 +86,8 @@ publicly.
 | Diverted flights | arrived somewhere else; the label would describe a different flight |
 | `ArrDel15` missing | no outcome recorded |
 
-The three overlap almost exactly: measured across all 18 extracts, `ArrDel15` is null **if
-and only if** the flight was cancelled or diverted — zero unexplained nulls in 3.6 million
-sampled rows.
+The three overlap almost exactly: `ArrDel15` is null **if and only if** the flight was cancelled or diverted.
 
-A fourth filter was added later, for a defect described below.
 
 ## Features
 
@@ -179,17 +176,9 @@ The negative values look like the supplier's own arithmetic across a clock chang
 `add_utc_features` adds that block time to the departure — placing the arrival an hour
 *before* the departure and reading the wrong hour's weather.
 
-`load_and_clean` now drops any row whose block time is outside 1 to 1440 minutes, and logs
-what it dropped. The raw suite tolerates a handful of such rows (`mostly=0.9999`) because
-they come from the supplier; the processed suite tolerates none, because by then they
-should be gone.
+`load_and_clean` drops any row whose block time is outside 1 to 1440 minutes, and logs
+what it dropped.
 
-### Cancellation rate varies by month
-
-`ArrDel15` nulls range from 0.62% (September 2025) to 6.07% (January 2026). An earlier
-expectation asserted at most 5% nulls, which failed in January — but that is a statement
-about winter weather, not about data quality. The expectation is now conditioned on
-`Cancelled == 0 and Diverted == 0`, which is what it always meant.
 
 ## Versioning
 
