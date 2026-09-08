@@ -65,6 +65,23 @@ share those airports in those hours, and assembles the feature frame itself.
 threshold. `variant` and `weather` say which model answered and why. `approximated` names
 any column the caller omitted that this model leans on.
 
+A model can be scored without every column it was trained on. What the request leaves
+out, `complete_frame` fills in before the matrix reaches the estimator: a missing numeric
+column takes the **median the transformer learned while fitting**, and a missing
+categorical one takes `OTHER`, the same bucket that swallowed every rare level during
+training.
+
+So the service names them. `approximated` lists the columns that were absent **and** that
+this particular model leans on, ordered by how much it leans:
+
+    "approximated": ["OriginCarrier", "ScheduledTurnaround"]
+
+Two conditions have to hold before a column appears there. It has to be missing — either
+not sent at all, or sent as `null`, which counts the same. And it has to carry at least
+`IMPORTANT_COLUMN_SHARE` of the model's total importance, five per cent by default:
+below that the absence is not worth a caller's attention, and listing every omitted
+column would make the field noise.
+
 With `?explain=true`, the answer also carries per-column contributions and a waterfall
 that closes on the probability given.
 
@@ -113,8 +130,7 @@ Brier Skill Score = 1 − 0.159 / 0.173 = 0.08
 Eight per cent better than knowing nothing. That is a real gain, and it is small. It is
 also close to the ceiling: the Brier decomposes into uncertainty minus resolution plus
 reliability, and calibration has already driven the reliability term near zero. Lowering
-it further needs a **better model**, not better calibration — and a better model needs
-information that does not exist before departure.
+it further needs a **better model** (i.e. it is a current limitation).
 
 **ROC-AUC 0.696.** Out of a hundred pairs of one delayed and one on-time flight, the model
 orders about seventy correctly. Enough to rank flights usefully; not enough to call one.
@@ -163,7 +179,7 @@ The waterfall identity closes to 1e-9.
 
 ## Limitations
 
-**The ceiling is the problem, not the model.** The strongest predictors of a delay are
+**Performance not so good** The strongest predictors of a delay are
 unknowable before departure: whether the inbound aircraft is already late, what the
 weather actually did, whether crew scheduling breaks. The model sees the plan and a
 forecast.
@@ -171,8 +187,7 @@ forecast.
 **Performance declines with the forecast horizon.** A flight five days out has a vaguer
 forecast than one tomorrow; beyond five days it has none, and the fallback model answers.
 
-**Trained on 2025–2026 only.** Airline schedules and fleets change. A model trained on this
-period will not describe a network that has since restructured.
+**Trained on 2025–2026 only.**
 
 **Domestic US only.** No international flights, no other jurisdictions.
 
