@@ -50,8 +50,8 @@ out to be - are unavailable at the moment the answer is needed. What the service
 offers instead is a calibrated probability: when it says 30%, roughly thirty flights
 in a hundred like it do arrive late.
 
-Two models are served rather than one. The forecast can fail - the flight is beyond
-the five-day horizon, or the weather service is unreachable - and rather than refuse
+Two models are served rather than one. The weather forecast can fail - the flight is beyond
+the five-day horizon, or the weather service (Open-Meteo) is unreachable - and rather than refuse
 an answer, the service falls back to a variant trained without weather at all. Every
 response names which model produced it, so a degraded answer is never mistaken for a
 complete one.
@@ -66,6 +66,14 @@ Six fields, all of them printed on a boarding pass. From those the service finds
 flight in the timetable and fills in the rest by itself: the scheduled times and the
 distance, how many other flights share each airport in that hour, and the weather
 forecast for departure and for arrival.
+
+Those six fields are the **auto-lookup path**: the caller names a flight and the service
+recovers everything else. It is the shorter way in, and the one that depends on an
+outside schedule service being reachable (AeroDataBox).
+The **manual entry path** is the other. There the caller supplies every column the models
+read — the scheduled times, the distance, the congestion counts, where the aircraft is in
+its day... — and the service adds only the weather, which is the one thing it alone can look
+up.
 
 ## Quick Start Guide
 
@@ -142,10 +150,6 @@ Stop it with `docker compose down`.
 ```bash
 uv run dvc repro
 ```
-
-> **Note:** `dvc repro` deletes a stage's outputs before re-running it. `download_weather`
-> holds roughly 2,800 files fetched from a rate-limited public API — re-running it is
-> hours of work. Use `dvc repro --single-item <stage>` when you mean one stage only.
 
 ## Project Organization
 
@@ -339,9 +343,6 @@ before any code was committed: [docs/FlightOnTime_ML_Canvas.md](docs/FlightOnTim
 
 ### Milestone 2 - Reproducibility
 
-**Exploratory analysis** established the base rate, the seasonality, and the relationships
-that later became features.
-
 **DVC** was initialised and the full pipeline defined, from download to registration. Every
 dependency is declared, so a change to one file re-runs exactly the stages that depend on
 it and no others. The training stage uses `foreach` to expand across variants and
@@ -368,7 +369,7 @@ Reports are written to [reports/great_expectations](reports/great_expectations).
 **Tests.** Unit tests across the data, modeling and serving modules; **behavioural tests**
 against the registered champions, covering directional expectations (worse weather must not
 lower the risk), invariance (a flight scores the same alone as in a batch), and minimum
-functionality. The HTML report lands in [reports/pytest](reports/pytest).
+functionality. The PDF report lands in [reports/pytest](reports/pytest).
 
 **Explainability.** SHAP `TreeExplainer` for the tree models and the closed form
 `coef · (x − E[x])` for logistic regression, verified to agree with `shap.LinearExplainer`.
