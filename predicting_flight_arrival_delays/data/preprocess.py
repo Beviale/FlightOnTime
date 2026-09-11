@@ -282,7 +282,7 @@ def add_turnaround_features(df: pd.DataFrame) -> pd.DataFrame:
     """Add each flight's scheduled turnaround time since its aircraft's previous leg.
 
     Args:
-        df: Flights with TailNumber, DepUtcHour and ArrUtcHour.
+        df: Flights with TailNumber, DepUtcHour, CRSDepTime and CRSElapsedTime.
 
     Returns:
         The same DataFrame with "ScheduledTurnaround" added (minutes; NaN
@@ -290,8 +290,16 @@ def add_turnaround_features(df: pd.DataFrame) -> pd.DataFrame:
         the Transformer's median imputation).
     """
     df = df.sort_values(["TailNumber", "DepUtcHour"])
-    prev_arr = df.groupby("TailNumber")["ArrUtcHour"].shift(1)
-    df["ScheduledTurnaround"] = (df["DepUtcHour"] - prev_arr).dt.total_seconds() / 60
+    departure = df["DepUtcHour"] + pd.to_timedelta(df["CRSDepTime"] % 100, unit="minute")
+    legs = pd.DataFrame(
+        {
+            "TailNumber": df["TailNumber"],
+            "departure": departure,
+            "arrival": departure + pd.to_timedelta(df["CRSElapsedTime"], unit="minute"),
+        }
+    ).sort_values(["TailNumber", "departure"])
+    previous_arrival = legs.groupby("TailNumber")["arrival"].shift(1)
+    df["ScheduledTurnaround"] = (legs["departure"] - previous_arrival).dt.total_seconds() / 60
     return df
 
 
