@@ -124,8 +124,8 @@ def rotation_features(leg: dict, flight_date: date) -> dict[str, float | None]:
 
     turnaround = None
     if position > 1:
-        previous = arrival_of(ordered[position - 2]).floor("h")
-        turnaround = (ours.floor("h") - previous).total_seconds() / 60
+        previous = arrival_of(ordered[position - 2])
+        turnaround = (ours - previous).total_seconds() / 60
 
     return {
         "AircraftDailyLegs": len(ordered),

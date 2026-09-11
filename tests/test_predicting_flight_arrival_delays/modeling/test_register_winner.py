@@ -151,11 +151,12 @@ def _winner_file(registry):
 
 class TestHonestNumber:
     def test_every_fold_contributes_to_the_reported_score(self, folds, registry, scores):
-        """Averaging over all folds is what makes the number statistically stable."""
+        """Averaging over all folds is what makes the number statistically stable.
+        """
         scores(0.9)
         _register()
 
-        assert len(registry.prepare_calls) == folds.count
+        assert len(registry.prepare_calls) == folds.count + 1
 
     def test_the_metrics_land_where_the_report_expects_them(self, folds, registry, scores):
         scores(0.9)
@@ -188,7 +189,7 @@ class TestHonestNumber:
         scores(0.9)
         _register()
 
-        assert registry.prepare_calls == ["none"] * folds.count
+        assert registry.prepare_calls == ["none"] * (folds.count + 1)
 
 
 class TestBaselineGuard:
@@ -225,25 +226,24 @@ class TestBaselineGuard:
 
 
 class TestRegisteredModel:
-    def test_it_is_fitted_on_the_last_fold_s_training_split_alone(self, folds, registry, scores):
-        scores(0.9)
-        _register()
-        last_train, _ = folds.sizes[-1]
-
-        assert registry.train_calls[-1] == last_train
-
-    def test_the_final_fit_is_smaller_than_the_data_the_fold_holds(self, folds, registry, scores):
+    def test_it_is_fitted_on_the_last_fold_s_train_and_validation(self, folds, registry, scores):
         scores(0.9)
         _register()
         last_train, last_validation = folds.sizes[-1]
 
-        assert registry.train_calls[-1] < last_train + last_validation
+        assert registry.train_calls[-1] == last_train + last_validation
 
-    def test_no_fit_happens_beyond_the_folds(self, folds, registry, scores):
+    def test_the_final_fit_is_wider_than_the_fit_that_was_measured(self, folds, registry, scores):
         scores(0.9)
         _register()
 
-        assert len(registry.train_calls) == folds.count
+        assert registry.train_calls[-1] > registry.train_calls[-2]
+
+    def test_one_fit_per_fold_plus_the_refit_that_gets_registered(self, folds, registry, scores):
+        scores(0.9)
+        _register()
+
+        assert len(registry.train_calls) == folds.count + 1
 
     def test_it_is_registered_under_the_variant_name(self, folds, registry, scores):
         scores(0.9)

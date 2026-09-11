@@ -2,6 +2,7 @@
 
 from datetime import date
 
+import pandas as pd
 import pytest
 
 from predicting_flight_arrival_delays.app.enrichment import lookup as lookup_module
@@ -13,6 +14,11 @@ from predicting_flight_arrival_delays.app.enrichment.lookup import (
     rotation_features,
 )
 from predicting_flight_arrival_delays.app.schema import FlightLookupRequest
+from predicting_flight_arrival_delays.config import DATE_COLUMN
+from predicting_flight_arrival_delays.data.preprocess import (
+    add_turnaround_features,
+    add_utc_columns,
+)
 
 FLIGHT_DATE = date(2037, 8, 25)
 
@@ -50,6 +56,26 @@ def a_leg(dest: str = "LBB", registration: str | None = None) -> dict:
     if registration:
         entry["aircraft"] = {"reg": registration}
     return entry
+
+
+def training_turnaround(legs: list[tuple[str, str]]) -> float:
+    starts = [pd.Timestamp(departure).tz_convert(None) for departure, _ in legs]
+    frame = pd.DataFrame(
+        {
+            DATE_COLUMN: [start.normalize() for start in starts],
+            "DepHour": [start.hour for start in starts],
+            "CRSDepTime": [start.hour * 100 + start.minute for start in starts],
+            "OriginAirportID": 1,
+            "CRSElapsedTime": [
+                (pd.Timestamp(arrival) - pd.Timestamp(departure)).total_seconds() / 60
+                for departure, arrival in legs
+            ],
+            "TailNumber": "N123AA",
+        }
+    )
+    airports = pd.DataFrame({"AirportId": [1], "Timezone": ["UTC"]})
+    frame = add_turnaround_features(add_utc_columns(frame, airports))
+    return float(frame.sort_values("DepUtcHour")["ScheduledTurnaround"].iloc[-1])
 
 
 @pytest.fixture
@@ -135,9 +161,7 @@ class TestRotationFeatures:
 
         assert features["ScheduledTurnaround"] == 60
 
-    def test_the_turnaround_is_floored_the_way_training_floors_it(self, schedule):
-        """Training rounds both ends down to the hour, so it only ever saw whole
-        hours; a truer figure would be a value the model has never seen."""
+    def test_the_turnaround_keeps_its_minutes(self, schedule):
         schedule(
             rotation=[
                 self.rotation_leg("2037-08-25 09:00Z", "2037-08-25 11:40Z"),
@@ -149,7 +173,27 @@ class TestRotationFeatures:
 
         features = rotation_features(leg, FLIGHT_DATE)
 
-        assert features["ScheduledTurnaround"] == 60
+        assert features["ScheduledTurnaround"] == 40
+
+    @pytest.mark.parametrize(
+        ("before", "ours"),
+        [
+            (("2037-08-25 09:00Z", "2037-08-25 11:00Z"), "2037-08-25 12:00Z"),
+            (("2037-08-25 09:00Z", "2037-08-25 11:40Z"), "2037-08-25 12:20Z"),
+            (("2037-08-25 09:50Z", "2037-08-25 10:20Z"), "2037-08-25 11:05Z"),
+            (("2037-08-25 07:45Z", "2037-08-25 09:05Z"), "2037-08-25 09:55Z"),
+            (("2037-08-25 09:05Z", "2037-08-25 09:25Z"), "2037-08-25 09:40Z"),
+        ],
+    )
+    def test_the_turnaround_is_the_one_training_computes(self, schedule, before, ours):
+        legs = [before, (ours, "2037-08-25 23:00Z")]
+        schedule(rotation=[self.rotation_leg(*leg) for leg in legs])
+        leg = a_leg(registration="N123AA")
+        leg["departure"]["scheduledTime"]["utc"] = ours
+
+        features = rotation_features(leg, FLIGHT_DATE)
+
+        assert features["ScheduledTurnaround"] == training_turnaround(legs)
 
     def test_the_first_leg_of_the_day_has_no_turnaround(self, schedule):
         schedule(rotation=[self.rotation_leg("2037-08-25 12:00Z", "2037-08-25 13:17Z")])

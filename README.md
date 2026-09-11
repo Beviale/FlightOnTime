@@ -307,16 +307,18 @@ wrapped in isotonic calibration fitted on a held-out validation set.
 
 ### Results — validation, by variant
 
+The winner of each variant, in bold, is the configuration with the best validation PR-AUC.
+
 | Model | ROC-AUC | PR-AUC | Brier |
 |-------|---------|--------|-------|
 | **all — LightGBM (deep)** | **0.7095** | **0.4436** | 0.1634 |
 | all — Random Forest | 0.7064 | 0.4405 | 0.1690 |
 | all — Logistic Regression | 0.6803 | 0.3806 | 0.1686 |
-| **noweather — LightGBM (fast)** | **0.6951** | **0.4202** | 0.1655 |
+| **noweather — LightGBM (deep)** | **0.6934** | **0.4211** | 0.1657 |
 | noweather — Logistic Regression | 0.6692 | 0.3596 | 0.1690 |
-| nocarrier — LightGBM (fast) | 0.7038 | 0.4342 | 0.1643 |
+| nocarrier — LightGBM (deep) | 0.7038 | 0.4356 | 0.1645 |
 
-**What the comparison shows.** Weather is worth about 1.4 points of ROC-AUC — the whole
+**What the comparison shows.** Weather is worth about 1.6 points of ROC-AUC — the whole
 gap between `all` and `noweather`. The carrier delay rates are worth about 0.6. Gradient
 boosting beats the linear model by roughly 3 points, which is the non-linearity in the
 problem: a delay depends on the *combination* of airport, hour and weather, not on their

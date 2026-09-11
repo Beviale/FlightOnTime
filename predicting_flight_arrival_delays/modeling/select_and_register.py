@@ -119,6 +119,51 @@ def all_fold_dirs(variant: str) -> list[Path]:
     return fold_dirs
 
 
+def score_across_folds(
+    fold_dirs: list[Path],
+    encoding: str,
+    algorithm: str,
+    config: str,
+    resample: str,
+    calibrate: bool,
+) -> tuple[dict[str, float], float]:
+    """Fit and measure the winner once per walk-forward fold.
+
+    Args:
+        fold_dirs: One directory per fold, in order.
+        encoding: How categoricals are encoded for this algorithm.
+        algorithm: The winning estimator.
+        config: The winning hyperparameter configuration.
+        resample: Training-set rebalancing strategy.
+        calibrate: Whether to calibrate predicted probabilities.
+
+    Returns:
+        The per-fold metrics averaged, and the mean test base rate - the PR-AUC a
+        model that knows nothing would reach.
+    """
+    per_fold_metrics = []
+    per_fold_baseline = []
+
+    for fold in fold_dirs:
+        X_fit, y_fit, X_val, y_val, X_test, y_test, _, _, _ = prepare_fold(
+            pd.read_parquet(fold / "train.parquet"),
+            encoding,
+            test_df=pd.read_parquet(fold / "test.parquet"),
+            validation_df=pd.read_parquet(fold / "validation.parquet"),
+            resample=resample,
+        )
+        model = train_model(X_fit, y_fit, algorithm, config, calibrate, X_val=X_val, y_val=y_val)
+        threshold = choose_threshold(y_val, model.predict_proba(X_val)[:, 1])
+
+        per_fold_metrics.append(evaluate.evaluate(X_test, y_test, model, threshold, 1.2))
+        per_fold_baseline.append(float(y_test.mean()))
+
+    metrics = {k: float(np.mean([m[k] for m in per_fold_metrics])) for k in per_fold_metrics[0]}
+    metrics["roc_auc_std"] = float(np.std([m["roc_auc"] for m in per_fold_metrics]))
+
+    return metrics, float(np.mean(per_fold_baseline))
+
+
 def register_winner(
     variant: str,
     algorithm: str,
@@ -128,7 +173,7 @@ def register_winner(
     alias: str | None = None,
     models_path: Path | None = None,
 ) -> None:
-    """Score the winner, then refit it and register it.
+    """Measure the winner across folds, refit it on the most recent window, register it.
 
     Args:
         variant: Which production variant is being registered.
@@ -144,53 +189,17 @@ def register_winner(
     """
     encoding = ENCODING[algorithm]
     all_folds = all_fold_dirs(variant)
-    fold_dir = all_folds[-1]  # the last fold: used for Step 2, the model registration
+    fold_dir = all_folds[-1]  # the last fold: the widest, most recent window
 
     with mlflow.start_run(run_name=f"{variant}__final__{algorithm}"):
         # --- Step 1: evaluation, averaged across every fold
-        per_fold_metrics = []
-        per_fold_baseline = []
-        for fold in all_folds:
-            fold_train_df = pd.read_parquet(fold / "train.parquet")
-            fold_validation_df = pd.read_parquet(fold / "validation.parquet")
-            fold_test_df = pd.read_parquet(fold / "test.parquet")
-
-            (
-                X_fit_f,
-                y_fit_f,
-                X_val_f,
-                y_val_f,
-                X_test_f,
-                y_test_f,
-                transformer,
-                feature_columns,
-                feature_means,
-            ) = prepare_fold(
-                fold_train_df,
-                encoding,
-                test_df=fold_test_df,
-                validation_df=fold_validation_df,
-                resample=resample,
-            )
-            fold_model = train_model(
-                X_fit_f, y_fit_f, algorithm, config, calibrate, X_val=X_val_f, y_val=y_val_f
-            )
-            fold_threshold = choose_threshold(y_val_f, fold_model.predict_proba(X_val_f)[:, 1])
-            per_fold_metrics.append(
-                evaluate.evaluate(X_test_f, y_test_f, fold_model, fold_threshold, 1.2)
-            )
-            per_fold_baseline.append(float(y_test_f.mean()))
-
-        metrics = {
-            k: float(np.mean([m[k] for m in per_fold_metrics])) for k in per_fold_metrics[0]
-        }
-        metrics["roc_auc_std"] = float(np.std([m["roc_auc"] for m in per_fold_metrics]))
+        metrics, baseline = score_across_folds(
+            all_folds, encoding, algorithm, config, resample, calibrate
+        )
 
         out_path = METRICS_DIR / "winner" / variant / f"{algorithm}__{config}.json"
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(json.dumps({**metrics, "resample": resample}, indent=2))
-
-        baseline = float(np.mean(per_fold_baseline))
 
         if metrics["pr_auc"] <= baseline:
             logger.error(
@@ -199,11 +208,38 @@ def register_winner(
             )
             return
 
-        model, final_threshold = fold_model, fold_threshold
-        X_full = X_fit_f
+        # --- Step 2: the model that gets registered.
+        final_train_df = pd.concat(
+            [
+                pd.read_parquet(fold_dir / "train.parquet"),
+                pd.read_parquet(fold_dir / "validation.parquet"),
+            ],
+            ignore_index=True,
+        )
+        holdout_df = pd.read_parquet(fold_dir / "test.parquet")
+
+        (
+            X_full,
+            y_full,
+            X_holdout,
+            y_holdout,
+            _,
+            _,
+            transformer,
+            feature_columns,
+            feature_means,
+        ) = prepare_fold(final_train_df, encoding, validation_df=holdout_df, resample=resample)
+        model = train_model(
+            X_full, y_full, algorithm, config, calibrate, X_val=X_holdout, y_val=y_holdout
+        )
+        final_threshold = choose_threshold(y_holdout, model.predict_proba(X_holdout)[:, 1])
+        logger.info(
+            f"{variant}: final fit on {len(final_train_df)} rows "
+            f"(train+validation of {fold_dir.name}), operating threshold {final_threshold:.4f}"
+        )
 
         dataset = from_pandas(
-            pd.concat([fold_train_df, fold_validation_df], ignore_index=True),
+            final_train_df,
             source=str(fold_dir),
             name=f"{variant}_final_train",
             digest=get_dvc_data_hash(PROCESSED_DATA_DIR / "selection"),
@@ -222,6 +258,8 @@ def register_winner(
                 "calibrated": calibrate,
                 "resample": resample,
                 "final": True,
+                "final_fit_rows": len(final_train_df),
+                "final_fit_fold": fold_dir.name,
                 "n_features": n_features,
                 **{f"hp_{k}": v for k, v in HYPERPARAMS[algorithm][config].items()},
             }

@@ -89,9 +89,15 @@ that closes on the probability given.
 
 - **Walk-forward cross-validation**, three folds, train and test contiguous in time.
 - **Calibration**: `CalibratedClassifierCV` with isotonic regression over a
-  `FrozenEstimator`, fitted on the fold's validation window — the base model is not refit,
-  only its probabilities are mapped.
-- **Threshold**: chosen on validation by maximising F-1 beta score.
+  `FrozenEstimator` — the base model is not refit, only its probabilities are mapped.
+- **Threshold**: chosen by maximising the F-beta score on the same held-out window the
+  calibration is fitted on.
+- **Measurement and deployment are two different fits.** Every number reported here comes
+  from models fitted on a fold's train, calibrated and thresholded on its validation, and
+  scored on its test — none of which is kept. The model that gets *registered* is then
+  refit on the last fold's train and validation together, the widest and most recent
+  window available, and takes its calibration and its threshold from that fold's test,
+  which the refit has never seen.
 - **No resampling.** Oversampling, undersampling and SMOTE were all evaluated; none
   improved ROC-AUC, and all three damaged calibration, which is the property this service
   actually sells.
@@ -141,7 +147,7 @@ Read off the difference between variants:
 
 | Removed | ROC-AUC cost |
 |---------|-------------|
-| Weather | 1.4 points |
+| Weather | 1.6 points |
 | Carrier delay rates | 0.6 points |
 
 And the algorithm matters: LightGBM beats logistic regression by roughly 3 points, which

@@ -180,7 +180,7 @@ Nothing else is needed for an existing algorithm — the config name is read fro
 uv run dvc repro train_evaluate_save_metrics
 ```
 
-`select_and_register` picks the best configuration per variant on validation ROC-AUC, so a
+`select_and_register` picks the best configuration per variant on validation PR-AUC, so a
 new candidate competes automatically. It will not register anything that fails to beat a
 random-guess PR-AUC baseline.
 

@@ -139,8 +139,11 @@ future, with train, validation and test contiguous and no gaps.
 A random split would let the model learn from August to predict March. No deployed model
 can do that, and a metric obtained that way is not a forecast of anything.
 
-The validation window is where calibration is fitted and the operating threshold chosen,
-so neither touches the test period.
+While the model is being *measured*, the validation window is where calibration is fitted
+and the operating threshold chosen, so neither touches the test period.
+
+The model that actually ships is refit on fold 3's train and validation together, and
+takes its calibration and its threshold from fold 3's test instead.
 
 **The base rate moves between folds** — 27.6%, 18.9%, 23.5% on validation — which is why
 PR-AUC differs across folds even when the model does not. It tracks the base rate almost

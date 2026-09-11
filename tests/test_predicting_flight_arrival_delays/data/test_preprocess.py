@@ -352,42 +352,61 @@ class TestAddUtcColumns:
 
 
 class TestAddTurnaroundFeatures:
-    def test_turnaround_is_measured_from_the_previous_leg(self):
-        df = pd.DataFrame(
+    @staticmethod
+    def legs(*rows):
+        tails, hours, local, blocks = zip(*rows)
+        return pd.DataFrame(
             {
-                "TailNumber": ["N1", "N1", "N2"],
-                "DepUtcHour": pd.to_datetime(
-                    ["2025-03-01 08:00", "2025-03-01 13:00", "2025-03-01 09:00"], utc=True
-                ),
-                "ArrUtcHour": pd.to_datetime(
-                    ["2025-03-01 11:00", "2025-03-01 16:00", "2025-03-01 12:00"], utc=True
-                ),
+                "TailNumber": list(tails),
+                "DepUtcHour": pd.to_datetime(list(hours), utc=True),
+                "CRSDepTime": list(local),
+                "CRSElapsedTime": [float(b) for b in blocks],
             }
+        )
+
+    def test_turnaround_is_measured_from_the_previous_leg(self):
+        df = self.legs(
+            ("N1", "2025-03-01 08:00", 300, 180),
+            ("N1", "2025-03-01 13:00", 800, 180),
+            ("N2", "2025-03-01 09:00", 400, 180),
         )
         out = add_turnaround_features(df).sort_index()
 
         assert out["ScheduledTurnaround"].iloc[1] == pytest.approx(120.0)
 
+    def test_turnaround_keeps_its_minutes(self):
+        df = self.legs(
+            ("N1", "2025-03-01 13:00", 850, 30),
+            ("N1", "2025-03-01 15:00", 1005, 60),
+        )
+        out = add_turnaround_features(df).sort_index()
+
+        assert out["ScheduledTurnaround"].iloc[1] == pytest.approx(45.0)
+
+    def test_legs_within_the_same_hour_are_ordered_by_their_minutes(self):
+        df = self.legs(
+            ("N1", "2025-03-01 13:00", 840, 90),
+            ("N1", "2025-03-01 13:00", 805, 20),
+        )
+        out = add_turnaround_features(df).set_index("CRSDepTime")
+
+        assert np.isnan(out.loc[805, "ScheduledTurnaround"])
+        assert out.loc[840, "ScheduledTurnaround"] == pytest.approx(15.0)
+
     def test_first_leg_of_an_aircraft_has_no_turnaround(self):
         """A NaN here is left to the Transformer's median imputation."""
-        df = pd.DataFrame(
-            {
-                "TailNumber": ["N1", "N2"],
-                "DepUtcHour": pd.to_datetime(["2025-03-01 08:00", "2025-03-01 09:00"], utc=True),
-                "ArrUtcHour": pd.to_datetime(["2025-03-01 11:00", "2025-03-01 12:00"], utc=True),
-            }
+        df = self.legs(
+            ("N1", "2025-03-01 08:00", 300, 180),
+            ("N2", "2025-03-01 09:00", 400, 180),
         )
         out = add_turnaround_features(df)
 
         assert out["ScheduledTurnaround"].isna().all()
 
     def test_turnaround_never_crosses_aircraft(self):
-        df = pd.DataFrame(
-            {
-                "TailNumber": ["N1", "N2"],
-                "DepUtcHour": pd.to_datetime(["2025-03-01 08:00", "2025-03-01 12:00"], utc=True),
-                "ArrUtcHour": pd.to_datetime(["2025-03-01 11:00", "2025-03-01 14:00"], utc=True),
-            }
+        df = self.legs(
+            ("N1", "2025-03-01 08:00", 300, 180),
+            ("N2", "2025-03-01 12:00", 700, 120),
         )
         out = add_turnaround_features(df)
 
