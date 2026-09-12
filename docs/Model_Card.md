@@ -10,10 +10,10 @@ Two models are registered and served together.
 
 | | `flight-delay-all` | `flight-delay-noweather` |
 |---|---|---|
-| **Algorithm** | LightGBM (`deep`) | LightGBM (`deep`) |
+| **Algorithm** | LightGBM (`deep`) | LightGBM (`default`) |
 | **Features** | 38 | 26 |
 | **Calibration** | isotonic | isotonic |
-| **Operating threshold** | 0.2345 | 0.2214 |
+| **Operating threshold** | 0.2403 | 0.2339 |
 | **Registry alias** | `Champion` | `Champion` |
 | **Version** | 1 | 1 |
 
@@ -55,7 +55,7 @@ share those airports in those hours, and assembles the feature frame itself.
   "delay_probability": 0.34,
   "is_delayed": 1,
   "variant": "all",
-  "threshold": 0.2345,
+  "threshold": 0.2403,
   "weather": "resolved",
   "approximated": []
 }
@@ -102,14 +102,16 @@ that closes on the probability given.
   improved ROC-AUC, and all three damaged calibration, which is the property this service
   actually sells.
 
-### Hyperparameters — LightGBM `deep`
+### Hyperparameters
 
-```yaml
-n_estimators: 500
-learning_rate: 0.03
-num_leaves: 127
-early_stopping_rounds: 50
-```
+`flight-delay-all` selected `deep`; `flight-delay-noweather` selected `default`.
+
+| | `deep` | `default` |
+|---|---|---|
+| `n_estimators` | 500 | 300 |
+| `learning_rate` | 0.03 | 0.05 |
+| `num_leaves` | 127 | 63 |
+| `early_stopping_rounds` | 50 | 50 |
 
 LightGBM uses native categorical handling rather than one-hot; the linear and forest
 candidates use one-hot.
@@ -120,26 +122,26 @@ Measured on the held-out test folds — the future relative to every fold's trai
 
 | Variant | ROC-AUC | PR-AUC | Brier | Recall | Precision | F1.2 | Alert rate |
 |---------|---------|--------|-------|--------|-----------|------|-----------|
-| **all** | 0.6958 | 0.4109 | 0.1591 | 0.631 | 0.341 | 0.462 | 41.9% |
-| **noweather** | 0.6763 | 0.3899 | 0.1639 | 0.654 | 0.319 | 0.449 | 46.9% |
+| **all** | 0.7074 | 0.4433 | 0.1555 | 0.610 | 0.358 | 0.469 | 38.4% |
+| **noweather** | 0.6910 | 0.4241 | 0.1599 | 0.651 | 0.332 | 0.459 | 45.0% |
 
 ### How to read these
 
-**The Brier score.** 0.159 sounds good until you know the scale. The base rate is 22.25%,
-so a model that always answered "22.25%" — looking at nothing — scores 0.173. The
-improvement is:
+**The Brier score.** 0.1555 sounds good until you know the scale. The base rate across the
+test folds is 22.26%, so a model that always answered "22.26%" — looking at nothing —
+scores 0.1730. The improvement is:
 
 ```
-Brier Skill Score = 1 − 0.159 / 0.173 = 0.08
+Brier Skill Score = 1 − 0.1555 / 0.1730 = 0.10
 ```
 
-Eight per cent better than knowing nothing. That is a real gain, and it is small. It is
+Ten per cent better than knowing nothing. That is a real gain, and it is small. It is
 also close to the ceiling: the Brier decomposes into uncertainty minus resolution plus
 reliability, and calibration has already driven the reliability term near zero. Lowering
 it further needs a **better model** (i.e. it is a current limitation).
 
-**ROC-AUC 0.696.** Out of a hundred pairs of one delayed and one on-time flight, the model
-orders about seventy correctly. Enough to rank flights usefully; not enough to call one.
+**ROC-AUC 0.707.** Out of a hundred pairs of one delayed and one on-time flight, the model
+orders about seventy-one correctly. Enough to rank flights usefully; not enough to call one.
 
 ### What each feature group is worth
 
@@ -147,10 +149,10 @@ Read off the difference between variants:
 
 | Removed | ROC-AUC cost |
 |---------|-------------|
-| Weather | 1.6 points |
-| Carrier delay rates | 0.6 points |
+| Weather | 1.5 points |
+| Carrier delay rates | 0.4 points |
 
-And the algorithm matters: LightGBM beats logistic regression by roughly 3 points, which
+And the algorithm matters: LightGBM beats logistic regression by roughly 4 points, which
 is the non-linearity in the problem. A delay depends on the *combination* of airport, hour
 and weather, not on their sum.
 

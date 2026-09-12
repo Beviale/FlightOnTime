@@ -199,7 +199,7 @@ learns that some carriers are late more often than others. `OriginCarrier` and
 `DestCarrier` are among the features the model leans on most. This is factual rather than
 prejudicial — it is what the public record says — but it means predictions carry a
 judgement about specific airlines, and the `nocarrier` variant exists partly to measure
-how much of the model's skill rests on that judgement. The answer is about 0.6 points of
+how much of the model's skill rests on that judgement. The answer is about 0.4 points of
 ROC-AUC.
 
 See [Risk_Classification.md](Risk_Classification.md) for the assessment under the AI Act.
