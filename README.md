@@ -309,30 +309,49 @@ wrapped in isotonic calibration fitted on a held-out validation set.
 
 The winner of each variant, in bold, is the configuration with the best validation PR-AUC.
 
-| Model | ROC-AUC | PR-AUC | Brier |
-|-------|---------|--------|-------|
-| **all — LightGBM (deep)** | **0.7095** | **0.4436** | 0.1634 |
-| all — Random Forest | 0.7064 | 0.4405 | 0.1690 |
-| all — Logistic Regression | 0.6803 | 0.3806 | 0.1686 |
-| **noweather — LightGBM (deep)** | **0.6934** | **0.4211** | 0.1657 |
-| noweather — Logistic Regression | 0.6692 | 0.3596 | 0.1690 |
-| nocarrier — LightGBM (deep) | 0.7038 | 0.4356 | 0.1645 |
+| Model | ROC-AUC | PR-AUC | Brier | ROC-AUC std |
+|-------|---------|--------|-------|-------------|
+| **all — LightGBM (deep)** | **0.7199** | **0.4744** | 0.1597 | 0.0020 |
+| all — LightGBM (default) | 0.7198 | 0.4735 | 0.1595 | 0.0023 |
+| all — LightGBM (regularised) | 0.7196 | 0.4734 | 0.1597 | 0.0018 |
+| all — LightGBM (fast) | 0.7186 | 0.4717 | 0.1596 | 0.0035 |
+| all — Random Forest (default) | 0.7028 | 0.4658 | 0.1585 | 0.0019 |
+| all — Logistic Regression (weak_l2) | 0.6802 | 0.3805 | 0.1687 | 0.0103 |
+| all — Logistic Regression (default) | 0.6802 | 0.3805 | 0.1686 | 0.0103 |
+| all — Logistic Regression (strong_l2) | 0.6801 | 0.3804 | 0.1687 | 0.0103 |
+| **noweather — LightGBM (default)** | **0.7046** | **0.4526** | 0.1619 | 0.0137 |
+| noweather — LightGBM (deep) | 0.7041 | 0.4519 | 0.1621 | 0.0119 |
+| noweather — LightGBM (regularised) | 0.7040 | 0.4512 | 0.1620 | 0.0151 |
+| noweather — LightGBM (fast) | 0.7040 | 0.4509 | 0.1617 | 0.0142 |
+| noweather — Random Forest (default) | 0.6948 | 0.4409 | 0.1992 | 0.0100 |
+| noweather — Logistic Regression (strong_l2) | 0.6692 | 0.3596 | 0.1690 | 0.0192 |
+| noweather — Logistic Regression (default) | 0.6692 | 0.3596 | 0.1690 | 0.0191 |
+| noweather — Logistic Regression (weak_l2) | 0.6692 | 0.3596 | 0.1690 | 0.0191 |
+| **nocarrier — LightGBM (default)** | **0.7160** | **0.4686** | 0.1604 | 0.0023 |
+| nocarrier — LightGBM (deep) | 0.7154 | 0.4684 | 0.1604 | 0.0015 |
+| nocarrier — LightGBM (regularised) | 0.7154 | 0.4682 | 0.1604 | 0.0022 |
+| nocarrier — LightGBM (fast) | 0.7159 | 0.4680 | 0.1603 | 0.0035 |
+| nocarrier — Random Forest (default) | 0.7087 | 0.4580 | 0.1708 | 0.0035 |
+| nocarrier — Logistic Regression (default) | 0.6710 | 0.3704 | 0.1697 | 0.0112 |
+| nocarrier — Logistic Regression (weak_l2) | 0.6710 | 0.3704 | 0.1697 | 0.0113 |
+| nocarrier — Logistic Regression (strong_l2) | 0.6710 | 0.3703 | 0.1697 | 0.0113 |
 
-**What the comparison shows.** Weather is worth about 1.6 points of ROC-AUC — the whole
-gap between `all` and `noweather`. The carrier delay rates are worth about 0.6. Gradient
-boosting beats the linear model by roughly 3 points, which is the non-linearity in the
+**What the comparison shows.** Weather is worth about 1.5 points of ROC-AUC — the whole
+gap between `all` and `noweather`. The carrier delay rates are worth about 0.4. Gradient
+boosting beats the linear model by roughly 4 points, which is the non-linearity in the
 problem: a delay depends on the *combination* of airport, hour and weather, not on their
 sum.
 
 ### Registered models
 
-Both production variants selected **LightGBM (deep)**. Measured on the held-out test
+`all` selected **LightGBM (deep)**, `noweather` **LightGBM (default)**. Measured on the
+held-out test
 folds, at the operating threshold each was released with:
 
 | Variant | ROC-AUC | PR-AUC | Brier | Recall | Precision | Threshold | Alert rate |
 |---------|---------|--------|-------|--------|-----------|-----------|------------|
-| **all** | 0.6958 | 0.4109 | 0.1591 | 0.631 | 0.341 | 0.235 | 41.9% |
-| **noweather** | 0.6763 | 0.3899 | 0.1639 | 0.654 | 0.319 | 0.227 | 46.9% |
+| **all** | 0.7074 | 0.4433 | 0.1555 | 0.610 | 0.358 | 0.240 | 38.4% |
+| **noweather** | 0.6910 | 0.4241 | 0.1599 | 0.651 | 0.332 | 0.234 | 45.0% |
 
 
 ## Milestones Description
